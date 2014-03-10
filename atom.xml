@@ -4,7 +4,7 @@
   <title><![CDATA[Eugene Zhulenev blog]]></title>
   <link href="http://ezhulenev.github.io/atom.xml" rel="self"/>
   <link href="http://ezhulenev.github.io/"/>
-  <updated>2014-03-09T21:59:35-04:00</updated>
+  <updated>2014-03-09T22:03:27-04:00</updated>
   <id>http://ezhulenev.github.io/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -12,5 +12,14 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[First Post]]></title>
+    <link href="http://ezhulenev.github.io/blog/2014/03/09/first-post/"/>
+    <updated>2014-03-09T22:03:03-04:00</updated>
+    <id>http://ezhulenev.github.io/blog/2014/03/09/first-post</id>
+    <content type="html"><![CDATA[
+]]></content>
+  </entry>
   
 </feed>
