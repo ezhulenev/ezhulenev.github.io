@@ -199,6 +199,26 @@
 
 
 
+<script>
+  $(document).ready(function(){
+    if (!window.jXHR){
+      var jxhr = document.createElement('script');
+      jxhr.type = 'text/javascript';
+      jxhr.src = '/javascripts/libs/jXHR.js';
+      var s = document.getElementsByTagName('script')[0];
+      s.parentNode.insertBefore(jxhr, s);
+    }
+
+    github.showRepos({
+      user: 'ezhulenev',
+      count: 0,
+      skip_forks: true,
+      target: '#gh_repos'
+    });
+  });
+</script>
+<script src="/javascripts/github.js"></script>
+
 
 
 
