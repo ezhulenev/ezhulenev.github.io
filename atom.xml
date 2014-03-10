@@ -2,10 +2,10 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
 
   <title><![CDATA[Eugene Zhulenev]]></title>
-  <link href="http://ezhulenev.github.io/atom.xml" rel="self"/>
-  <link href="http://ezhulenev.github.io/"/>
-  <updated>2014-03-10T01:42:27-04:00</updated>
-  <id>http://ezhulenev.github.io/</id>
+  <link href="http://eugenezhulenev.com/atom.xml" rel="self"/>
+  <link href="http://eugenezhulenev.com/"/>
+  <updated>2014-03-10T10:07:50-04:00</updated>
+  <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
     
@@ -15,9 +15,9 @@
   
   <entry>
     <title type="html"><![CDATA[First Post]]></title>
-    <link href="http://ezhulenev.github.io/blog/2014/03/09/first-post/"/>
+    <link href="http://eugenezhulenev.com/blog/2014/03/09/first-post/"/>
     <updated>2014-03-09T22:03:03-04:00</updated>
-    <id>http://ezhulenev.github.io/blog/2014/03/09/first-post</id>
+    <id>http://eugenezhulenev.com/blog/2014/03/09/first-post</id>
     <content type="html"><![CDATA[
 ]]></content>
   </entry>
