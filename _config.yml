@@ -97,11 +97,12 @@ delicious_user:
 delicious_count: 3
 
 # Disqus Comments
-disqus_short_name:
-disqus_show_comment_count: false
+disqus_short_name: eugenezhulenev
+disqus_show_comment_count: true
+disqus_developer: 0
 
 # Google Analytics
-google_analytics_tracking_id:
+google_analytics_tracking_id: UA-49585535-1
 
 # Facebook Like
 facebook_like: false
