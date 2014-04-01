@@ -3,12 +3,13 @@
 # ----------------------- #
 
 url: http://eugenezhulenev.com
-title: Eugene Zhulenev
+title: Eugene Zhulenev Blog
 site.email: evgeny.zhulenev@gmail.com
-subtitle: Tech blog.
+subtitle: Tech blog
 author: Eugene Zhulenev
 simple_search: https://www.google.com/search
-description:
+description: My contribution to opensource
+keywords: scala,scalaz,scalaz-stream
 
 # Default date format is "ordinal" (resulting in "July 22nd 2007")
 # You can customize the format as defined in
