@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[Category: scalaz | Eugene Zhulenev]]></title>
+  <title><![CDATA[Category: scalaz | Eugene Zhulenev Blog]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/scalaz/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2014-04-01T12:07:50-04:00</updated>
+  <updated>2014-04-01T12:21:01-04:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
