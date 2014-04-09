@@ -65,6 +65,8 @@ Output = Vector(1, 4, 9, 16, 25, 36, 49, 64, 81, 100), in 10196 ms
 
 To run effectful functions concurrently, with controlled number of queued tasks we can use `scalaz.stream.merge.mergeN` which is for now available only in `snapshot-0.4`.
 
+<!-- more -->
+
 {% codeblock lang:scala %}
   val P = scalaz.stream.Process
 
