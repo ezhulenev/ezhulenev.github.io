@@ -4,7 +4,7 @@
   <title><![CDATA[Category: scalaz-stream | Eugene Zhulenev Blog]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/scalaz-stream/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2014-04-01T12:21:01-04:00</updated>
+  <updated>2014-04-09T17:00:05-04:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -118,6 +118,9 @@ and in following example all computation steps will run consecutively.</p>
 <h3>Concurrent Process</h3>
 
 <p>To run effectful functions concurrently, with controlled number of queued tasks we can use <code>scalaz.stream.merge.mergeN</code> which is for now available only in <code>snapshot-0.4</code>.</p>
+
+<!-- more -->
+
 
 <p><div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>

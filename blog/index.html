@@ -64,6 +64,164 @@
     <header>
   
   <h1 class="beta">
+    <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/">Seamless migration from monolithic application to Finagle services (Part 2/2)</a>
+  </h1>
+  
+
+  
+  <div class="meta clearfix">
+    
+
+
+
+
+
+
+
+
+  
+
+
+<time class="pull-left" datetime="2014-04-09T22:03:45-04:00" pubdate data-updated="true"><i class="icon-calendar"></i> Apr 9<span>th</span>, 2014</time>
+    
+
+  <div class="pull-left">
+    <i class="icon-tags"></i>
+    <ul class="tags unstyled">
+    
+      
+        <li><a class='category' href='/blog/categories/cloud/'>cloud</a></li>
+      
+        <li><a class='category' href='/blog/categories/finagle/'>finagle</a></li>
+      
+        <li><a class='category' href='/blog/categories/micro-services/'>micro-services</a></li>
+      
+        <li><a class='category' href='/blog/categories/scala/'>scala</a></li>
+      
+        <li><a class='category' href='/blog/categories/zookeper/'>zookeper</a></li>
+      
+    
+    </ul>
+  </div>
+
+    
+      <a class="pull-right" href="http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/#disqus_thread">
+        Comments <i class="icon-comment"></i>
+      </a>
+    
+  </div>
+  
+</header>
+
+
+
+
+<div class="entry-content clearfix">
+  <h3>Synopsis</h3>
+
+<blockquote><p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/finagled-movie-db">Github</a></p></blockquote>
+
+<p>Distributed micro-services architecture is hot trend right now, it&rsquo;s widely adopted by <a href="https://blog.twitter.com/2011/finagle-a-protocol-agnostic-rpc-system">Twitter</a>, <a href="https://engineering.linkedin.com/architecture/restli-restful-service-architecture-scale">LinkedIn</a> and <a href="http://www.slideshare.net/LappleApple/gilt-from-monolith-ruby-app-to-micro-service-scala-service-architecture">Gilt</a>.
+However it can be difficult if data model is already defined, and services accessed via existing API throughout all your code. I’ll show how it&rsquo;s possible to split monoliths app into standalone services built with Finagle and SBinary for custom communication protocol.</p>
+
+<p>I&rsquo;m going to show it on example of small Fancy Movie Database application.</p>
+
+<h2>[Part 2/2] Spit application to distributed services</h2>
+
+<p>Go to <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1">Part 1</a> where fancy movie database application defined.</p>
+
+<h3>What is Finagle</h3>
+
+<p>Finagle is a protocol-agnostic, asynchronous RPC system for the JVM that makes it easy to build robust clients and servers in Java, Scala, or any JVM-hosted language.</p>
+
+
+  <a class="btn pull-right" href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/">Read on &rarr;</a>
+</div>
+
+  </article>
+  <hr>
+
+  
+  <article class="listing">
+    <header>
+  
+  <h1 class="beta">
+    <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1/">Seamless migration from monolithic application to Finagle services (Part 1/2)</a>
+  </h1>
+  
+
+  
+  <div class="meta clearfix">
+    
+
+
+
+
+
+
+
+
+  
+
+
+<time class="pull-left" datetime="2014-04-09T22:03:45-04:00" pubdate data-updated="true"><i class="icon-calendar"></i> Apr 9<span>th</span>, 2014</time>
+    
+
+  <div class="pull-left">
+    <i class="icon-tags"></i>
+    <ul class="tags unstyled">
+    
+      
+        <li><a class='category' href='/blog/categories/cloud/'>cloud</a></li>
+      
+        <li><a class='category' href='/blog/categories/finagle/'>finagle</a></li>
+      
+        <li><a class='category' href='/blog/categories/micro-services/'>micro-services</a></li>
+      
+        <li><a class='category' href='/blog/categories/scala/'>scala</a></li>
+      
+    
+    </ul>
+  </div>
+
+    
+      <a class="pull-right" href="http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1/#disqus_thread">
+        Comments <i class="icon-comment"></i>
+      </a>
+    
+  </div>
+  
+</header>
+
+
+
+
+<div class="entry-content clearfix">
+  <h3>Synopsis</h3>
+
+<blockquote><p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/finagled-movie-db">Github</a></p></blockquote>
+
+<p>Distributed micro-services architecture is hot trend right now, it&rsquo;s widely adopted by <a href="https://blog.twitter.com/2011/finagle-a-protocol-agnostic-rpc-system">Twitter</a>, <a href="https://engineering.linkedin.com/architecture/restli-restful-service-architecture-scale">LinkedIn</a> and <a href="http://www.slideshare.net/LappleApple/gilt-from-monolith-ruby-app-to-micro-service-scala-service-architecture">Gilt</a>.
+However it can be difficult if data model is already defined, and services accessed via existing API throughout all your code. I’ll show how it&rsquo;s possible to split monoliths app into standalone services built with Finagle and SBinary for custom communication protocol.</p>
+
+<p>I&rsquo;m going to show it on example of small Fancy Movie Database application.</p>
+
+<h2>[Part 1] Fancy Movie Database application</h2>
+
+<p>Go to <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2">Part 2</a> where fancy movie database application is divided into server and client using Finagle.</p>
+
+
+  <a class="btn pull-right" href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1/">Read on &rarr;</a>
+</div>
+
+  </article>
+  <hr>
+
+  
+  <article class="listing">
+    <header>
+  
+  <h1 class="beta">
     <a href="/blog/2014/04/01/scalaz-stream-concurrent-process/">Scalaz-Stream: Feed `Process` through the given effectful `Channel` concurrently</a>
   </h1>
   
@@ -112,6 +270,7 @@
 
 
 
+<div class="entry-content clearfix">
   <p>Let&rsquo;s assume that we have some input process, and want to run some &lsquo;heavy computation&rsquo; on each element.
 Obviously we want utilize all available cores and use thread pool. However scalaz-stream by default is deterministic
 and in following example all computation steps will run consecutively.</p>
@@ -209,86 +368,9 @@ and in following example all computation steps will run consecutively.</p>
 
 <p>To run effectful functions concurrently, with controlled number of queued tasks we can use <code>scalaz.stream.merge.mergeN</code> which is for now available only in <code>snapshot-0.4</code>.</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'>  <span class="k">val</span> <span class="n">P</span> <span class="k">=</span> <span class="n">scalaz</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="nc">Process</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">implicit</span> <span class="k">class</span> <span class="nc">ConcurrentProcess</span><span class="o">[</span><span class="kt">O</span><span class="o">](</span><span class="k">val</span> <span class="n">process</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">O</span><span class="o">])</span> <span class="o">{</span>
-</span><span class='line'>    <span class="cm">/**</span>
-</span><span class='line'><span class="cm">     * Run process through channel with given level of concurrency</span>
-</span><span class='line'><span class="cm">     */</span>
-</span><span class='line'>    <span class="k">def</span> <span class="n">concurrently</span><span class="o">[</span><span class="kt">O2</span><span class="o">](</span><span class="n">concurrencyLevel</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span>
-</span><span class='line'>                        <span class="o">(</span><span class="n">f</span><span class="k">:</span> <span class="kt">Channel</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">O</span>, <span class="kt">O2</span><span class="o">])</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">O2</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
-</span><span class='line'>      <span class="k">val</span> <span class="n">actions</span> <span class="k">=</span>
-</span><span class='line'>        <span class="n">process</span><span class="o">.</span>
-</span><span class='line'>          <span class="n">zipWith</span><span class="o">(</span><span class="n">f</span><span class="o">)((</span><span class="n">data</span><span class="o">,</span> <span class="n">f</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">f</span><span class="o">(</span><span class="n">data</span><span class="o">))</span>
-</span><span class='line'>
-</span><span class='line'>      <span class="k">val</span> <span class="n">nestedActions</span> <span class="k">=</span>
-</span><span class='line'>        <span class="n">actions</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">P</span><span class="o">.</span><span class="n">eval</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>      <span class="n">merge</span><span class="o">.</span><span class="n">mergeN</span><span class="o">(</span><span class="n">concurrencyLevel</span><span class="o">)(</span><span class="n">nestedActions</span><span class="o">)</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>  <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
 
-
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'>  <span class="k">val</span> <span class="n">output</span> <span class="k">=</span> <span class="nc">Process</span><span class="o">.</span><span class="n">range</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">11</span><span class="o">)</span>
-</span><span class='line'>               <span class="o">.</span><span class="n">concurrently</span><span class="o">(</span><span class="mi">5</span><span class="o">)(</span><span class="n">effectfulChannel</span><span class="o">).</span><span class="n">runLog</span><span class="o">.</span><span class="n">run</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>Concurrent Process Output</h3>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>pool-1-thread-1: Run for 1, TaskN = 1 (time = 12:00:15:625)
-</span><span class='line'>pool-1-thread-3: Run for 3, TaskN = 3 (time = 12:00:15:626)
-</span><span class='line'>pool-1-thread-2: Run for 2, TaskN = 2 (time = 12:00:15:626)
-</span><span class='line'>pool-1-thread-3: Run for 4, TaskN = 4 (time = 12:00:16:683)
-</span><span class='line'>pool-1-thread-1: Run for 5, TaskN = 5 (time = 12:00:16:683)
-</span><span class='line'>pool-1-thread-2: Run for 6, TaskN = 6 (time = 12:00:16:693)
-</span><span class='line'>pool-1-thread-3: Run for 7, TaskN = 7 (time = 12:00:17:684)
-</span><span class='line'>pool-1-thread-1: Run for 8, TaskN = 8 (time = 12:00:17:684)
-</span><span class='line'>pool-1-thread-2: Run for 9, TaskN = 9 (time = 12:00:17:694)
-</span><span class='line'>pool-1-thread-3: Run for 10, TaskN = 10 (time = 12:00:18:685)
-</span><span class='line'>Output = Vector(4, 9, 1, 25, 16, 36, 49, 64, 81, 100), in 4234 ms</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>Result</h3>
-
-<p>As you can see in second case computations run concurrently and total time spent is much smaller, and final result is the same, as expected.</p>
-
-<p>Full code for this post is available in <a href="https://gist.github.com/ezhulenev/9916972">Gist</a>.</p>
-
+  <a class="btn pull-right" href="/blog/2014/04/01/scalaz-stream-concurrent-process/">Read on &rarr;</a>
+</div>
 
   </article>
   <hr>
@@ -329,6 +411,14 @@ and in following example all computation steps will run consecutively.</p>
   <section id="recent-posts" class="aside-module grid__item one-whole lap-one-half">
   <h1 class="title delta">Recent Posts</h1>
   <ul class="divided">
+    
+      <li class="post">
+        <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/">Seamless migration from monolithic application to Finagle services (Part 2/2)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1/">Seamless migration from monolithic application to Finagle services (Part 1/2)</a>
+      </li>
     
       <li class="post">
         <a href="/blog/2014/04/01/scalaz-stream-concurrent-process/">Scalaz-Stream: Feed `Process` through the given effectful `Channel` concurrently</a>

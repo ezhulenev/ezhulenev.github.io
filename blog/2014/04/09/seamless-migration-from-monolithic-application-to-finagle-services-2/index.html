@@ -1,24 +1,116 @@
-<?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom">
-
-  <title><![CDATA[Eugene Zhulenev Blog]]></title>
-  <link href="http://eugenezhulenev.com/atom.xml" rel="self"/>
-  <link href="http://eugenezhulenev.com/"/>
-  <updated>2014-04-09T17:00:05-04:00</updated>
-  <id>http://eugenezhulenev.com/</id>
-  <author>
-    <name><![CDATA[Eugene Zhulenev]]></name>
-    
-  </author>
-  <generator uri="http://octopress.org/">Octopress</generator>
+<!doctype html>
+  <!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+  <!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+  <!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+  <!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
 
   
-  <entry>
-    <title type="html"><![CDATA[Seamless migration from monolithic application to Finagle services (Part 2/2)]]></title>
-    <link href="http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/"/>
-    <updated>2014-04-09T22:03:45-04:00</updated>
-    <id>http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2</id>
-    <content type="html"><![CDATA[<h3>Synopsis</h3>
+    
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>Seamless migration from monolithic application to Finagle services (Part 2/2) - Eugene Zhulenev Blog</title>
+    <meta name="author" content="Eugene Zhulenev">
+    
+    <meta name="description" content="My contribution to opensource">
+    <meta name="keywords" content="scala, finagle, micro-services, zookeper, cloud">
+    <meta name="viewport" content="width=device-width">
+    <link rel="canonical" href="http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2">
+    
+    <link href="/favicon.png" rel="icon">
+    <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet">
+    <link href="/atom.xml" rel="alternate" title="Eugene Zhulenev Blog" type="application/atom+xml">
+  </head>
+
+
+  <body >
+
+    <header>
+      <div class="grid-wrapper">
+  <div class="grid">
+
+    <div class="grid__item two-fifths lap-four-sixths palm-one-whole">
+  <a href="/" class="site-title">Eugene Zhulenev Blog</a>
+</div>
+
+<div class="grid__item three-fifths lap-two-sixths palm-one-whole">
+  <nav>
+    <input type="checkbox" id="toggle">
+<label for="toggle" class="toggle" data-open="Main Menu" data-close="Close Menu"></label>
+<ul class="menu pull-right">
+  <li><a href="/">Home</a></li>
+  <li><a href="/blog/">Blog</a></li>
+</ul>
+  </nav>
+</div>
+
+  </div>
+</div>
+    </header>
+
+    
+
+    <div class="grid-wrapper">
+      <div class="grid grid-center">
+        
+        <div class="grid__item two-thirds lap-one-whole palm-one-whole">
+        
+
+          <article class="post">
+  <header>
+  
+  <h1 class="title indent">Seamless migration from monolithic application to Finagle services (Part 2/2)</h1>
+  
+
+  
+  <div class="meta clearfix">
+    
+
+
+
+
+
+
+
+
+  
+
+
+<time class="pull-left" datetime="2014-04-09T22:03:45-04:00" pubdate data-updated="true"><i class="icon-calendar"></i> Apr 9<span>th</span>, 2014</time>
+    
+
+  <div class="pull-left">
+    <i class="icon-tags"></i>
+    <ul class="tags unstyled">
+    
+      
+        <li><a class='category' href='/blog/categories/cloud/'>cloud</a></li>
+      
+        <li><a class='category' href='/blog/categories/finagle/'>finagle</a></li>
+      
+        <li><a class='category' href='/blog/categories/micro-services/'>micro-services</a></li>
+      
+        <li><a class='category' href='/blog/categories/scala/'>scala</a></li>
+      
+        <li><a class='category' href='/blog/categories/zookeper/'>zookeper</a></li>
+      
+    
+    </ul>
+  </div>
+
+    
+      <a class="pull-right" href="#disqus_thread">
+        Comments <i class="icon-comment"></i>
+      </a>
+    
+  </div>
+  
+</header>
+
+
+
+
+  <h3>Synopsis</h3>
 
 <blockquote><p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/finagled-movie-db">Github</a></p></blockquote>
 
@@ -29,7 +121,7 @@ However it can be difficult if data model is already defined, and services acces
 
 <h2>[Part 2/2] Spit application to distributed services</h2>
 
-<p>Go to <a href="http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1">Part 1</a> where fancy movie database application defined.</p>
+<p>Go to <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1">Part 1</a> where fancy movie database application defined.</p>
 
 <h3>What is Finagle</h3>
 
@@ -497,422 +589,167 @@ But with Finagle server-side part of application can be scaled independently, an
 
 <p>Finagle has amazing cluster discovery support, built on top of Zookeeper and ServerGroups, and it&rsquo;s perfect choice for cloud environment.</p>
 
-<h2><a href="http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1">&lt;&lt;&lt; Go to Part 1</a></h2>
-]]></content>
-  </entry>
+<h2><a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1">&lt;&lt;&lt; Go to Part 1</a></h2>
+
+
+</article>
+
+ 
+<section id="disqus">
+  <h1 class="indent title">Comments</h1>
+  <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+</section>
+
+
+        </div>
+
+        
+        <aside id="sidebar" class="grid__item one-third lap-one-whole palm-one-whole">
+          <div class="grid">
+
   
-  <entry>
-    <title type="html"><![CDATA[Seamless migration from monolithic application to Finagle services (Part 1/2)]]></title>
-    <link href="http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1/"/>
-    <updated>2014-04-09T22:03:45-04:00</updated>
-    <id>http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1</id>
-    <content type="html"><![CDATA[<h3>Synopsis</h3>
-
-<blockquote><p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/finagled-movie-db">Github</a></p></blockquote>
-
-<p>Distributed micro-services architecture is hot trend right now, it&rsquo;s widely adopted by <a href="https://blog.twitter.com/2011/finagle-a-protocol-agnostic-rpc-system">Twitter</a>, <a href="https://engineering.linkedin.com/architecture/restli-restful-service-architecture-scale">LinkedIn</a> and <a href="http://www.slideshare.net/LappleApple/gilt-from-monolith-ruby-app-to-micro-service-scala-service-architecture">Gilt</a>.
-However it can be difficult if data model is already defined, and services accessed via existing API throughout all your code. I’ll show how it&rsquo;s possible to split monoliths app into standalone services built with Finagle and SBinary for custom communication protocol.</p>
-
-<p>I&rsquo;m going to show it on example of small Fancy Movie Database application.</p>
-
-<h2>[Part 1] Fancy Movie Database application</h2>
-
-<p>Go to <a href="http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2">Part 2</a> where fancy movie database application is divided into server and client using Finagle.</p>
-
-<!-- more -->
+<section class="social aside-module grid__item one-whole lap-one-half">
+  <h1 class="title delta">
+    Contact me
+  </h1>
+  <ul class="unstyled">
+    
+    
+    <li><a class="github" href="//github.com/ezhulenev"><i class="icon-github"></i> Github</a></li>
+    
+    
+    <li><a class="linkedin" href="//linkedin.com/in/eugenezhulenev"><i class="icon-linkedin-sign"></i> LinkedIn</a></li>
+    
+    
+    
+    
+  </ul>
+</section>
 
 
-<h3>Data model</h3>
+  <section id="recent-posts" class="aside-module grid__item one-whole lap-one-half">
+  <h1 class="title delta">Recent Posts</h1>
+  <ul class="divided">
+    
+      <li class="post">
+        <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/">Seamless migration from monolithic application to Finagle services (Part 2/2)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1/">Seamless migration from monolithic application to Finagle services (Part 1/2)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/04/01/scalaz-stream-concurrent-process/">Scalaz-Stream: Feed `Process` through the given effectful `Channel` concurrently</a>
+      </li>
+    
+  </ul>
+</section>
 
-<p>Let&rsquo;s start with application data model definition:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">sealed</span> <span class="k">trait</span> <span class="nc">Genre</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">object</span> <span class="nc">Genre</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">object</span> <span class="nc">Action</span>      <span class="k">extends</span> <span class="nc">Genre</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">object</span> <span class="nc">Adventure</span>   <span class="k">extends</span> <span class="nc">Genre</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">object</span> <span class="nc">Animation</span>   <span class="k">extends</span> <span class="nc">Genre</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">object</span> <span class="nc">Biography</span>   <span class="k">extends</span> <span class="nc">Genre</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">object</span> <span class="nc">Comedy</span>      <span class="k">extends</span> <span class="nc">Genre</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">object</span> <span class="nc">Crime</span>       <span class="k">extends</span> <span class="nc">Genre</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">object</span> <span class="nc">Documentary</span> <span class="k">extends</span> <span class="nc">Genre</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">object</span> <span class="nc">Drama</span>       <span class="k">extends</span> <span class="nc">Genre</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">object</span> <span class="nc">Thriller</span>    <span class="k">extends</span> <span class="nc">Genre</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">object</span> <span class="nc">Western</span>     <span class="k">extends</span> <span class="nc">Genre</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Person</span><span class="o">(</span><span class="n">firstName</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">secondName</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">born</span><span class="k">:</span> <span class="kt">LocalDate</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Cast</span><span class="o">(</span><span class="n">person</span><span class="k">:</span> <span class="kt">Person</span><span class="o">,</span> <span class="n">as</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Movie</span><span class="o">(</span><span class="n">title</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span>
-</span><span class='line'>                 <span class="n">genre</span><span class="k">:</span> <span class="kt">Genre</span><span class="o">,</span>
-</span><span class='line'>                 <span class="n">year</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span>
-</span><span class='line'>                 <span class="n">directedBy</span><span class="k">:</span> <span class="kt">Person</span><span class="o">,</span>
-</span><span class='line'>                 <span class="n">cast</span><span class="k">:</span> <span class="kt">Vector</span><span class="o">[</span><span class="kt">Cast</span><span class="o">])</span>
-</span></code></pre></td></tr></table></div></figure>
+<section id="github-repos" class="aside-module grid__item one-whole lap-one-half">
+  <h1 class="title delta">
+    GitHub Repos
+    
+    <small class="pull-right">
+      <a class="btn" href="//github.com/ezhulenev" title="@ezhulenev on GitHub" target="_blank">
+        <i class="icon-external-link"></i>
+      </a>
+    </small>
+    
+  </h1>
+  <ul id="gh_repos" class="divided">
+    <li class="loading">
+      <i class="icon-spinner icon-spin"></i>
+    </li>
+  </ul>
+</section>
 
 
-<h3>Services definition</h3>
-
-<p>And services that we want to provide:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">trait</span> <span class="nc">PeopleService</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">def</span> <span class="n">people</span><span class="o">()</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">Vector</span><span class="o">[</span><span class="kt">Person</span><span class="o">]]</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">trait</span> <span class="nc">MoviesService</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">def</span> <span class="n">movies</span><span class="o">()</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">Vector</span><span class="o">[</span><span class="kt">Movie</span><span class="o">]]</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">def</span> <span class="n">movies</span><span class="o">(</span><span class="n">year</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">Vector</span><span class="o">[</span><span class="kt">Movie</span><span class="o">]]</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">def</span> <span class="n">movies</span><span class="o">(</span><span class="n">genre</span><span class="k">:</span> <span class="kt">Genre</span><span class="o">)</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">Vector</span><span class="o">[</span><span class="kt">Movie</span><span class="o">]]</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">def</span> <span class="n">movies</span><span class="o">(</span><span class="n">person</span><span class="k">:</span> <span class="kt">Person</span><span class="o">)</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">Vector</span><span class="o">[</span><span class="kt">Movie</span><span class="o">]]</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
 
 
-<h3>Mock data access layer</h3>
+</div>
 
-<p>In real application we probably would have SQL database or some other type of storage with movies data.
-Let&rsquo;s assume that this storage is <code>blocking resource</code>, and quite expensive to access.
-However for this example application I will use small in-memory mock implementation of access layer with only two movies directed by <a href="http://www.imdb.com/name/nm0000233/">Quentin Tarantino</a>: <a href="http://www.imdb.com/title/tt1853728/?ref_=nm_flmg_dr_3">Django Unchained</a>, and <a href="http://www.imdb.com/title/tt0361748/?ref_=nm_flmg_dr_4">Inglourious Basterds</a></p>
+        </aside>
+        
+      </div>
+    </div>
 
-<blockquote><p>Source code for access layer on Github: <a href="https://github.com/ezhulenev/finagled-movie-db/blob/master/core/src/main/scala/com/fmdb/MovieDatabaseAccess.scala">MovieDatabaseAccess.scala</a></p></blockquote>
+    <footer>
+      <div class="grid-wrapper">
+  <div class="grid">
+    <div class="grid__item">
+      <p class="copyright">
+  All content by Eugene Zhulenev and licenced under <a href="//creativecommons.org/licenses/by-nc-sa/3.0/ie/">Creative Commons</a>.<br>
+  Code under <a href="//github.com/coogie/oscailte/blob/master/README.md">MIT Licence</a>.
+</p>
+    </div>
+  </div>
+</div>
 
-<h3>Let&rsquo;s be reactive</h3>
+    </footer>
 
-<p>I hope we all agree that applications needs to be <code>reactive</code>, that&rsquo;s why I&rsquo;m wrapping <code>blocking</code> calls into <code>scala.concurrent.future</code>.</p>
+    <!--[if lt IE 7]>
+      <p class="chromeframe">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">activate Google Chrome Frame</a> to improve your experience.</p>
+    <![endif]-->
 
-<p>Straightforward services layer implementation:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">package</span> <span class="nn">object</span> <span class="n">monolithic</span> <span class="o">{</span>
-</span><span class='line'><span class="k">trait</span> <span class="nc">PeopleServiceImpl</span> <span class="k">extends</span> <span class="nc">PeopleService</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">override</span> <span class="k">def</span> <span class="n">people</span><span class="o">()</span> <span class="k">=</span>
-</span><span class='line'>       <span class="n">future</span> <span class="o">{</span> <span class="nc">MovieDatabaseAccess</span><span class="o">.</span><span class="n">people</span><span class="o">()</span> <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">trait</span> <span class="nc">MoviesServiceImpl</span> <span class="k">extends</span> <span class="nc">MoviesService</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">override</span> <span class="k">def</span> <span class="n">movies</span><span class="o">(</span><span class="n">person</span><span class="k">:</span> <span class="kt">Person</span><span class="o">)</span> <span class="k">=</span>
-</span><span class='line'>       <span class="n">future</span> <span class="o">{</span> <span class="nc">MovieDatabaseAccess</span><span class="o">.</span><span class="n">movies</span><span class="o">(</span><span class="n">person</span><span class="o">)</span> <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">override</span> <span class="k">def</span> <span class="n">movies</span><span class="o">(</span><span class="n">genre</span><span class="k">:</span> <span class="kt">Genre</span><span class="o">)</span> <span class="k">=</span>
-</span><span class='line'>       <span class="n">future</span> <span class="o">{</span> <span class="nc">MovieDatabaseAccess</span><span class="o">.</span><span class="n">movies</span><span class="o">(</span><span class="n">genre</span><span class="o">)</span> <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">override</span> <span class="k">def</span> <span class="n">movies</span><span class="o">(</span><span class="n">year</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span> <span class="k">=</span>
-</span><span class='line'>       <span class="n">future</span> <span class="o">{</span> <span class="nc">MovieDatabaseAccess</span><span class="o">.</span><span class="n">movies</span><span class="o">(</span><span class="n">year</span><span class="o">)</span> <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">override</span> <span class="k">def</span> <span class="n">movies</span><span class="o">()</span> <span class="k">=</span>
-</span><span class='line'>       <span class="n">future</span> <span class="o">{</span> <span class="nc">MovieDatabaseAccess</span><span class="o">.</span><span class="n">movies</span><span class="o">()</span> <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+<script src="//crypto-js.googlecode.com/svn/tags/3.1.2/build/rollups/md5.js"></script>
+<script defer src="/javascripts/octopress.js"></script>
 
 
-<h3>Let&rsquo;s combine it together</h3>
-
-<p>After model and services are defined, and basic implementation is provided we can build simple application for querying Fancy Movies Database.</p>
-
-<p>Let&rsquo;s find all movies with Leonardo DiCaprio:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">object</span> <span class="nc">MonolithicExample</span> <span class="k">extends</span> <span class="nc">App</span> <span class="o">{</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="c1">// Lets create services</span>
-</span><span class='line'>  <span class="k">object</span> <span class="nc">Services</span> <span class="k">extends</span> <span class="nc">PeopleServiceImpl</span> <span class="k">with</span> <span class="nc">MoviesServiceImpl</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="c1">// Lets&#39; get all movies for Leonardo DiCaprio</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">leo</span> <span class="k">=</span> <span class="nc">Await</span><span class="o">.</span>
-</span><span class='line'>    <span class="n">result</span><span class="o">(</span><span class="nc">Services</span><span class="o">.</span><span class="n">people</span><span class="o">(),</span> <span class="mf">1.</span><span class="n">second</span><span class="o">).</span><span class="n">find</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">firstName</span> <span class="o">==</span> <span class="s">&quot;Leonardo&quot;</span><span class="o">).</span><span class="n">get</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">val</span> <span class="n">leoMovies</span> <span class="k">=</span> <span class="nc">Await</span><span class="o">.</span>
-</span><span class='line'>    <span class="n">result</span><span class="o">(</span><span class="nc">Services</span><span class="o">.</span><span class="n">movies</span><span class="o">(</span><span class="n">leo</span><span class="o">),</span> <span class="mf">1.</span><span class="n">second</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;Movies with ${leo.firstName} ${leo.secondName}:&quot;</span><span class="o">)</span>
-</span><span class='line'>  <span class="n">leoMovies</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">m</span> <span class="k">=&gt;</span> <span class="n">s</span><span class="s">&quot; - ${m.title}, ${m.year}&quot;</span><span class="o">).</span><span class="n">foreach</span><span class="o">(</span><span class="n">println</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="c1">// Shutdown</span>
-</span><span class='line'>  <span class="nc">System</span><span class="o">.</span><span class="n">exit</span><span class="o">(</span><span class="mi">0</span><span class="o">)</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
+<script>
+  var _gaq=[['_setAccount','UA-49585535-1'],['_trackPageview']];
+  (function(d,t){var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
+  g.src=('https:'==location.protocol?'//ssl':'//www')+'.google-analytics.com/ga.js';
+  s.parentNode.insertBefore(g,s)}(document,'script'));
+</script>
 
 
-<h5>Output</h5>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>Movies with Leonardo DiCaprio:
-</span><span class='line'> - Django Unchained, 2012</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>Next step</h3>
-
-<p>In next part I&rsquo;m going to divide this application into server and client preserving existing API, such that migration from monolithic application to distributed is completely seamless for <code>service clients</code>.</p>
-
-<h2><a href="http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2">>>> Go to Part 2</a></h2>
-]]></content>
-  </entry>
+<script>
+  var disqus_shortname = 'eugenezhulenev';
   
-  <entry>
-    <title type="html"><![CDATA[Scalaz-Stream: Feed `Process` through the given effectful `Channel` concurrently]]></title>
-    <link href="http://eugenezhulenev.com/blog/2014/04/01/scalaz-stream-concurrent-process/"/>
-    <updated>2014-04-01T22:03:03-04:00</updated>
-    <id>http://eugenezhulenev.com/blog/2014/04/01/scalaz-stream-concurrent-process</id>
-    <content type="html"><![CDATA[<p>Let&rsquo;s assume that we have some input process, and want to run some &lsquo;heavy computation&rsquo; on each element.
-Obviously we want utilize all available cores and use thread pool. However scalaz-stream by default is deterministic
-and in following example all computation steps will run consecutively.</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'>  <span class="k">val</span> <span class="n">timeFormat</span> <span class="k">=</span> <span class="nc">DateTimeFormat</span><span class="o">.</span><span class="n">forPattern</span><span class="o">(</span><span class="s">&quot;HH:mm:ss:SSS&quot;</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">val</span> <span class="n">counter</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">AtomicInteger</span><span class="o">(</span><span class="mi">0</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="c1">// ThreadPool for running effectful functions</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">executor</span> <span class="k">=</span> <span class="nc">Executors</span><span class="o">.</span><span class="n">newFixedThreadPool</span><span class="o">(</span><span class="mi">3</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="c1">// channel of effectful functions</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">effectfulChannel</span> <span class="k">=</span> <span class="n">channel</span><span class="o">[</span><span class="kt">Int</span>, <span class="kt">Int</span><span class="o">]</span> <span class="o">{</span>
-</span><span class='line'>    <span class="n">in</span> <span class="k">=&gt;</span> <span class="nc">Task</span> <span class="o">{</span>
-</span><span class='line'>      <span class="k">val</span> <span class="n">taskN</span> <span class="k">=</span> <span class="n">counter</span><span class="o">.</span><span class="n">incrementAndGet</span><span class="o">()</span>
-</span><span class='line'>
-</span><span class='line'>      <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;${Thread.currentThread().getName}: &quot;</span> <span class="o">+</span>
-</span><span class='line'>        <span class="n">s</span><span class="s">&quot;Run for $in, &quot;</span> <span class="o">+</span>
-</span><span class='line'>        <span class="n">s</span><span class="s">&quot;TaskN = $taskN &quot;</span> <span class="o">+</span>
-</span><span class='line'>        <span class="n">s</span><span class="s">&quot;(time = ${timeFormat.print(System.currentTimeMillis())})&quot;</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>      <span class="c1">// Long running computation</span>
-</span><span class='line'>      <span class="k">val</span> <span class="n">computed</span> <span class="k">=</span> <span class="o">{</span>
-</span><span class='line'>        <span class="nc">Thread</span><span class="o">.</span><span class="n">sleep</span><span class="o">(</span><span class="mi">1000</span><span class="o">)</span>
-</span><span class='line'>        <span class="n">in</span> <span class="o">*</span> <span class="n">in</span>
-</span><span class='line'>      <span class="o">}</span>
-</span><span class='line'>      <span class="n">computed</span>
-</span><span class='line'>    <span class="o">}(</span><span class="n">executor</span><span class="o">)</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">val</span> <span class="n">start</span> <span class="k">=</span> <span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">()</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">output</span> <span class="k">=</span> <span class="nc">Process</span><span class="o">.</span><span class="n">range</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">11</span><span class="o">).</span><span class="n">through</span><span class="o">(</span><span class="n">effectfulChannel</span><span class="o">).</span><span class="n">runLog</span><span class="o">.</span><span class="n">run</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">end</span> <span class="k">=</span> <span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">()</span>
-</span><span class='line'>  <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;Output = $output, in ${end-start} ms&quot;</span><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>Deterministic Output</h3>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>pool-1-thread-1: Run for 1, TaskN = 1   (time = 22:59:14:720)
-</span><span class='line'>pool-1-thread-2: Run for 2, TaskN = 2   (time = 22:59:15:811)
-</span><span class='line'>pool-1-thread-3: Run for 3, TaskN = 3   (time = 22:59:16:813)
-</span><span class='line'>pool-1-thread-3: Run for 4, TaskN = 4   (time = 22:59:17:815)
-</span><span class='line'>pool-1-thread-3: Run for 5, TaskN = 5   (time = 22:59:18:817)
-</span><span class='line'>pool-1-thread-3: Run for 6, TaskN = 6   (time = 22:59:19:818)
-</span><span class='line'>pool-1-thread-3: Run for 7, TaskN = 7   (time = 22:59:20:819)
-</span><span class='line'>pool-1-thread-3: Run for 8, TaskN = 8   (time = 22:59:21:821)
-</span><span class='line'>pool-1-thread-3: Run for 9, TaskN = 9   (time = 22:59:22:822)
-</span><span class='line'>pool-1-thread-3: Run for 10, TaskN = 10 (time = 22:59:23:823)
-</span><span class='line'>Output = Vector(1, 4, 9, 16, 25, 36, 49, 64, 81, 100), in 10196 ms</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>Concurrent Process</h3>
-
-<p>To run effectful functions concurrently, with controlled number of queued tasks we can use <code>scalaz.stream.merge.mergeN</code> which is for now available only in <code>snapshot-0.4</code>.</p>
-
-<!-- more -->
-
-
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'>  <span class="k">val</span> <span class="n">P</span> <span class="k">=</span> <span class="n">scalaz</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="nc">Process</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">implicit</span> <span class="k">class</span> <span class="nc">ConcurrentProcess</span><span class="o">[</span><span class="kt">O</span><span class="o">](</span><span class="k">val</span> <span class="n">process</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">O</span><span class="o">])</span> <span class="o">{</span>
-</span><span class='line'>    <span class="cm">/**</span>
-</span><span class='line'><span class="cm">     * Run process through channel with given level of concurrency</span>
-</span><span class='line'><span class="cm">     */</span>
-</span><span class='line'>    <span class="k">def</span> <span class="n">concurrently</span><span class="o">[</span><span class="kt">O2</span><span class="o">](</span><span class="n">concurrencyLevel</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span>
-</span><span class='line'>                        <span class="o">(</span><span class="n">f</span><span class="k">:</span> <span class="kt">Channel</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">O</span>, <span class="kt">O2</span><span class="o">])</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">O2</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
-</span><span class='line'>      <span class="k">val</span> <span class="n">actions</span> <span class="k">=</span>
-</span><span class='line'>        <span class="n">process</span><span class="o">.</span>
-</span><span class='line'>          <span class="n">zipWith</span><span class="o">(</span><span class="n">f</span><span class="o">)((</span><span class="n">data</span><span class="o">,</span> <span class="n">f</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">f</span><span class="o">(</span><span class="n">data</span><span class="o">))</span>
-</span><span class='line'>
-</span><span class='line'>      <span class="k">val</span> <span class="n">nestedActions</span> <span class="k">=</span>
-</span><span class='line'>        <span class="n">actions</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">P</span><span class="o">.</span><span class="n">eval</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>      <span class="n">merge</span><span class="o">.</span><span class="n">mergeN</span><span class="o">(</span><span class="n">concurrencyLevel</span><span class="o">)(</span><span class="n">nestedActions</span><span class="o">)</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>  <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'>  <span class="k">val</span> <span class="n">output</span> <span class="k">=</span> <span class="nc">Process</span><span class="o">.</span><span class="n">range</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">11</span><span class="o">)</span>
-</span><span class='line'>               <span class="o">.</span><span class="n">concurrently</span><span class="o">(</span><span class="mi">5</span><span class="o">)(</span><span class="n">effectfulChannel</span><span class="o">).</span><span class="n">runLog</span><span class="o">.</span><span class="n">run</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>Concurrent Process Output</h3>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>pool-1-thread-1: Run for 1, TaskN = 1 (time = 12:00:15:625)
-</span><span class='line'>pool-1-thread-3: Run for 3, TaskN = 3 (time = 12:00:15:626)
-</span><span class='line'>pool-1-thread-2: Run for 2, TaskN = 2 (time = 12:00:15:626)
-</span><span class='line'>pool-1-thread-3: Run for 4, TaskN = 4 (time = 12:00:16:683)
-</span><span class='line'>pool-1-thread-1: Run for 5, TaskN = 5 (time = 12:00:16:683)
-</span><span class='line'>pool-1-thread-2: Run for 6, TaskN = 6 (time = 12:00:16:693)
-</span><span class='line'>pool-1-thread-3: Run for 7, TaskN = 7 (time = 12:00:17:684)
-</span><span class='line'>pool-1-thread-1: Run for 8, TaskN = 8 (time = 12:00:17:684)
-</span><span class='line'>pool-1-thread-2: Run for 9, TaskN = 9 (time = 12:00:17:694)
-</span><span class='line'>pool-1-thread-3: Run for 10, TaskN = 10 (time = 12:00:18:685)
-</span><span class='line'>Output = Vector(4, 9, 1, 25, 16, 36, 49, 64, 81, 100), in 4234 ms</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>Result</h3>
-
-<p>As you can see in second case computations run concurrently and total time spent is much smaller, and final result is the same, as expected.</p>
-
-<p>Full code for this post is available in <a href="https://gist.github.com/ezhulenev/9916972">Gist</a>.</p>
-]]></content>
-  </entry>
+    
+    // var disqus_developer = 1;
+    var disqus_identifier = 'http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/';
+    var disqus_url = 'http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/';
+    var disqus_script = 'embed.js';
   
-</feed>
+  (function () {
+    var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+    dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+  }());
+</script>
+
+
+
+
+<script>
+  $(document).ready(function(){
+    if (!window.jXHR){
+      var jxhr = document.createElement('script');
+      jxhr.type = 'text/javascript';
+      jxhr.src = '/javascripts/libs/jXHR.js';
+      var s = document.getElementsByTagName('script')[0];
+      s.parentNode.insertBefore(jxhr, s);
+    }
+
+    github.showRepos({
+      user: 'ezhulenev',
+      count: 0,
+      skip_forks: true,
+      target: '#gh_repos'
+    });
+  });
+</script>
+<script src="/javascripts/github.js"></script>
+
+
+
+
+
+
+  </body>
+</html>
