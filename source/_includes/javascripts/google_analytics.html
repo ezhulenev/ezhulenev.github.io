@@ -5,4 +5,18 @@
   g.src=('https:'==location.protocol?'//ssl':'//www')+'.google-analytics.com/ga.js';
   s.parentNode.insertBefore(g,s)}(document,'script'));
 </script>
+
+<script>
+  $(document).ready(function(){
+    $('a.github').attr('target','_blank');
+    $('a.github').on('click', function() {
+       _gaq.push(['_trackEvent', 'ContactMe', 'Click', 'Github']);
+    });
+
+    $('a.linkedin').attr('target','_blank');
+    $('a.linkedin').on('click', function() {
+       _gaq.push(['_trackEvent', 'ContactMe', 'Click', 'LinkedIn']);
+    });
+   });
+</script>
 {% endif %}
