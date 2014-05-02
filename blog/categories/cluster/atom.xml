@@ -4,7 +4,7 @@
   <title><![CDATA[Category: cluster | Eugene Zhulenev Blog]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/cluster/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2014-05-02T17:06:29-04:00</updated>
+  <updated>2014-05-02T17:07:51-04:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -14,7 +14,7 @@
 
   
   <entry>
-    <title type="html"><![CDATA[Akka Cluster for Value-at-Risk calculation (Part 2/2)]]></title>
+    <title type="html"><![CDATA[Akka Cluster for Value at Risk calculation (Part 2/2)]]></title>
     <link href="http://eugenezhulenev.com/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2/"/>
     <updated>2014-05-01T22:03:45-04:00</updated>
     <id>http://eugenezhulenev.com/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2</id>
@@ -538,7 +538,7 @@ And scalaz-stream is very nice and super powerful library, I strongly encourage 
   </entry>
   
   <entry>
-    <title type="html"><![CDATA[Akka Cluster for Value-at-Risk calculation (Part 1/2)]]></title>
+    <title type="html"><![CDATA[Akka Cluster for Value at Risk calculation (Part 1/2)]]></title>
     <link href="http://eugenezhulenev.com/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1/"/>
     <updated>2014-05-01T22:03:45-04:00</updated>
     <id>http://eugenezhulenev.com/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1</id>
