@@ -3,8 +3,8 @@ layout: post
 title: "Akka Cluster for Value at Risk calculation (Part 2/2)"
 date: 2014-05-01 22:03:45 -0400
 comments: true
-categories: [scala, akka, cluster, value-at-risk, grid]
-keywords: scala, akka, cluster, value-at-risk, grid, grid-computing
+categories: [scala, akka, cluster, value-at-risk, grid, scalaz-stream]
+keywords: scala, akka, cluster, value-at-risk, grid, grid-computing, scalaz-stream
 ---
 
 ### Synopsis
