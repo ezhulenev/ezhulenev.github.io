@@ -4,7 +4,7 @@
   <title><![CDATA[Category: scala | Eugene Zhulenev Blog]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/scala/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2014-05-02T17:04:59-04:00</updated>
+  <updated>2014-05-02T17:06:29-04:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -30,6 +30,9 @@ In Part 1 I&rsquo;m describing the problem and <code>single-node</code> solution
 <h2>[Part 2/2] Scale-out VaR calculation to multiple nodes</h2>
 
 <p>Go to <a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1">Part 1</a> where Value at Risk calculator defined.</p>
+
+<!-- more -->
+
 
 <h3>Akka Cluster</h3>
 
