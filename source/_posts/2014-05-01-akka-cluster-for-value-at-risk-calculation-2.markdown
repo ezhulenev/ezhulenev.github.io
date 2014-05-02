@@ -21,6 +21,8 @@ In Part 1 I'm describing the problem and `single-node` solution, and in Part 2 I
 
 Go to [Part 1](/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1) where Value at Risk calculator defined.
 
+<!-- more -->
+
 ### Akka Cluster
 
 Akka is amazing library for Actors abstraction for Scala and Java.
