@@ -3,13 +3,13 @@
 # ----------------------- #
 
 url: http://eugenezhulenev.com
-title: Eugene Zhulenev Blog
+title: Eugene Zhulenev
 site.email: evgeny.zhulenev@gmail.com
-subtitle: Tech blog
+subtitle: Java, Scala, Finance, Engineering Big Data plarform at <a href="http://pellucid.com">Pellucid Analytics</a>
 author: Eugene Zhulenev
 simple_search: https://www.google.com/search
 description: My contribution to opensource
-keywords: scala,scalaz,scalaz-stream
+keywords: scala,scalaz,scalaz-stream,big data,spark,cassanrda,hbase,hadoop,machine learning
 
 # Default date format is "ordinal" (resulting in "July 22nd 2007")
 # You can customize the format as defined in
