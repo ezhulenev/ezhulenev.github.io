@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[Category: scalaz | Eugene Zhulenev Blog]]></title>
+  <title><![CDATA[Category: Scalaz | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/scalaz/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2014-10-01T23:37:32-04:00</updated>
+  <updated>2014-10-03T21:42:46-04:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -14,7 +14,7 @@
 
   
   <entry>
-    <title type="html"><![CDATA[Scalaz-Stream: Feed `Process` through the given effectful `Channel` concurrently]]></title>
+    <title type="html"><![CDATA[Scalaz-Stream: Feed `Process` Through the Given Effectful `Channel` Concurrently]]></title>
     <link href="http://eugenezhulenev.com/blog/2014/04/01/scalaz-stream-concurrent-process/"/>
     <updated>2014-04-01T22:03:03-04:00</updated>
     <id>http://eugenezhulenev.com/blog/2014/04/01/scalaz-stream-concurrent-process</id>
