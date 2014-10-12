@@ -46,6 +46,14 @@ that people this about them as comparable companies. In this post I'll show how 
 with Spark, Spark Streaming and Cassandra. We use only Twitter live stream data for now, accessing high quality news data is
 a bit more complicated problem.
 
+Let's take for example this tweet from CNN:
+
+<blockquote class="twitter-tweet" lang="en"><p>Trying to spot the next <a href="https://twitter.com/search?q=%24FB&amp;src=ctag">$FB</a> or <a href="https://twitter.com/search?q=%24TWTR&amp;src=ctag">$TWTR</a>? These 10 startups are worth keeping an eye on <a href="http://t.co/FEKNtm7QqB">http://t.co/FEKNtm7QqB</a></p>&mdash; CNN Public Relations (@CNNPR) <a href="https://twitter.com/CNNPR/status/518083527863435264">October 3, 2014</a></blockquote>
+<script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+From this tweet we can derive 2 mentions for 2 companies. For Facebook it will be Twitter and vice-versa. If we collect
+tweets for all companies over some period of time, and take a ratio of joint appearance in same tweet as a
+measure of "similarity", we can build comparable company recommendations based on this measure.
 
 ### Data Model
 
