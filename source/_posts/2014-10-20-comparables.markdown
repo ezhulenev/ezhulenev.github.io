@@ -22,7 +22,7 @@ central to this business.
 We faced with a problem of finding scalable solution to establish a peer group for any company.
 
 
-### Approaches that we tried
+### Approaches That We Tried
 
 #### Company Industry
 
@@ -49,8 +49,9 @@ a bit more complicated problem.
 
 ### Data Model
 
-We use Cassandra to store all mentions, aggregates and recommendations. We use [Phantom DSL](https://github.com/websudos/phantom)
-for scala to define Cassandra schema and build services.
+We use [Cassandra](http://cassandra.apache.org/) to store all mentions, aggregates and final recommendations.
+We use [Phantom DSL](https://github.com/websudos/phantom) for scala to define schema
+and for most of Cassandra operations (spark integration is not yet supported in Phantom).
 
 {% codeblock lang:scala %}
 /**
@@ -80,9 +81,196 @@ sealed class MentionRecord extends CassandraTable[MentionRecord, Mention] with S
 }
 {% endcodeblock %}
 
+{% codeblock lang:scala %}
+/**
+ * Count mentions for each ticker pair
+ *
+ * @param ticker        ticker of focus company
+ * @param mentionedWith mentioned with this ticker
+ * @param count         number of mentions
+ */
+case class MentionsAggregate(ticker: Ticker, mentionedWith: Ticker, count: Long)
 
-### Spark Job For Aggregation and Recommendation
+sealed class MentionsAggregateRecord extends CassandraTable[MentionsAggregateRecord, MentionsAggregate] {
 
-We use [Datastax Spark Cassandra Connector](https://github.com/datastax/spark-cassandra-connector)
-to read raw mentions data from Cassandra into Spark RDD. After data is available as `RDD[Mention]` we run Spark job
-to build aggregates and later another job to derive recommendations from aggregates.
+  override val tableName: String = "mentions_aggregate"
+
+  object ticker         extends StringColumn (this) with PartitionKey[String]
+  object mentioned_with extends StringColumn (this) with PrimaryKey[String]
+  object counter        extends LongColumn   (this)
+
+  def fromRow(r: Row): MentionsAggregate = {
+    MentionsAggregate(Ticker(ticker(r)), Ticker(mentioned_with(r)), counter(r))
+  }
+}
+{% endcodeblock %}
+
+{% codeblock lang:scala %}
+/**
+ * Recommendation built based on company mentions with other companies
+ *
+ * @param ticker         focus company ticker
+ * @position             recommendation position
+ * @param recommendation recommended company ticker
+ * @param p              number of times recommended company mentioned together
+ *                       with focus company divided by total focus company mentions
+ */
+case class Recommendation(ticker: Ticker, position: Long, recommendation: Ticker, p: Double)
+
+sealed class RecommendationRecord extends CassandraTable[RecommendationRecord, Recommendation] {
+
+  override val tableName: String = "recommendation"
+
+  object ticker         extends StringColumn (this) with PartitionKey[String]
+  object position       extends LongColumn   (this) with PrimaryKey[Long]
+  object recommendation extends StringColumn (this)
+  object p              extends DoubleColumn (this)
+
+  def fromRow(r: Row): Recommendation = {
+    Recommendation(Ticker(ticker(r)), position(r), Ticker(recommendation(r)), p(r))
+  }
+}
+{% endcodeblock %}
+
+
+### Ingest Real-Time Twitter Stream
+
+We use [Spark Streaming](https://spark.apache.org/streaming/) Twitter integration to subscribe for
+real-time twitter updates, then we extract company mentions and put them to Cassandra. Unfortunately Phantom
+doesn't support Spark yet, so we used [Datastax Spark Cassandra Connector](https://github.com/datastax/spark-cassandra-connector)
+with custom type mappers to map from Phantom-record types into Cassandra tables.
+
+{% codeblock lang:scala %}
+class MentionStreamFunctions(@transient stream: DStream[Mention]) extends Serializable {
+
+  import TickerTypeConverter._
+
+  TypeConverter.registerConverter(StringToTickerTypeConverter)
+  TypeConverter.registerConverter(TickerToStringTypeConverter)
+
+  implicit object MentionMapper extends DefaultColumnMapper[Mention](Map(
+    "ticker"        -> "ticker",
+    "source"        -> "source",
+    "sourceId"      -> "source_id",
+    "time"          -> "time",
+    "mentions"      -> "mentions"
+  ))
+
+  def saveMentionsToCassandra(keyspace: String) = {
+    stream.saveToCassandra(keyspace, MentionRecord.tableName)
+  }
+}
+{% endcodeblock %}
+
+
+{% codeblock lang:scala %}
+  private val filters = Companies.load().map(c => s"$$${c.ticker.value}")
+
+  val sc = new SparkContext(sparkConf)
+  val ssc = new StreamingContext(sc, Seconds(2))
+
+  val stream = TwitterUtils.createStream(ssc, None, filters = filters)
+
+  // Save Twitter Stream to cassandra
+  stream.foreachRDD(updates => log.info(s"Received Twitter stream updates. Count: ${updates.count()}"))
+  stream.extractMentions.saveMentionsToCassandra(keySpace)
+
+  // Start Streaming Application
+  ssc.start()
+{% endcodeblock %}
+
+
+### Spark For Aggregation and Recommendation
+
+To come up with comparable company recommendation we use 2-step process.
+
+##### 1. Count mentions for each pair of tickers
+
+After `Mentions` table loaded in Spark as `RDD[Mention]` we extract pairs of tickers,
+and it enables bunch of aggregate and reduce functions from Spark `PairRDDFunctions`.
+With `aggregateByKey` and given combine functions we efficiently build counter map `Map[Ticker, Long]` for each
+ticker distributed in cluster. From single `Map[Ticker, Long]` we emit multiple aggregates for each ticket pair.
+
+{% codeblock lang:scala %}
+class AggregateMentions(@transient sc: SparkContext, keyspace: String)
+  extends CassandraMappers with Serializable {
+
+  private type Counter = Map[Ticker, Long]
+
+  private implicit lazy val summ = Semigroup.instance[Long](_ + _)
+
+  private lazy val seqOp: (Counter, Ticker) => Counter = {
+    case (counter, ticker) if counter.isDefinedAt(ticker) => counter.updated(ticker, counter(ticker) + 1)
+    case (counter, ticker) => counter + (ticker -> 1)
+  }
+
+  private lazy val combOp: (Counter, Counter) => Counter = {
+    case (l, r) => implicitly[Monoid[Counter]].append(l, r)
+  }
+
+  def aggregate(): Unit = {
+    // Emit pairs of (Focus Company Ticker, Mentioned With)
+    val pairs = sc.cassandraTable[Mention](keyspace, MentionRecord.tableName).
+      flatMap(mention => mention.mentions.map((mention.ticker, _)))
+
+    // Calculate mentions for each ticker
+    val aggregated = pairs.aggregateByKey(Map.empty[Ticker, Long])(seqOp, combOp)
+
+    // Build MentionsAggregate from counters
+    val mentionsAggregate = aggregated flatMap {
+      case (ticker, counter) => counter map {
+        case (mentionedWith, count) => MentionsAggregate(ticker, mentionedWith, count)
+      }
+    }
+
+    mentionsAggregate.saveToCassandra(keyspace, MentionsAggregateRecord.tableName)
+  }
+}
+{% endcodeblock %}
+
+##### 2. Sort aggregates and build recommendations
+
+After aggregates computed, we sort them globally and then group them by key (Ticker). After
+all aggregates grouped we produce `Recommendation` in single traverse distributed for each key.
+
+{% codeblock lang:scala %}
+class Recommend(@transient sc: SparkContext, keyspace: String) extends CassandraMappers with Serializable {
+  private def toRecommendation: (MentionsAggregate, Int) => Recommendation = {
+    var totalMentions: Option[Long] = None
+
+    {
+      case (aggregate, idx) if totalMentions.isEmpty =>
+        totalMentions = Some(aggregate.count)
+        Recommendation(aggregate.ticker, idx, aggregate.mentionedWith, 1)
+
+      case (aggregate, idx) =>
+        Recommendation(aggregate.ticker, idx, aggregate.mentionedWith, aggregate.count.toDouble / totalMentions.get)
+    }
+  }
+
+  def recommend(): Unit = {
+    val aggregates = sc.
+               cassandraTable[MentionsAggregate](keyspace, MentionsAggregateRecord.tableName).
+               sortBy(_.count, ascending = false)
+
+    val recommendations = aggregates.
+      groupBy(_.ticker).
+      mapValues(_.zipWithIndex).
+      flatMapValues(_ map toRecommendation.tupled).values
+
+    recommendations.saveToCassandra(keyspace, RecommendationRecord.tableName)
+  }
+}
+{% endcodeblock %}
+
+
+### Results
+
+You can check comparable company recommendations build from Twitter stream on Pellucid [web site](http://comparables.io.pellucid.com).
+
+Cassandra and Spark works perfectly together and allows to build scalable data-driven applications,
+that super easy to scale out and handle gigabytes and terabytes of data. In this particular case, it's
+probably an overkill. Twitter doesn't have enough finance-related activity to produce serious load. However it's easy to
+extend this application and add other streams: Bloomberg News Feed, Thompson Reuters, etc.
+
+> The code for this application app can be found on [Github](https://github.com/pellucidanalytics/hackday)
