@@ -1,0 +1,27 @@
+/* overrides of the lousy styles from _syntax.scss */
+.CodeRay pre {
+  background: none;
+  color: #000;
+}
+
+/* fixes issue where the whole line wouldn't get colored in a diff */
+.CodeRay span.insert, .CodeRay span.change, .CodeRay span.delete {
+  width: auto;
+}
+
+figure.code {
+  -webkit-margin-before: 0;
+  -webkit-margin-after: 0;
+  -webkit-margin-start: 0.8em;
+  -webkit-margin-end: 0.8em;
+}
+
+figure.code {
+  font-size: 0.6em;
+
+  figcaption.code-header {
+  	font-size: 1.3em;
+  }
+}
+
+@import "coderay-github";
