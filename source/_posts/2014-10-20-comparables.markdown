@@ -63,7 +63,7 @@ We use [Cassandra](http://cassandra.apache.org/) to store all mentions, aggregat
 We use [Phantom DSL](https://github.com/websudos/phantom) for scala to define schema
 and for most of Cassandra operations (spark integration is not yet supported in Phantom).
 
-{% codeblock lang:scala %}
+{% coderay lang:groovy %}
 /**
  * Mention of focus company
  *
@@ -89,10 +89,10 @@ sealed class MentionRecord extends CassandraTable[MentionRecord, Mention] with S
     Mention(Ticker(ticker(r)), source(r), source_id(r), time(r), mentions(r) map Ticker)
   }
 }
-{% endcodeblock %}
+{% endcoderay %}
 
 
-{% codeblock lang:scala %}
+{% coderay lang:groovy %}
 /**
  * Count mentions for each ticker pair
  *
@@ -114,9 +114,9 @@ sealed class MentionsAggregateRecord extends CassandraTable[MentionsAggregateRec
     MentionsAggregate(Ticker(ticker(r)), Ticker(mentioned_with(r)), counter(r))
   }
 }
-{% endcodeblock %}
+{% endcoderay %}
 
-{% codeblock lang:scala %}
+{% coderay lang:groovy %}
 /**
  * Recommendation built based on company mentions with other companies
  *
@@ -141,7 +141,7 @@ sealed class RecommendationRecord extends CassandraTable[RecommendationRecord, R
     Recommendation(Ticker(ticker(r)), position(r), Ticker(recommendation(r)), p(r))
   }
 }
-{% endcodeblock %}
+{% endcoderay %}
 
 
 ### Ingest Real-Time Twitter Stream
@@ -151,7 +151,7 @@ real-time twitter updates, then we extract company mentions and put them to Cass
 doesn't support Spark yet, so we used [Datastax Spark Cassandra Connector](https://github.com/datastax/spark-cassandra-connector)
 with custom type mappers to map from Phantom-record types into Cassandra tables.
 
-{% codeblock lang:scala %}
+{% coderay lang:groovy %}
 class MentionStreamFunctions(@transient stream: DStream[Mention]) extends Serializable {
 
   import TickerTypeConverter._
@@ -171,10 +171,10 @@ class MentionStreamFunctions(@transient stream: DStream[Mention]) extends Serial
     stream.saveToCassandra(keyspace, MentionRecord.tableName)
   }
 }
-{% endcodeblock %}
+{% endcoderay %}
 
 
-{% codeblock lang:scala %}
+{% coderay lang:groovy %}
   private val filters = Companies.load().map(c => s"$$${c.ticker.value}")
 
   val sc = new SparkContext(sparkConf)
@@ -188,7 +188,7 @@ class MentionStreamFunctions(@transient stream: DStream[Mention]) extends Serial
 
   // Start Streaming Application
   ssc.start()
-{% endcodeblock %}
+{% endcoderay %}
 
 
 ### Spark For Aggregation and Recommendation
@@ -202,7 +202,7 @@ and it enables bunch of aggregate and reduce functions from Spark `PairRDDFuncti
 With `aggregateByKey` and given combine functions we efficiently build counter map `Map[Ticker, Long]` for each
 ticker distributed in cluster. From single `Map[Ticker, Long]` we emit multiple aggregates for each ticket pair.
 
-{% codeblock lang:scala %}
+{% coderay lang:groovy %}
 class AggregateMentions(@transient sc: SparkContext, keyspace: String)
   extends CassandraMappers with Serializable {
 
@@ -237,15 +237,17 @@ class AggregateMentions(@transient sc: SparkContext, keyspace: String)
     mentionsAggregate.saveToCassandra(keyspace, MentionsAggregateRecord.tableName)
   }
 }
-{% endcodeblock %}
+{% endcoderay %}
 
 ##### 2. Sort aggregates and build recommendations
 
 After aggregates computed, we sort them globally and then group them by key (Ticker). After
 all aggregates grouped we produce `Recommendation` in single traverse distributed for each key.
 
-{% codeblock lang:scala %}
-class Recommend(@transient sc: SparkContext, keyspace: String) extends CassandraMappers with Serializable {
+{% coderay lang:groovy %}
+class Recommend(@transient sc: SparkContext, keyspace: String)
+  extends CassandraMappers with Serializable {
+
   private def toRecommendation: (MentionsAggregate, Int) => Recommendation = {
     var totalMentions: Option[Long] = None
 
@@ -255,7 +257,9 @@ class Recommend(@transient sc: SparkContext, keyspace: String) extends Cassandra
         Recommendation(aggregate.ticker, idx, aggregate.mentionedWith, 1)
 
       case (aggregate, idx) =>
-        Recommendation(aggregate.ticker, idx, aggregate.mentionedWith, aggregate.count.toDouble / totalMentions.get)
+        Recommendation(aggregate.ticker, idx,
+                       aggregate.mentionedWith,
+                       aggregate.count.toDouble / totalMentions.get)
     }
   }
 
@@ -272,7 +276,7 @@ class Recommend(@transient sc: SparkContext, keyspace: String) extends Cassandra
     recommendations.saveToCassandra(keyspace, RecommendationRecord.tableName)
   }
 }
-{% endcodeblock %}
+{% endcoderay %}
 
 
 ### Results

@@ -50,12 +50,12 @@ rdiscount:
     - smart
 pygments: false # default python pygments have been replaced by pygments.rb
 
-#markdown: kramdown
-#kramdown:
-#  use_coderay: true
-#  coderay:
-#    coderay_line_numbers: nil
-#    coderay_css: class
+markdown: kramdown
+kramdown:
+  use_coderay: true
+  coderay:
+    coderay_line_numbers: nil
+    coderay_css: class
 
 paginate: 10          # Posts per page on the blog index
 pagination_dir: blog  # Directory base for pagination URLs eg. /blog/page/2/
