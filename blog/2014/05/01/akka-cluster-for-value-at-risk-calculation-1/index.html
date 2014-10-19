@@ -123,522 +123,508 @@ for Grid Computing, and &hellip;">
   </header>
 
 
-<div class="entry-content"><h3>Synopsis</h3>
+<div class="entry-content"><h3 id="synopsis">Synopsis</h3>
 
-<blockquote><p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/akka-var-calculation">Github</a></p></blockquote>
+<blockquote>
+  <p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/akka-var-calculation">Github</a></p>
+</blockquote>
 
 <p>Risk Management in finance is one of the most common <a href="http://www.gridgain.com/usecases/risk-management/">case studies</a>
 for Grid Computing, and Value-at-Risk is most widely used risk measure.
-In this article I&rsquo;m going to show how to <code>scale-out</code> Value-at-Risk calculation to multiple nodes with latest <a href="http://akka.io">Akka</a> middleware.
-In Part 1 I&rsquo;m describing the problem and <code>single-node</code> solution, and in Part 2 I&rsquo;m scaling it to multiple nodes.</p>
+In this article I’m going to show how to <code>scale-out</code> Value-at-Risk calculation to multiple nodes with latest <a href="http://akka.io">Akka</a> middleware.
+In Part 1 I’m describing the problem and <code>single-node</code> solution, and in Part 2 I’m scaling it to multiple nodes.</p>
 
-<h2>[Part 1] Introduction to Value at Risk calculation</h2>
+<h2 id="part-1-introduction-to-value-at-risk-calculation">[Part 1] Introduction to Value at Risk calculation</h2>
 
 <p>Go to <a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2">Part 2</a> where VaR calculation scaled-out to multiple nodes.</p>
 
 <!-- more -->
 
+<h3 id="what-is-value-at-risk">What is Value-at-Risk</h3>
 
-<h3>What is Value-at-Risk</h3>
+<blockquote>
+  <p>In financial mathematics and financial risk management, value at risk (VaR) is a widely used risk measure of the risk of loss on a specific portfolio of financial assets. For a given portfolio, probability and time horizon, VaR is defined as a threshold value such that the probability that the mark-to-market loss on the portfolio over the given time horizon exceeds this value (assuming normal markets and no trading in the portfolio) is the given probability level.</p>
+</blockquote>
 
-<blockquote><p>In financial mathematics and financial risk management, value at risk (VaR) is a widely used risk measure of the risk of loss on a specific portfolio of financial assets. For a given portfolio, probability and time horizon, VaR is defined as a threshold value such that the probability that the mark-to-market loss on the portfolio over the given time horizon exceeds this value (assuming normal markets and no trading in the portfolio) is the given probability level.</p></blockquote>
+<p>You can continue with reading amazing set of articles <a href="http://blog.octo.com/en/introduction-to-grid-computing-for-value-at-risk-calculatio/">“Introduction to Grid Computing for Value At Risk calculation”</a> where VaR described in more details
+and explained why it’s a perfect fit for grid computing and spreading calculation across multiple nodes. Also there you can find examples for <a href="http://www.gridgain.com/">GridGain</a> and <a href="http://hadoop.apache.org/">Hadoop</a>. In this article I’m going to use Akka.</p>
 
-<p>You can continue with reading amazing set of articles <a href="http://blog.octo.com/en/introduction-to-grid-computing-for-value-at-risk-calculatio/">&ldquo;Introduction to Grid Computing for Value At Risk calculation&rdquo;</a> where VaR described in more details
-and explained why it&rsquo;s a perfect fit for grid computing and spreading calculation across multiple nodes. Also there you can find examples for <a href="http://www.gridgain.com/">GridGain</a> and <a href="http://hadoop.apache.org/">Hadoop</a>. In this article I&rsquo;m going to use Akka.</p>
+<h3 id="data-model">Data Model</h3>
 
-<h3>Data Model</h3>
+<p>Let’s define simple model for supported instruments:</p>
 
-<p>Let&rsquo;s define simple model for supported instruments:</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">sealed</span> <span class="k">trait</span> <span class="nc">Instrument</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Equity</span><span class="o">(</span><span class="n">ticker</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Instrument</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">sealed</span> <span class="k">trait</span> <span class="nc">EquityOption</span> <span class="k">extends</span> <span class="nc">Instrument</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">def</span> <span class="n">underlying</span><span class="k">:</span> <span class="kt">Equity</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">CallOption</span><span class="o">(</span>
-</span><span class='line'>           <span class="n">underlying</span><span class="k">:</span> <span class="kt">Equity</span><span class="o">,</span>
-</span><span class='line'>           <span class="n">strike</span><span class="k">:</span> <span class="kt">Double</span><span class="o">,</span>
-</span><span class='line'>           <span class="n">maturity</span><span class="k">:</span> <span class="kt">LocalDate</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">EquityOption</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">PutOption</span><span class="o">(</span>
-</span><span class='line'>           <span class="n">underlying</span><span class="k">:</span> <span class="kt">Equity</span><span class="o">,</span>
-</span><span class='line'>           <span class="n">strike</span><span class="k">:</span> <span class="kt">Double</span><span class="o">,</span>
-</span><span class='line'>           <span class="n">maturity</span><span class="k">:</span> <span class="kt">LocalDate</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">EquityOption</span>
-</span></code></pre></td></tr></table></div></figure>
-
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+<span class="line-number">15</span>
+<span class="line-number">16</span>
+<span class="line-number">17</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">sealed</span> <span class="k">trait</span> <span class="nc">Instrument</span>
+</span><span class="line">
+</span><span class="line"><span class="k">case</span> <span class="k">class</span> <span class="nc">Equity</span><span class="o">(</span><span class="n">ticker</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">Instrument</span>
+</span><span class="line">
+</span><span class="line"><span class="k">sealed</span> <span class="k">trait</span> <span class="nc">EquityOption</span> <span class="k">extends</span> <span class="nc">Instrument</span> <span class="o">{</span>
+</span><span class="line">  <span class="k">def</span> <span class="n">underlying</span><span class="k">:</span> <span class="kt">Equity</span>
+</span><span class="line"><span class="o">}</span>
+</span><span class="line">
+</span><span class="line"><span class="k">case</span> <span class="k">class</span> <span class="nc">CallOption</span><span class="o">(</span>
+</span><span class="line">           <span class="n">underlying</span><span class="k">:</span> <span class="kt">Equity</span><span class="o">,</span>
+</span><span class="line">           <span class="n">strike</span><span class="k">:</span> <span class="kt">Double</span><span class="o">,</span>
+</span><span class="line">           <span class="n">maturity</span><span class="k">:</span> <span class="kt">LocalDate</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">EquityOption</span>
+</span><span class="line">
+</span><span class="line"><span class="k">case</span> <span class="k">class</span> <span class="nc">PutOption</span><span class="o">(</span>
+</span><span class="line">           <span class="n">underlying</span><span class="k">:</span> <span class="kt">Equity</span><span class="o">,</span>
+</span><span class="line">           <span class="n">strike</span><span class="k">:</span> <span class="kt">Double</span><span class="o">,</span>
+</span><span class="line">           <span class="n">maturity</span><span class="k">:</span> <span class="kt">LocalDate</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">EquityOption</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
 <p>and portfolio for which market risk will be calculated:</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'> <span class="k">case</span> <span class="k">class</span> <span class="nc">Position</span><span class="o">(</span><span class="n">instrument</span><span class="k">:</span> <span class="kt">Instrument</span><span class="o">,</span> <span class="n">n</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'> <span class="k">case</span> <span class="k">class</span> <span class="nc">Portfolio</span><span class="o">(</span><span class="n">positions</span><span class="k">:</span> <span class="kt">NonEmptyList</span><span class="o">[</span><span class="kt">Position</span><span class="o">])</span>
-</span></code></pre></td></tr></table></div></figure>
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"> <span class="k">case</span> <span class="k">class</span> <span class="nc">Position</span><span class="o">(</span><span class="n">instrument</span><span class="k">:</span> <span class="kt">Instrument</span><span class="o">,</span> <span class="n">n</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span>
+</span><span class="line">
+</span><span class="line"> <span class="k">case</span> <span class="k">class</span> <span class="nc">Portfolio</span><span class="o">(</span><span class="n">positions</span><span class="k">:</span> <span class="kt">NonEmptyList</span><span class="o">[</span><span class="kt">Position</span><span class="o">])</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
+<h3 id="portfolio-pricing">Portfolio pricing</h3>
 
-<h3>Portfolio pricing</h3>
+<p>Let’s define elementary portfolio pricing service, that can calculate market price for instrument based on market factors:</p>
 
-<p>Let&rsquo;s define elementary portfolio pricing service, that can calculate market price for instrument based on market factors:</p>
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+<span class="line-number">15</span>
+<span class="line-number">16</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">sealed</span> <span class="k">trait</span> <span class="nc">MarketFactor</span>
+</span><span class="line">
+</span><span class="line"><span class="k">object</span> <span class="nc">MarketFactor</span> <span class="o">{</span>
+</span><span class="line">  <span class="k">case</span> <span class="k">class</span> <span class="nc">Price</span><span class="o">(</span><span class="n">equity</span><span class="k">:</span> <span class="kt">Equity</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">MarketFactor</span>
+</span><span class="line">  <span class="k">case</span> <span class="k">class</span> <span class="nc">Volatility</span><span class="o">(</span><span class="n">equity</span><span class="k">:</span> <span class="kt">Equity</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">MarketFactor</span>
+</span><span class="line">  <span class="k">case</span> <span class="k">class</span> <span class="nc">DaysToMaturity</span><span class="o">(</span><span class="n">maturity</span><span class="k">:</span> <span class="kt">LocalDate</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">MarketFactor</span>
+</span><span class="line">  <span class="k">case</span> <span class="k">object</span> <span class="nc">RiskFreeRate</span> <span class="k">extends</span> <span class="nc">MarketFactor</span>
+</span><span class="line"><span class="o">}</span>
+</span><span class="line">
+</span><span class="line"><span class="k">trait</span> <span class="nc">MarketFactors</span> <span class="o">{</span>
+</span><span class="line">  <span class="k">def</span> <span class="n">apply</span><span class="o">(</span><span class="n">factor</span><span class="k">:</span> <span class="kt">MarketFactor</span><span class="o">)</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">Double</span><span class="o">]</span>
+</span><span class="line"><span class="o">}</span>
+</span><span class="line">
+</span><span class="line"><span class="k">trait</span> <span class="nc">MarketFactorsGenerator</span> <span class="o">{</span>
+</span><span class="line">  <span class="k">def</span> <span class="n">factors</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">MarketFactors</span><span class="o">]</span>
+</span><span class="line"><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">sealed</span> <span class="k">trait</span> <span class="nc">MarketFactor</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">object</span> <span class="nc">MarketFactor</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">class</span> <span class="nc">Price</span><span class="o">(</span><span class="n">equity</span><span class="k">:</span> <span class="kt">Equity</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">MarketFactor</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">class</span> <span class="nc">Volatility</span><span class="o">(</span><span class="n">equity</span><span class="k">:</span> <span class="kt">Equity</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">MarketFactor</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">class</span> <span class="nc">DaysToMaturity</span><span class="o">(</span><span class="n">maturity</span><span class="k">:</span> <span class="kt">LocalDate</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">MarketFactor</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">object</span> <span class="nc">RiskFreeRate</span> <span class="k">extends</span> <span class="nc">MarketFactor</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">trait</span> <span class="nc">MarketFactors</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">def</span> <span class="n">apply</span><span class="o">(</span><span class="n">factor</span><span class="k">:</span> <span class="kt">MarketFactor</span><span class="o">)</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">Double</span><span class="o">]</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">trait</span> <span class="nc">MarketFactorsGenerator</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">def</span> <span class="n">factors</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">MarketFactors</span><span class="o">]</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+<span class="line-number">15</span>
+<span class="line-number">16</span>
+<span class="line-number">17</span>
+<span class="line-number">18</span>
+<span class="line-number">19</span>
+<span class="line-number">20</span>
+<span class="line-number">21</span>
+<span class="line-number">22</span>
+<span class="line-number">23</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">sealed</span> <span class="k">trait</span> <span class="nc">PricingError</span>
+</span><span class="line">
+</span><span class="line"><span class="k">object</span> <span class="nc">PricingError</span> <span class="o">{</span>
+</span><span class="line">  <span class="k">case</span> <span class="k">class</span> <span class="nc">MissingMarketFactors</span><span class="o">(</span><span class="n">factors</span><span class="k">:</span> <span class="kt">NonEmptyList</span><span class="o">[</span><span class="kt">MarketFactor</span><span class="o">])</span> <span class="k">extends</span> <span class="nc">PricingError</span>
+</span><span class="line"><span class="o">}</span>
+</span><span class="line">
+</span><span class="line"><span class="nd">@implicitNotFound</span><span class="o">(</span><span class="n">msg</span> <span class="k">=</span> <span class="s">&quot;Can&#39;t find pricer for instrument type &#39;${I}&#39;&quot;</span><span class="o">)</span>
+</span><span class="line"><span class="k">trait</span> <span class="nc">Pricer</span><span class="o">[</span><span class="kt">I</span> <span class="k">&lt;:</span> <span class="kt">Instrument</span><span class="o">]</span> <span class="o">{</span>
+</span><span class="line">  <span class="k">def</span> <span class="n">price</span><span class="o">(</span><span class="n">i</span><span class="k">:</span> <span class="kt">I</span><span class="o">)(</span><span class="k">implicit</span> <span class="n">m</span><span class="k">:</span> <span class="kt">MarketFactors</span><span class="o">)</span><span class="k">:</span> <span class="kt">PricingError</span> <span class="kt">\/</span> <span class="kt">Double</span>
+</span><span class="line"><span class="o">}</span>
+</span><span class="line">
+</span><span class="line"><span class="k">object</span> <span class="nc">Pricer</span> <span class="k">extends</span> <span class="nc">PricerImplicits</span>
+</span><span class="line">
+</span><span class="line"><span class="k">trait</span> <span class="nc">PricerImplicits</span> <span class="o">{</span>
+</span><span class="line">
+</span><span class="line">    <span class="k">implicit</span> <span class="k">object</span> <span class="nc">EquityPricer</span> <span class="k">extends</span> <span class="nc">Pricer</span><span class="o">[</span><span class="kt">Equity</span><span class="o">]</span> <span class="o">{</span>
+</span><span class="line">        <span class="c1">// ...</span>
+</span><span class="line">    <span class="o">}</span>
+</span><span class="line">
+</span><span class="line">    <span class="k">implicit</span> <span class="k">object</span> <span class="nc">OptionPricer</span> <span class="k">extends</span> <span class="nc">Pricer</span><span class="o">[</span><span class="kt">EquityOption</span><span class="o">]</span> <span class="o">{</span>
+</span><span class="line">        <span class="c1">// Use Black-Scholes formula to price Option</span>
+</span><span class="line">    <span class="o">}</span>
+</span><span class="line"><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
+<h3 id="market-risk-calculator">Market Risk Calculator</h3>
 
+<p>Portfolio Market Risk depends on market factors forecast. I’m going to construct market factors forecast for one day horizon from historical market data:</p>
 
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">MarketDataModule</span> <span class="o">{</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">protected</span> <span class="k">def</span> <span class="n">marketData</span><span class="k">:</span> <span class="kt">MarketData</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">sealed</span> <span class="k">trait</span> <span class="nc">MarketDataError</span>
+</span><span class="line">  <span class="k">case</span> <span class="k">class</span> <span class="nc">MarketDataUnavailable</span><span class="o">(</span><span class="n">error</span><span class="k">:</span> <span class="kt">Throwable</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">MarketDataError</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">trait</span> <span class="nc">MarketData</span> <span class="o">{</span>
+</span><span class="line">    <span class="k">def</span> <span class="n">historicalPrices</span><span class="o">(</span><span class="n">equity</span><span class="k">:</span> <span class="kt">Equity</span><span class="o">,</span> <span class="n">from</span><span class="k">:</span> <span class="kt">LocalDate</span><span class="o">,</span> <span class="n">to</span><span class="k">:</span> <span class="kt">LocalDate</span><span class="o">)</span><span class="k">:</span>  <span class="kt">MarketDataError</span> <span class="kt">\/</span> <span class="kt">Vector</span><span class="o">[</span><span class="kt">HistoricalPrice</span><span class="o">]</span>
+</span><span class="line">
+</span><span class="line">    <span class="k">def</span> <span class="n">historicalPrice</span><span class="o">(</span><span class="n">equity</span><span class="k">:</span> <span class="kt">Equity</span><span class="o">,</span> <span class="n">date</span><span class="k">:</span> <span class="kt">LocalDate</span><span class="o">)</span><span class="k">:</span> <span class="kt">MarketDataError</span> <span class="kt">\/</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">HistoricalPrice</span><span class="o">]</span>
+</span><span class="line">  <span class="o">}</span>
+</span><span class="line"><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">sealed</span> <span class="k">trait</span> <span class="nc">PricingError</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">object</span> <span class="nc">PricingError</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">class</span> <span class="nc">MissingMarketFactors</span><span class="o">(</span><span class="n">factors</span><span class="k">:</span> <span class="kt">NonEmptyList</span><span class="o">[</span><span class="kt">MarketFactor</span><span class="o">])</span> <span class="k">extends</span> <span class="nc">PricingError</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="nd">@implicitNotFound</span><span class="o">(</span><span class="n">msg</span> <span class="k">=</span> <span class="s">&quot;Can&#39;t find pricer for instrument type &#39;${I}&#39;&quot;</span><span class="o">)</span>
-</span><span class='line'><span class="k">trait</span> <span class="nc">Pricer</span><span class="o">[</span><span class="kt">I</span> <span class="k">&lt;:</span> <span class="kt">Instrument</span><span class="o">]</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">def</span> <span class="n">price</span><span class="o">(</span><span class="n">i</span><span class="k">:</span> <span class="kt">I</span><span class="o">)(</span><span class="k">implicit</span> <span class="n">m</span><span class="k">:</span> <span class="kt">MarketFactors</span><span class="o">)</span><span class="k">:</span> <span class="kt">PricingError</span> <span class="kt">\/</span> <span class="kt">Double</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">object</span> <span class="nc">Pricer</span> <span class="k">extends</span> <span class="nc">PricerImplicits</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">trait</span> <span class="nc">PricerImplicits</span> <span class="o">{</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="k">implicit</span> <span class="k">object</span> <span class="nc">EquityPricer</span> <span class="k">extends</span> <span class="nc">Pricer</span><span class="o">[</span><span class="kt">Equity</span><span class="o">]</span> <span class="o">{</span>
-</span><span class='line'>        <span class="c1">// ...</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="k">implicit</span> <span class="k">object</span> <span class="nc">OptionPricer</span> <span class="k">extends</span> <span class="nc">Pricer</span><span class="o">[</span><span class="kt">EquityOption</span><span class="o">]</span> <span class="o">{</span>
-</span><span class='line'>        <span class="c1">// Use Black-Scholes formula to price Option</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">MarketFactorsModule</span> <span class="o">{</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">case</span> <span class="k">class</span> <span class="nc">MarketFactorsParameters</span><span class="o">(</span><span class="n">riskFreeRate</span><span class="k">:</span> <span class="kt">Double</span> <span class="o">=</span> <span class="mf">0.05</span><span class="o">,</span>
+</span><span class="line">                                     <span class="n">horizon</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="mi">1000</span><span class="o">)</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">protected</span> <span class="k">def</span> <span class="n">oneDayMarketFactors</span><span class="o">(</span><span class="n">portfolio</span><span class="k">:</span> <span class="kt">Portfolio</span><span class="o">,</span> <span class="n">date</span><span class="k">:</span> <span class="kt">LocalDate</span><span class="o">)(</span><span class="k">implicit</span> <span class="n">parameters</span><span class="k">:</span> <span class="kt">MarketFactorsParameters</span><span class="o">)</span><span class="k">:</span> <span class="kt">MarketFactorsGenerator</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">protected</span> <span class="k">def</span> <span class="n">marketFactors</span><span class="o">(</span><span class="n">date</span><span class="k">:</span> <span class="kt">LocalDate</span><span class="o">)(</span><span class="k">implicit</span> <span class="n">parameters</span><span class="k">:</span> <span class="kt">MarketFactorsParameters</span><span class="o">)</span><span class="k">:</span> <span class="kt">MarketFactors</span>
+</span><span class="line"><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">MarketRiskCalculator</span> <span class="o">{</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">type</span> <span class="kt">MarketRisk</span> <span class="k">&lt;:</span> <span class="kt">MarketRiskLike</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">trait</span> <span class="nc">MarketRiskLike</span> <span class="o">{</span>
+</span><span class="line">    <span class="k">def</span> <span class="nc">VaR</span><span class="o">(</span><span class="n">p</span><span class="k">:</span> <span class="kt">Double</span><span class="o">)</span><span class="k">:</span> <span class="kt">Double</span>
+</span><span class="line">    <span class="k">def</span> <span class="n">conditionalVaR</span><span class="o">(</span><span class="n">p</span><span class="k">:</span> <span class="kt">Double</span><span class="o">)</span><span class="k">:</span> <span class="kt">Double</span>
+</span><span class="line">  <span class="o">}</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">def</span> <span class="n">marketRisk</span><span class="o">(</span><span class="n">portfolio</span><span class="k">:</span> <span class="kt">Portfolio</span><span class="o">,</span> <span class="n">date</span><span class="k">:</span> <span class="kt">LocalDate</span><span class="o">)</span><span class="k">:</span> <span class="kt">MarketRisk</span>
+</span><span class="line"><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
-<h3>Market Risk Calculator</h3>
+<h3 id="monte-carlo-simulation-for-market-risk-calculation">Monte Carlo Simulation for Market Risk Calculation</h3>
 
-<p>Portfolio Market Risk depends on market factors forecast. I&rsquo;m going to construct market factors forecast for one day horizon from historical market data:</p>
+<blockquote>
+  <p>Monte Carlo simulation performs risk analysis by building models of possible results by substituting a range of values—a probability distribution—for any factor that has inherent uncertainty. It then calculates results over and over, each time using a different set of random values from the probability functions. Depending upon the number of uncertainties and the ranges specified for them, a Monte Carlo simulation could involve thousands or tens of thousands of recalculations before it is complete. Monte Carlo simulation produces distributions of possible outcome values. <a href="http://www.palisade.com/risk/monte_carlo_simulation.asp">…</a></p>
+</blockquote>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">trait</span> <span class="nc">MarketDataModule</span> <span class="o">{</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">protected</span> <span class="k">def</span> <span class="n">marketData</span><span class="k">:</span> <span class="kt">MarketData</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">sealed</span> <span class="k">trait</span> <span class="nc">MarketDataError</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">class</span> <span class="nc">MarketDataUnavailable</span><span class="o">(</span><span class="n">error</span><span class="k">:</span> <span class="kt">Throwable</span><span class="o">)</span> <span class="k">extends</span> <span class="nc">MarketDataError</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">trait</span> <span class="nc">MarketData</span> <span class="o">{</span>
-</span><span class='line'>    <span class="k">def</span> <span class="n">historicalPrices</span><span class="o">(</span><span class="n">equity</span><span class="k">:</span> <span class="kt">Equity</span><span class="o">,</span> <span class="n">from</span><span class="k">:</span> <span class="kt">LocalDate</span><span class="o">,</span> <span class="n">to</span><span class="k">:</span> <span class="kt">LocalDate</span><span class="o">)</span><span class="k">:</span>  <span class="kt">MarketDataError</span> <span class="kt">\/</span> <span class="kt">Vector</span><span class="o">[</span><span class="kt">HistoricalPrice</span><span class="o">]</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="k">def</span> <span class="n">historicalPrice</span><span class="o">(</span><span class="n">equity</span><span class="k">:</span> <span class="kt">Equity</span><span class="o">,</span> <span class="n">date</span><span class="k">:</span> <span class="kt">LocalDate</span><span class="o">)</span><span class="k">:</span> <span class="kt">MarketDataError</span> <span class="kt">\/</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">HistoricalPrice</span><span class="o">]</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">trait</span> <span class="nc">MarketFactorsModule</span> <span class="o">{</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">case</span> <span class="k">class</span> <span class="nc">MarketFactorsParameters</span><span class="o">(</span><span class="n">riskFreeRate</span><span class="k">:</span> <span class="kt">Double</span> <span class="o">=</span> <span class="mf">0.05</span><span class="o">,</span>
-</span><span class='line'>                                     <span class="n">horizon</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="mi">1000</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">protected</span> <span class="k">def</span> <span class="n">oneDayMarketFactors</span><span class="o">(</span><span class="n">portfolio</span><span class="k">:</span> <span class="kt">Portfolio</span><span class="o">,</span> <span class="n">date</span><span class="k">:</span> <span class="kt">LocalDate</span><span class="o">)(</span><span class="k">implicit</span> <span class="n">parameters</span><span class="k">:</span> <span class="kt">MarketFactorsParameters</span><span class="o">)</span><span class="k">:</span> <span class="kt">MarketFactorsGenerator</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">protected</span> <span class="k">def</span> <span class="n">marketFactors</span><span class="o">(</span><span class="n">date</span><span class="k">:</span> <span class="kt">LocalDate</span><span class="o">)(</span><span class="k">implicit</span> <span class="n">parameters</span><span class="k">:</span> <span class="kt">MarketFactorsParameters</span><span class="o">)</span><span class="k">:</span> <span class="kt">MarketFactors</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">trait</span> <span class="nc">MarketRiskCalculator</span> <span class="o">{</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">type</span> <span class="kt">MarketRisk</span> <span class="k">&lt;:</span> <span class="kt">MarketRiskLike</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">trait</span> <span class="nc">MarketRiskLike</span> <span class="o">{</span>
-</span><span class='line'>    <span class="k">def</span> <span class="nc">VaR</span><span class="o">(</span><span class="n">p</span><span class="k">:</span> <span class="kt">Double</span><span class="o">)</span><span class="k">:</span> <span class="kt">Double</span>
-</span><span class='line'>    <span class="k">def</span> <span class="n">conditionalVaR</span><span class="o">(</span><span class="n">p</span><span class="k">:</span> <span class="kt">Double</span><span class="o">)</span><span class="k">:</span> <span class="kt">Double</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">def</span> <span class="n">marketRisk</span><span class="o">(</span><span class="n">portfolio</span><span class="k">:</span> <span class="kt">Portfolio</span><span class="o">,</span> <span class="n">date</span><span class="k">:</span> <span class="kt">LocalDate</span><span class="o">)</span><span class="k">:</span> <span class="kt">MarketRisk</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>Monte Carlo Simulation for Market Risk Calculation</h3>
-
-<blockquote><p>Monte Carlo simulation performs risk analysis by building models of possible results by substituting a range of values—a probability distribution—for any factor that has inherent uncertainty. It then calculates results over and over, each time using a different set of random values from the probability functions. Depending upon the number of uncertainties and the ranges specified for them, a Monte Carlo simulation could involve thousands or tens of thousands of recalculations before it is complete. Monte Carlo simulation produces distributions of possible outcome values. <a href="http://www.palisade.com/risk/monte_carlo_simulation.asp">&hellip;</a></p></blockquote>
-
-<h4>Abstract Monte Carlo Risk Calculator</h4>
+<h4 id="abstract-monte-carlo-risk-calculator">Abstract Monte Carlo Risk Calculator</h4>
 
 <p>I will use <a href="/blog/2014/03/09/2014-03-09-scalaz-stream-concurrent-process">scalaz-stream</a> for splitting calculation to independent tasks, running them <a href="/blog/2014/03/09/2014-03-09-scalaz-stream-concurrent-process">concurrently</a> and aggregating results.</p>
 
-<figure class='code'><figcaption><span>Some code is omitted. Full source code on Github &#8211;>>></span><a href='https://github.com/ezhulenev/akka-var-calculation/blob/master/core/src/main/scala/kkalc/service/simulation/MonteCarloMarketRiskCalculator.scala'>link</a></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-<span class='line-number'>43</span>
-<span class='line-number'>44</span>
-<span class='line-number'>45</span>
-<span class='line-number'>46</span>
-<span class='line-number'>47</span>
-<span class='line-number'>48</span>
-<span class='line-number'>49</span>
-<span class='line-number'>50</span>
-<span class='line-number'>51</span>
-<span class='line-number'>52</span>
-<span class='line-number'>53</span>
-<span class='line-number'>54</span>
-<span class='line-number'>55</span>
-<span class='line-number'>56</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">trait</span> <span class="nc">PortfolioValueSimulation</span> <span class="o">{</span>
-</span><span class='line'>  <span class="n">self</span><span class="k">:</span> <span class="kt">MarketFactorsModule</span> <span class="kt">with</span> <span class="kt">MonteCarloMarketRiskCalculator</span> <span class="o">=&gt;</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="cm">/**</span>
-</span><span class='line'><span class="cm">   * Scalaz-Stream Channel that for given market factors generator</span>
-</span><span class='line'><span class="cm">   * runs defined number of simulations and produce MarketRisk</span>
-</span><span class='line'><span class="cm">   */</span>
-</span><span class='line'>  <span class="k">def</span> <span class="n">simulation</span><span class="o">(</span><span class="n">portfolio</span><span class="k">:</span> <span class="kt">Portfolio</span><span class="o">,</span> <span class="n">simulations</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span><span class="k">:</span>
-</span><span class='line'>    <span class="kt">Channel</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">MarketFactorsGenerator</span>, <span class="kt">Simulations</span><span class="o">]</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="cm">/**</span>
-</span><span class='line'><span class="cm"> * @concurrencyLevel Number of simulation tasks running at the same time</span>
-</span><span class='line'><span class="cm"> */</span>
-</span><span class='line'><span class="k">abstract</span> <span class="k">class</span> <span class="nc">MonteCarloMarketRiskCalculator</span><span class="o">(</span><span class="n">simulations</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="mi">1000000</span><span class="o">,</span>
-</span><span class='line'>                                              <span class="n">splitFactor</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="mi">10</span><span class="o">,</span>
-</span><span class='line'>                                              <span class="n">concurrencyLevel</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="mi">10</span><span class="o">)</span>
-</span><span class='line'>  <span class="k">extends</span> <span class="nc">MarketRiskCalculator</span>
-</span><span class='line'>     <span class="k">with</span> <span class="nc">MarketDataModule</span>
-</span><span class='line'>     <span class="k">with</span> <span class="nc">MarketFactorsModule</span>
-</span><span class='line'>     <span class="k">with</span> <span class="nc">PortfolioValueSimulation</span> <span class="o">{</span> <span class="n">calculator</span> <span class="k">=&gt;</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">case</span> <span class="k">class</span> <span class="nc">Simulations</span><span class="o">(</span><span class="n">simulations</span><span class="k">:</span> <span class="kt">Vector</span><span class="o">[</span><span class="kt">Double</span><span class="o">])</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">class</span> <span class="nc">MarketRisk</span><span class="o">(</span><span class="n">initialValue</span><span class="k">:</span> <span class="kt">Double</span><span class="o">,</span> <span class="n">simulations</span><span class="k">:</span> <span class="kt">Simulations</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>    <span class="k">def</span> <span class="nc">VaR</span><span class="o">(</span><span class="n">p</span><span class="k">:</span> <span class="kt">Double</span><span class="o">)</span><span class="k">:</span> <span class="kt">Double</span> <span class="o">=</span> <span class="o">...</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="k">def</span> <span class="n">conditionalVaR</span><span class="o">(</span><span class="n">p</span><span class="k">:</span> <span class="kt">Double</span><span class="o">)</span><span class="k">:</span> <span class="kt">Double</span> <span class="o">=</span> <span class="o">...</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">private</span> <span class="k">val</span> <span class="n">P</span> <span class="k">=</span> <span class="nc">Process</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">def</span> <span class="n">marketRisk</span><span class="o">(</span><span class="n">portfolio</span><span class="k">:</span> <span class="kt">Portfolio</span><span class="o">,</span> <span class="n">date</span><span class="k">:</span> <span class="kt">LocalDate</span><span class="o">)</span><span class="k">:</span> <span class="kt">MarketRisk</span> <span class="o">=</span> <span class="o">{</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="c1">// Get initial Portfolio value</span>
-</span><span class='line'>    <span class="k">implicit</span> <span class="k">val</span> <span class="n">initialFactors</span> <span class="k">=</span> <span class="n">marketFactors</span><span class="o">(</span><span class="n">date</span><span class="o">)</span>
-</span><span class='line'>    <span class="k">val</span> <span class="n">initialPortfolioValue</span> <span class="k">=</span>
-</span><span class='line'>      <span class="nc">PortfolioPricer</span><span class="o">.</span><span class="n">price</span><span class="o">(</span><span class="n">portfolio</span><span class="o">).</span>
-</span><span class='line'>        <span class="n">fold</span><span class="o">(</span><span class="n">err</span> <span class="k">=&gt;</span> <span class="n">sys</span><span class="o">.</span><span class="n">error</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;Failed price portfolio: $err&quot;</span><span class="o">),</span> <span class="n">identity</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="c1">// Run portfolio values simulation</span>
-</span><span class='line'>    <span class="k">val</span> <span class="n">oneSimulation</span> <span class="k">=</span> <span class="n">simulations</span> <span class="o">/</span> <span class="n">splitFactor</span>
-</span><span class='line'>    <span class="k">val</span> <span class="n">simulationChannel</span> <span class="k">=</span> <span class="n">simulation</span><span class="o">(</span><span class="n">portfolio</span><span class="o">,</span> <span class="n">oneSimulation</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="k">val</span> <span class="n">generator</span> <span class="k">=</span> <span class="n">oneDayMarketFactors</span><span class="o">(</span><span class="n">portfolio</span><span class="o">,</span> <span class="n">date</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="k">val</span> <span class="n">process</span> <span class="k">=</span> <span class="n">P</span><span class="o">.</span>
-</span><span class='line'>      <span class="n">range</span><span class="o">(</span><span class="mi">0</span><span class="o">,</span> <span class="n">splitFactor</span><span class="o">).</span>
-</span><span class='line'>      <span class="n">map</span><span class="o">(</span><span class="k">_</span> <span class="k">=&gt;</span> <span class="n">generator</span><span class="o">).</span>
-</span><span class='line'>      <span class="n">concurrently</span><span class="o">(</span><span class="n">concurrencyLevel</span><span class="o">)(</span><span class="n">simulationChannel</span><span class="o">).</span>
-</span><span class='line'>      <span class="n">runFoldMap</span><span class="o">(</span><span class="n">identity</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="c1">// Produce market-risk object from initial value and simulated values</span>
-</span><span class='line'>    <span class="k">new</span> <span class="nc">MarketRisk</span><span class="o">(</span><span class="n">initialPortfolioValue</span><span class="o">,</span> <span class="n">process</span><span class="o">.</span><span class="n">run</span><span class="o">)</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
+<div class="bogus-wrapper"><notextile><figure class="code"><figcaption><span>Some code is omitted. Full source code on Github &#8211;&gt;&gt;&gt;</span><a href="https://github.com/ezhulenev/akka-var-calculation/blob/master/core/src/main/scala/kkalc/service/simulation/MonteCarloMarketRiskCalculator.scala">link</a></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+<span class="line-number">15</span>
+<span class="line-number">16</span>
+<span class="line-number">17</span>
+<span class="line-number">18</span>
+<span class="line-number">19</span>
+<span class="line-number">20</span>
+<span class="line-number">21</span>
+<span class="line-number">22</span>
+<span class="line-number">23</span>
+<span class="line-number">24</span>
+<span class="line-number">25</span>
+<span class="line-number">26</span>
+<span class="line-number">27</span>
+<span class="line-number">28</span>
+<span class="line-number">29</span>
+<span class="line-number">30</span>
+<span class="line-number">31</span>
+<span class="line-number">32</span>
+<span class="line-number">33</span>
+<span class="line-number">34</span>
+<span class="line-number">35</span>
+<span class="line-number">36</span>
+<span class="line-number">37</span>
+<span class="line-number">38</span>
+<span class="line-number">39</span>
+<span class="line-number">40</span>
+<span class="line-number">41</span>
+<span class="line-number">42</span>
+<span class="line-number">43</span>
+<span class="line-number">44</span>
+<span class="line-number">45</span>
+<span class="line-number">46</span>
+<span class="line-number">47</span>
+<span class="line-number">48</span>
+<span class="line-number">49</span>
+<span class="line-number">50</span>
+<span class="line-number">51</span>
+<span class="line-number">52</span>
+<span class="line-number">53</span>
+<span class="line-number">54</span>
+<span class="line-number">55</span>
+<span class="line-number">56</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">PortfolioValueSimulation</span> <span class="o">{</span>
+</span><span class="line">  <span class="n">self</span><span class="k">:</span> <span class="kt">MarketFactorsModule</span> <span class="kt">with</span> <span class="kt">MonteCarloMarketRiskCalculator</span> <span class="o">=&gt;</span>
+</span><span class="line">
+</span><span class="line">  <span class="cm">/**</span>
+</span><span class="line"><span class="cm">   * Scalaz-Stream Channel that for given market factors generator</span>
+</span><span class="line"><span class="cm">   * runs defined number of simulations and produce MarketRisk</span>
+</span><span class="line"><span class="cm">   */</span>
+</span><span class="line">  <span class="k">def</span> <span class="n">simulation</span><span class="o">(</span><span class="n">portfolio</span><span class="k">:</span> <span class="kt">Portfolio</span><span class="o">,</span> <span class="n">simulations</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span><span class="k">:</span>
+</span><span class="line">    <span class="kt">Channel</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">MarketFactorsGenerator</span>, <span class="kt">Simulations</span><span class="o">]</span>
+</span><span class="line"><span class="o">}</span>
+</span><span class="line">
+</span><span class="line"><span class="cm">/**</span>
+</span><span class="line"><span class="cm"> * @concurrencyLevel Number of simulation tasks running at the same time</span>
+</span><span class="line"><span class="cm"> */</span>
+</span><span class="line"><span class="k">abstract</span> <span class="k">class</span> <span class="nc">MonteCarloMarketRiskCalculator</span><span class="o">(</span><span class="n">simulations</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="mi">1000000</span><span class="o">,</span>
+</span><span class="line">                                              <span class="n">splitFactor</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="mi">10</span><span class="o">,</span>
+</span><span class="line">                                              <span class="n">concurrencyLevel</span><span class="k">:</span> <span class="kt">Int</span> <span class="o">=</span> <span class="mi">10</span><span class="o">)</span>
+</span><span class="line">  <span class="k">extends</span> <span class="nc">MarketRiskCalculator</span>
+</span><span class="line">     <span class="k">with</span> <span class="nc">MarketDataModule</span>
+</span><span class="line">     <span class="k">with</span> <span class="nc">MarketFactorsModule</span>
+</span><span class="line">     <span class="k">with</span> <span class="nc">PortfolioValueSimulation</span> <span class="o">{</span> <span class="n">calculator</span> <span class="k">=&gt;</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">case</span> <span class="k">class</span> <span class="nc">Simulations</span><span class="o">(</span><span class="n">simulations</span><span class="k">:</span> <span class="kt">Vector</span><span class="o">[</span><span class="kt">Double</span><span class="o">])</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">class</span> <span class="nc">MarketRisk</span><span class="o">(</span><span class="n">initialValue</span><span class="k">:</span> <span class="kt">Double</span><span class="o">,</span> <span class="n">simulations</span><span class="k">:</span> <span class="kt">Simulations</span><span class="o">)</span> <span class="o">{</span>
+</span><span class="line">    <span class="k">def</span> <span class="nc">VaR</span><span class="o">(</span><span class="n">p</span><span class="k">:</span> <span class="kt">Double</span><span class="o">)</span><span class="k">:</span> <span class="kt">Double</span> <span class="o">=</span> <span class="o">...</span>
+</span><span class="line">
+</span><span class="line">    <span class="k">def</span> <span class="n">conditionalVaR</span><span class="o">(</span><span class="n">p</span><span class="k">:</span> <span class="kt">Double</span><span class="o">)</span><span class="k">:</span> <span class="kt">Double</span> <span class="o">=</span> <span class="o">...</span>
+</span><span class="line">  <span class="o">}</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">private</span> <span class="k">val</span> <span class="n">P</span> <span class="k">=</span> <span class="nc">Process</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">def</span> <span class="n">marketRisk</span><span class="o">(</span><span class="n">portfolio</span><span class="k">:</span> <span class="kt">Portfolio</span><span class="o">,</span> <span class="n">date</span><span class="k">:</span> <span class="kt">LocalDate</span><span class="o">)</span><span class="k">:</span> <span class="kt">MarketRisk</span> <span class="o">=</span> <span class="o">{</span>
+</span><span class="line">
+</span><span class="line">    <span class="c1">// Get initial Portfolio value</span>
+</span><span class="line">    <span class="k">implicit</span> <span class="k">val</span> <span class="n">initialFactors</span> <span class="k">=</span> <span class="n">marketFactors</span><span class="o">(</span><span class="n">date</span><span class="o">)</span>
+</span><span class="line">    <span class="k">val</span> <span class="n">initialPortfolioValue</span> <span class="k">=</span>
+</span><span class="line">      <span class="nc">PortfolioPricer</span><span class="o">.</span><span class="n">price</span><span class="o">(</span><span class="n">portfolio</span><span class="o">).</span>
+</span><span class="line">        <span class="n">fold</span><span class="o">(</span><span class="n">err</span> <span class="k">=&gt;</span> <span class="n">sys</span><span class="o">.</span><span class="n">error</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;Failed price portfolio: $err&quot;</span><span class="o">),</span> <span class="n">identity</span><span class="o">)</span>
+</span><span class="line">
+</span><span class="line">    <span class="c1">// Run portfolio values simulation</span>
+</span><span class="line">    <span class="k">val</span> <span class="n">oneSimulation</span> <span class="k">=</span> <span class="n">simulations</span> <span class="o">/</span> <span class="n">splitFactor</span>
+</span><span class="line">    <span class="k">val</span> <span class="n">simulationChannel</span> <span class="k">=</span> <span class="n">simulation</span><span class="o">(</span><span class="n">portfolio</span><span class="o">,</span> <span class="n">oneSimulation</span><span class="o">)</span>
+</span><span class="line">
+</span><span class="line">    <span class="k">val</span> <span class="n">generator</span> <span class="k">=</span> <span class="n">oneDayMarketFactors</span><span class="o">(</span><span class="n">portfolio</span><span class="o">,</span> <span class="n">date</span><span class="o">)</span>
+</span><span class="line">
+</span><span class="line">    <span class="k">val</span> <span class="n">process</span> <span class="k">=</span> <span class="n">P</span><span class="o">.</span>
+</span><span class="line">      <span class="n">range</span><span class="o">(</span><span class="mi">0</span><span class="o">,</span> <span class="n">splitFactor</span><span class="o">).</span>
+</span><span class="line">      <span class="n">map</span><span class="o">(</span><span class="k">_</span> <span class="k">=&gt;</span> <span class="n">generator</span><span class="o">).</span>
+</span><span class="line">      <span class="n">concurrently</span><span class="o">(</span><span class="n">concurrencyLevel</span><span class="o">)(</span><span class="n">simulationChannel</span><span class="o">).</span>
+</span><span class="line">      <span class="n">runFoldMap</span><span class="o">(</span><span class="n">identity</span><span class="o">)</span>
+</span><span class="line">
+</span><span class="line">    <span class="c1">// Produce market-risk object from initial value and simulated values</span>
+</span><span class="line">    <span class="k">new</span> <span class="nc">MarketRisk</span><span class="o">(</span><span class="n">initialPortfolioValue</span><span class="o">,</span> <span class="n">process</span><span class="o">.</span><span class="n">run</span><span class="o">)</span>
+</span><span class="line">  <span class="o">}</span>
+</span><span class="line"><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
-
-<h4>Running simulation on a single node</h4>
+<h4 id="running-simulation-on-a-single-node">Running simulation on a single node</h4>
 
 <p>Here is straightforward PortfolioValueSimulation implementation, that runs simulation tasks in a separate thread pool in a single JVM:</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">trait</span> <span class="nc">SingleNodePortfolioValueSimulation</span> <span class="k">extends</span> <span class="nc">PortfolioValueSimulation</span> <span class="o">{</span>
-</span><span class='line'>  <span class="n">self</span><span class="k">:</span> <span class="kt">MarketFactorsModule</span> <span class="kt">with</span> <span class="kt">MonteCarloMarketRiskCalculator</span> <span class="o">=&gt;</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">def</span> <span class="n">simulation</span><span class="o">(</span><span class="n">portfolio</span><span class="k">:</span> <span class="kt">Portfolio</span><span class="o">,</span> <span class="n">simulations</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span> <span class="k">=</span>
-</span><span class='line'>    <span class="n">channel</span><span class="o">[</span><span class="kt">MarketFactorsGenerator</span>, <span class="kt">Simulations</span><span class="o">]</span> <span class="o">{</span> <span class="n">generator</span> <span class="k">=&gt;</span>
-</span><span class='line'>
-</span><span class='line'>      <span class="c1">// calculate portfolio prices for generated market factors</span>
-</span><span class='line'>      <span class="k">val</span> <span class="n">process</span> <span class="k">=</span> <span class="n">generator</span><span class="o">.</span><span class="n">factors</span><span class="o">.</span><span class="n">take</span><span class="o">(</span><span class="n">simulations</span><span class="o">).</span><span class="n">map</span> <span class="o">{</span>
-</span><span class='line'>        <span class="k">implicit</span> <span class="n">factors</span> <span class="k">=&gt;</span> <span class="nc">PortfolioPricer</span><span class="o">.</span><span class="n">price</span><span class="o">(</span><span class="n">portfolio</span><span class="o">).</span>
-</span><span class='line'>          <span class="n">fold</span><span class="o">(</span><span class="n">err</span> <span class="k">=&gt;</span> <span class="n">sys</span><span class="o">.</span><span class="n">error</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;Failed to price portfolio: $err&quot;</span><span class="o">),</span> <span class="n">identity</span><span class="o">)</span>
-</span><span class='line'>      <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>      <span class="c1">// Fork simulations into thread pool</span>
-</span><span class='line'>      <span class="nc">Task</span><span class="o">.</span><span class="n">fork</span> <span class="o">{</span>
-</span><span class='line'>        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;Simulate $simulations portfolio values for $portfolio&quot;</span><span class="o">)</span>
-</span><span class='line'>        <span class="n">process</span><span class="o">.</span><span class="n">runLog</span><span class="o">.</span>
-</span><span class='line'>            <span class="n">map</span><span class="o">(</span><span class="n">portfolioValues</span> <span class="k">=&gt;</span> <span class="nc">Simulations</span><span class="o">(</span><span class="n">portfolioValues</span><span class="o">.</span><span class="n">toVector</span><span class="o">))</span>
-</span><span class='line'>      <span class="o">}(</span><span class="n">executor</span><span class="o">)</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+<span class="line-number">15</span>
+<span class="line-number">16</span>
+<span class="line-number">17</span>
+<span class="line-number">18</span>
+<span class="line-number">19</span>
+<span class="line-number">20</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">SingleNodePortfolioValueSimulation</span> <span class="k">extends</span> <span class="nc">PortfolioValueSimulation</span> <span class="o">{</span>
+</span><span class="line">  <span class="n">self</span><span class="k">:</span> <span class="kt">MarketFactorsModule</span> <span class="kt">with</span> <span class="kt">MonteCarloMarketRiskCalculator</span> <span class="o">=&gt;</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">def</span> <span class="n">simulation</span><span class="o">(</span><span class="n">portfolio</span><span class="k">:</span> <span class="kt">Portfolio</span><span class="o">,</span> <span class="n">simulations</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span> <span class="k">=</span>
+</span><span class="line">    <span class="n">channel</span><span class="o">[</span><span class="kt">MarketFactorsGenerator</span>, <span class="kt">Simulations</span><span class="o">]</span> <span class="o">{</span> <span class="n">generator</span> <span class="k">=&gt;</span>
+</span><span class="line">
+</span><span class="line">      <span class="c1">// calculate portfolio prices for generated market factors</span>
+</span><span class="line">      <span class="k">val</span> <span class="n">process</span> <span class="k">=</span> <span class="n">generator</span><span class="o">.</span><span class="n">factors</span><span class="o">.</span><span class="n">take</span><span class="o">(</span><span class="n">simulations</span><span class="o">).</span><span class="n">map</span> <span class="o">{</span>
+</span><span class="line">        <span class="k">implicit</span> <span class="n">factors</span> <span class="k">=&gt;</span> <span class="nc">PortfolioPricer</span><span class="o">.</span><span class="n">price</span><span class="o">(</span><span class="n">portfolio</span><span class="o">).</span>
+</span><span class="line">          <span class="n">fold</span><span class="o">(</span><span class="n">err</span> <span class="k">=&gt;</span> <span class="n">sys</span><span class="o">.</span><span class="n">error</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;Failed to price portfolio: $err&quot;</span><span class="o">),</span> <span class="n">identity</span><span class="o">)</span>
+</span><span class="line">      <span class="o">}</span>
+</span><span class="line">
+</span><span class="line">      <span class="c1">// Fork simulations into thread pool</span>
+</span><span class="line">      <span class="nc">Task</span><span class="o">.</span><span class="n">fork</span> <span class="o">{</span>
+</span><span class="line">        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;Simulate $simulations portfolio values for $portfolio&quot;</span><span class="o">)</span>
+</span><span class="line">        <span class="n">process</span><span class="o">.</span><span class="n">runLog</span><span class="o">.</span>
+</span><span class="line">            <span class="n">map</span><span class="o">(</span><span class="n">portfolioValues</span> <span class="k">=&gt;</span> <span class="nc">Simulations</span><span class="o">(</span><span class="n">portfolioValues</span><span class="o">.</span><span class="n">toVector</span><span class="o">))</span>
+</span><span class="line">      <span class="o">}(</span><span class="n">executor</span><span class="o">)</span>
+</span><span class="line">  <span class="o">}</span>
+</span><span class="line"><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
+<h4 id="run-market-risk-calculation">Run Market Risk Calculation</h4>
 
-<h4>Run Market Risk Calculation</h4>
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+<span class="line-number">15</span>
+<span class="line-number">16</span>
+<span class="line-number">17</span>
+<span class="line-number">18</span>
+<span class="line-number">19</span>
+<span class="line-number">20</span>
+<span class="line-number">21</span>
+<span class="line-number">22</span>
+<span class="line-number">23</span>
+<span class="line-number">24</span>
+<span class="line-number">25</span>
+<span class="line-number">26</span>
+<span class="line-number">27</span>
+<span class="line-number">28</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">object</span> <span class="nc">SingleNodeMarketRiskCalculation</span> <span class="k">extends</span> <span class="nc">App</span> <span class="o">{</span>
+</span><span class="line">  <span class="k">val</span> <span class="nc">AMZN</span> <span class="k">=</span> <span class="nc">Equity</span><span class="o">(</span><span class="s">&quot;AMZN&quot;</span><span class="o">)</span>
+</span><span class="line">  <span class="k">val</span> <span class="nc">AAPL</span> <span class="k">=</span> <span class="nc">Equity</span><span class="o">(</span><span class="s">&quot;AAPL&quot;</span><span class="o">)</span>
+</span><span class="line">  <span class="k">val</span> <span class="nc">IBM</span> <span class="k">=</span> <span class="nc">Equity</span><span class="o">(</span><span class="s">&quot;IBM&quot;</span><span class="o">)</span>
+</span><span class="line">  <span class="k">val</span> <span class="nc">GS</span> <span class="k">=</span> <span class="nc">Equity</span><span class="o">(</span><span class="s">&quot;GS&quot;</span><span class="o">)</span>
+</span><span class="line">
+</span><span class="line">  <span class="c1">// Portfolio evaluation date</span>
+</span><span class="line">  <span class="k">val</span> <span class="n">date</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">LocalDate</span><span class="o">(</span><span class="mi">2014</span><span class="o">,</span> <span class="mi">1</span><span class="o">,</span> <span class="mi">3</span><span class="o">)</span>
+</span><span class="line">
+</span><span class="line">  <span class="c1">// Options maturity date</span>
+</span><span class="line">  <span class="k">val</span> <span class="n">maturityDate</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">LocalDate</span><span class="o">(</span><span class="mi">2014</span><span class="o">,</span> <span class="mi">3</span><span class="o">,</span> <span class="mi">31</span><span class="o">)</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">val</span> <span class="n">portfolio</span> <span class="k">=</span> <span class="nc">Portfolio</span><span class="o">(</span><span class="n">nels</span><span class="o">(</span>
+</span><span class="line">    <span class="nc">Position</span><span class="o">(</span><span class="nc">AMZN</span><span class="o">,</span> <span class="mi">10</span><span class="o">),</span> <span class="nc">Position</span><span class="o">(</span><span class="nc">AAPL</span><span class="o">,</span> <span class="mi">20</span><span class="o">),</span> <span class="nc">Position</span><span class="o">(</span><span class="nc">IBM</span><span class="o">,</span> <span class="mi">30</span><span class="o">),</span>
+</span><span class="line">    <span class="nc">Position</span><span class="o">(</span><span class="nc">CallOption</span><span class="o">(</span><span class="nc">GS</span><span class="o">,</span> <span class="mi">180</span><span class="o">,</span> <span class="n">maturityDate</span><span class="o">),</span> <span class="mi">10</span><span class="o">)</span>
+</span><span class="line">  <span class="o">))</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">object</span> <span class="nc">RiskCalculator</span>
+</span><span class="line">    <span class="k">extends</span> <span class="nc">MonteCarloMarketRiskCalculator</span><span class="o">(</span><span class="mi">10000</span><span class="o">,</span> <span class="mi">10</span><span class="o">)</span>
+</span><span class="line">    <span class="k">with</span> <span class="nc">SingleNodePortfolioValueSimulation</span>
+</span><span class="line">    <span class="k">with</span> <span class="nc">HistoricalMarketFactors</span> <span class="k">with</span> <span class="nc">HistoricalMarketData</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">val</span> <span class="n">marketRisk</span> <span class="k">=</span> <span class="nc">RiskCalculator</span><span class="o">.</span><span class="n">marketRisk</span><span class="o">(</span><span class="n">portfolio</span><span class="o">,</span> <span class="n">date</span><span class="o">)</span>
+</span><span class="line">
+</span><span class="line">  <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;Calculated marker risk; &quot;</span> <span class="o">+</span>
+</span><span class="line">    <span class="n">s</span><span class="s">&quot;VaR(p = 0.95) = ${marketRisk.VaR(0.95)}, &quot;</span> <span class="o">+</span>
+</span><span class="line">    <span class="n">s</span><span class="s">&quot;CVaR(p = 0.95) = ${marketRisk.conditionalVaR(0.95)}&quot;</span><span class="o">)</span>
+</span><span class="line"><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">object</span> <span class="nc">SingleNodeMarketRiskCalculation</span> <span class="k">extends</span> <span class="nc">App</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">val</span> <span class="nc">AMZN</span> <span class="k">=</span> <span class="nc">Equity</span><span class="o">(</span><span class="s">&quot;AMZN&quot;</span><span class="o">)</span>
-</span><span class='line'>  <span class="k">val</span> <span class="nc">AAPL</span> <span class="k">=</span> <span class="nc">Equity</span><span class="o">(</span><span class="s">&quot;AAPL&quot;</span><span class="o">)</span>
-</span><span class='line'>  <span class="k">val</span> <span class="nc">IBM</span> <span class="k">=</span> <span class="nc">Equity</span><span class="o">(</span><span class="s">&quot;IBM&quot;</span><span class="o">)</span>
-</span><span class='line'>  <span class="k">val</span> <span class="nc">GS</span> <span class="k">=</span> <span class="nc">Equity</span><span class="o">(</span><span class="s">&quot;GS&quot;</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="c1">// Portfolio evaluation date</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">date</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">LocalDate</span><span class="o">(</span><span class="mi">2014</span><span class="o">,</span> <span class="mi">1</span><span class="o">,</span> <span class="mi">3</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="c1">// Options maturity date</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">maturityDate</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">LocalDate</span><span class="o">(</span><span class="mi">2014</span><span class="o">,</span> <span class="mi">3</span><span class="o">,</span> <span class="mi">31</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">val</span> <span class="n">portfolio</span> <span class="k">=</span> <span class="nc">Portfolio</span><span class="o">(</span><span class="n">nels</span><span class="o">(</span>
-</span><span class='line'>    <span class="nc">Position</span><span class="o">(</span><span class="nc">AMZN</span><span class="o">,</span> <span class="mi">10</span><span class="o">),</span> <span class="nc">Position</span><span class="o">(</span><span class="nc">AAPL</span><span class="o">,</span> <span class="mi">20</span><span class="o">),</span> <span class="nc">Position</span><span class="o">(</span><span class="nc">IBM</span><span class="o">,</span> <span class="mi">30</span><span class="o">),</span>
-</span><span class='line'>    <span class="nc">Position</span><span class="o">(</span><span class="nc">CallOption</span><span class="o">(</span><span class="nc">GS</span><span class="o">,</span> <span class="mi">180</span><span class="o">,</span> <span class="n">maturityDate</span><span class="o">),</span> <span class="mi">10</span><span class="o">)</span>
-</span><span class='line'>  <span class="o">))</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">object</span> <span class="nc">RiskCalculator</span>
-</span><span class='line'>    <span class="k">extends</span> <span class="nc">MonteCarloMarketRiskCalculator</span><span class="o">(</span><span class="mi">10000</span><span class="o">,</span> <span class="mi">10</span><span class="o">)</span>
-</span><span class='line'>    <span class="k">with</span> <span class="nc">SingleNodePortfolioValueSimulation</span>
-</span><span class='line'>    <span class="k">with</span> <span class="nc">HistoricalMarketFactors</span> <span class="k">with</span> <span class="nc">HistoricalMarketData</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">val</span> <span class="n">marketRisk</span> <span class="k">=</span> <span class="nc">RiskCalculator</span><span class="o">.</span><span class="n">marketRisk</span><span class="o">(</span><span class="n">portfolio</span><span class="o">,</span> <span class="n">date</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;Calculated marker risk; &quot;</span> <span class="o">+</span>
-</span><span class='line'>    <span class="n">s</span><span class="s">&quot;VaR(p = 0.95) = ${marketRisk.VaR(0.95)}, &quot;</span> <span class="o">+</span>
-</span><span class='line'>    <span class="n">s</span><span class="s">&quot;CVaR(p = 0.95) = ${marketRisk.conditionalVaR(0.95)}&quot;</span><span class="o">)</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+</pre></td><td class="code"><pre><code class=""><span class="line">[simulation-pool-1] Simulate 1000 portfolio values for Portfolio( ...
+</span><span class="line">[simulation-pool-2] Simulate 1000 portfolio values for Portfolio( ...
+</span><span class="line">[simulation-pool-0] Simulate 1000 portfolio values for Portfolio( ...
+</span><span class="line">[simulation-pool-3] Simulate 1000 portfolio values for Portfolio( ...
+</span><span class="line">[simulation-pool-4] Simulate 1000 portfolio values for Portfolio( ...
+</span><span class="line">[simulation-pool-5] Simulate 1000 portfolio values for Portfolio( ...
+</span><span class="line">[simulation-pool-6] Simulate 1000 portfolio values for Portfolio( ...
+</span><span class="line">[simulation-pool-7] Simulate 1000 portfolio values for Portfolio( ...
+</span><span class="line">[simulation-pool-8] Simulate 1000 portfolio values for Portfolio( ...
+</span><span class="line">[simulation-pool-9] Simulate 1000 portfolio values for Portfolio( ...
+</span><span class="line">
+</span><span class="line">Calculated marker risk in 3492 milliseconds:
+</span><span class="line">        VaR(p = 0.95) = -135.82237858706867
+</span><span class="line">        CVaR(p = 0.95) = -170.1895188516829</span></code></pre></td></tr></table></div></figure></notextile></div>
 
+<h3 id="next-step">Next step</h3>
 
+<p>In next part I’m going to scale-out VaR calculation to multiple nodes, and I will be using latest Akka Cluster for it.</p>
 
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>[simulation-pool-1] Simulate 1000 portfolio values for Portfolio( ...
-</span><span class='line'>[simulation-pool-2] Simulate 1000 portfolio values for Portfolio( ...
-</span><span class='line'>[simulation-pool-0] Simulate 1000 portfolio values for Portfolio( ...
-</span><span class='line'>[simulation-pool-3] Simulate 1000 portfolio values for Portfolio( ...
-</span><span class='line'>[simulation-pool-4] Simulate 1000 portfolio values for Portfolio( ...
-</span><span class='line'>[simulation-pool-5] Simulate 1000 portfolio values for Portfolio( ...
-</span><span class='line'>[simulation-pool-6] Simulate 1000 portfolio values for Portfolio( ...
-</span><span class='line'>[simulation-pool-7] Simulate 1000 portfolio values for Portfolio( ...
-</span><span class='line'>[simulation-pool-8] Simulate 1000 portfolio values for Portfolio( ...
-</span><span class='line'>[simulation-pool-9] Simulate 1000 portfolio values for Portfolio( ...
-</span><span class='line'>
-</span><span class='line'>Calculated marker risk in 3492 milliseconds:
-</span><span class='line'>        VaR(p = 0.95) = -135.82237858706867
-</span><span class='line'>        CVaR(p = 0.95) = -170.1895188516829</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>Next step</h3>
-
-<p>In next part I&rsquo;m going to scale-out VaR calculation to multiple nodes, and I will be using latest Akka Cluster for it.</p>
-
-<h2><a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2">>>> Go to Part 2</a></h2>
+<h2 id="go-to-part-2blog20140501akka-cluster-for-value-at-risk-calculation-2"><a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2">»&gt; Go to Part 2</a></h2>
 </div>
 
 
@@ -716,6 +702,10 @@ and explained why it&rsquo;s a perfect fit for grid computing and spreading calc
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/10/18/run-tests-in-standalone-spark-cluster/">Running Spark Tests in Standalone Cluster</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2/">Akka Cluster for Value at Risk Calculation (Part 2/2)</a>
       </li>
     
@@ -729,10 +719,6 @@ and explained why it&rsquo;s a perfect fit for grid computing and spreading calc
     
       <li class="post">
         <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1/">Seamless Migration From Monolithic Application to Finagle Services (Part 1/2)</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/04/01/scalaz-stream-concurrent-process/">Scalaz-Stream: Feed `Process` Through the Given Effectful `Channel` Concurrently</a>
       </li>
     
   </ul>

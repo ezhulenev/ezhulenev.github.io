@@ -9,7 +9,7 @@
   <meta name="author" content="Eugene Zhulenev">
 
   
-  <meta name="description" content="Synopsis The code &amp; sample app can be found on Github Distributed micro-services architecture is hot trend right now, it&rsquo;s widely adopted &hellip;">
+  <meta name="description" content="Synopsis The code &amp; sample app can be found on Github Distributed micro-services architecture is hot trend right now, it’s widely adopted by &hellip;">
   <meta name="keywords" content="scala, finagle, micro-services, cloud">
 
   <!-- http://t.co/dKP3o1e -->
@@ -122,223 +122,221 @@
   </header>
 
 
-<div class="entry-content"><h3>Synopsis</h3>
+<div class="entry-content"><h3 id="synopsis">Synopsis</h3>
 
-<blockquote><p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/finagled-movie-db">Github</a></p></blockquote>
+<blockquote>
+  <p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/finagled-movie-db">Github</a></p>
+</blockquote>
 
-<p>Distributed micro-services architecture is hot trend right now, it&rsquo;s widely adopted by <a href="https://blog.twitter.com/2011/finagle-a-protocol-agnostic-rpc-system">Twitter</a>, <a href="https://engineering.linkedin.com/architecture/restli-restful-service-architecture-scale">LinkedIn</a> and <a href="http://www.slideshare.net/LappleApple/gilt-from-monolith-ruby-app-to-micro-service-scala-service-architecture">Gilt</a>.
-However it can be difficult if data model is already defined, and services accessed via existing API throughout all your code. I’ll show how it&rsquo;s possible to split monoliths app into standalone services built with Finagle and SBinary for custom communication protocol.</p>
+<p>Distributed micro-services architecture is hot trend right now, it’s widely adopted by <a href="https://blog.twitter.com/2011/finagle-a-protocol-agnostic-rpc-system">Twitter</a>, <a href="https://engineering.linkedin.com/architecture/restli-restful-service-architecture-scale">LinkedIn</a> and <a href="http://www.slideshare.net/LappleApple/gilt-from-monolith-ruby-app-to-micro-service-scala-service-architecture">Gilt</a>.
+However it can be difficult if data model is already defined, and services accessed via existing API throughout all your code. I’ll show how it’s possible to split monoliths app into standalone services built with Finagle and SBinary for custom communication protocol.</p>
 
-<p>I&rsquo;m going to show it on example of small Fancy Movie Database application.</p>
+<p>I’m going to show it on example of small Fancy Movie Database application.</p>
 
-<h2>[Part 1] Fancy Movie Database application</h2>
+<h2 id="part-1-fancy-movie-database-application">[Part 1] Fancy Movie Database application</h2>
 
 <p>Go to <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2">Part 2</a> where fancy movie database application is divided into server and client using Finagle.</p>
 
 <!-- more -->
 
+<h3 id="data-model">Data model</h3>
 
-<h3>Data model</h3>
+<p>Let’s start with application data model definition:</p>
 
-<p>Let&rsquo;s start with application data model definition:</p>
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+<span class="line-number">15</span>
+<span class="line-number">16</span>
+<span class="line-number">17</span>
+<span class="line-number">18</span>
+<span class="line-number">19</span>
+<span class="line-number">20</span>
+<span class="line-number">21</span>
+<span class="line-number">22</span>
+<span class="line-number">23</span>
+<span class="line-number">24</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">sealed</span> <span class="k">trait</span> <span class="nc">Genre</span>
+</span><span class="line">
+</span><span class="line"><span class="k">object</span> <span class="nc">Genre</span> <span class="o">{</span>
+</span><span class="line">  <span class="k">case</span> <span class="k">object</span> <span class="nc">Action</span>      <span class="k">extends</span> <span class="nc">Genre</span>
+</span><span class="line">  <span class="k">case</span> <span class="k">object</span> <span class="nc">Adventure</span>   <span class="k">extends</span> <span class="nc">Genre</span>
+</span><span class="line">  <span class="k">case</span> <span class="k">object</span> <span class="nc">Animation</span>   <span class="k">extends</span> <span class="nc">Genre</span>
+</span><span class="line">  <span class="k">case</span> <span class="k">object</span> <span class="nc">Biography</span>   <span class="k">extends</span> <span class="nc">Genre</span>
+</span><span class="line">  <span class="k">case</span> <span class="k">object</span> <span class="nc">Comedy</span>      <span class="k">extends</span> <span class="nc">Genre</span>
+</span><span class="line">  <span class="k">case</span> <span class="k">object</span> <span class="nc">Crime</span>       <span class="k">extends</span> <span class="nc">Genre</span>
+</span><span class="line">  <span class="k">case</span> <span class="k">object</span> <span class="nc">Documentary</span> <span class="k">extends</span> <span class="nc">Genre</span>
+</span><span class="line">  <span class="k">case</span> <span class="k">object</span> <span class="nc">Drama</span>       <span class="k">extends</span> <span class="nc">Genre</span>
+</span><span class="line">  <span class="k">case</span> <span class="k">object</span> <span class="nc">Thriller</span>    <span class="k">extends</span> <span class="nc">Genre</span>
+</span><span class="line">  <span class="k">case</span> <span class="k">object</span> <span class="nc">Western</span>     <span class="k">extends</span> <span class="nc">Genre</span>
+</span><span class="line"><span class="o">}</span>
+</span><span class="line">
+</span><span class="line"><span class="k">case</span> <span class="k">class</span> <span class="nc">Person</span><span class="o">(</span><span class="n">firstName</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">secondName</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">born</span><span class="k">:</span> <span class="kt">LocalDate</span><span class="o">)</span>
+</span><span class="line">
+</span><span class="line"><span class="k">case</span> <span class="k">class</span> <span class="nc">Cast</span><span class="o">(</span><span class="n">person</span><span class="k">:</span> <span class="kt">Person</span><span class="o">,</span> <span class="n">as</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span>
+</span><span class="line">
+</span><span class="line"><span class="k">case</span> <span class="k">class</span> <span class="nc">Movie</span><span class="o">(</span><span class="n">title</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span>
+</span><span class="line">                 <span class="n">genre</span><span class="k">:</span> <span class="kt">Genre</span><span class="o">,</span>
+</span><span class="line">                 <span class="n">year</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span>
+</span><span class="line">                 <span class="n">directedBy</span><span class="k">:</span> <span class="kt">Person</span><span class="o">,</span>
+</span><span class="line">                 <span class="n">cast</span><span class="k">:</span> <span class="kt">Vector</span><span class="o">[</span><span class="kt">Cast</span><span class="o">])</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">sealed</span> <span class="k">trait</span> <span class="nc">Genre</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">object</span> <span class="nc">Genre</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">object</span> <span class="nc">Action</span>      <span class="k">extends</span> <span class="nc">Genre</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">object</span> <span class="nc">Adventure</span>   <span class="k">extends</span> <span class="nc">Genre</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">object</span> <span class="nc">Animation</span>   <span class="k">extends</span> <span class="nc">Genre</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">object</span> <span class="nc">Biography</span>   <span class="k">extends</span> <span class="nc">Genre</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">object</span> <span class="nc">Comedy</span>      <span class="k">extends</span> <span class="nc">Genre</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">object</span> <span class="nc">Crime</span>       <span class="k">extends</span> <span class="nc">Genre</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">object</span> <span class="nc">Documentary</span> <span class="k">extends</span> <span class="nc">Genre</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">object</span> <span class="nc">Drama</span>       <span class="k">extends</span> <span class="nc">Genre</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">object</span> <span class="nc">Thriller</span>    <span class="k">extends</span> <span class="nc">Genre</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">object</span> <span class="nc">Western</span>     <span class="k">extends</span> <span class="nc">Genre</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Person</span><span class="o">(</span><span class="n">firstName</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">secondName</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span> <span class="n">born</span><span class="k">:</span> <span class="kt">LocalDate</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Cast</span><span class="o">(</span><span class="n">person</span><span class="k">:</span> <span class="kt">Person</span><span class="o">,</span> <span class="n">as</span><span class="k">:</span> <span class="kt">String</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">case</span> <span class="k">class</span> <span class="nc">Movie</span><span class="o">(</span><span class="n">title</span><span class="k">:</span> <span class="kt">String</span><span class="o">,</span>
-</span><span class='line'>                 <span class="n">genre</span><span class="k">:</span> <span class="kt">Genre</span><span class="o">,</span>
-</span><span class='line'>                 <span class="n">year</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span>
-</span><span class='line'>                 <span class="n">directedBy</span><span class="k">:</span> <span class="kt">Person</span><span class="o">,</span>
-</span><span class='line'>                 <span class="n">cast</span><span class="k">:</span> <span class="kt">Vector</span><span class="o">[</span><span class="kt">Cast</span><span class="o">])</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>Services definition</h3>
+<h3 id="services-definition">Services definition</h3>
 
 <p>And services that we want to provide:</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">trait</span> <span class="nc">PeopleService</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">def</span> <span class="n">people</span><span class="o">()</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">Vector</span><span class="o">[</span><span class="kt">Person</span><span class="o">]]</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">trait</span> <span class="nc">MoviesService</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">def</span> <span class="n">movies</span><span class="o">()</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">Vector</span><span class="o">[</span><span class="kt">Movie</span><span class="o">]]</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">def</span> <span class="n">movies</span><span class="o">(</span><span class="n">year</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">Vector</span><span class="o">[</span><span class="kt">Movie</span><span class="o">]]</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">def</span> <span class="n">movies</span><span class="o">(</span><span class="n">genre</span><span class="k">:</span> <span class="kt">Genre</span><span class="o">)</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">Vector</span><span class="o">[</span><span class="kt">Movie</span><span class="o">]]</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">def</span> <span class="n">movies</span><span class="o">(</span><span class="n">person</span><span class="k">:</span> <span class="kt">Person</span><span class="o">)</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">Vector</span><span class="o">[</span><span class="kt">Movie</span><span class="o">]]</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">PeopleService</span> <span class="o">{</span>
+</span><span class="line">  <span class="k">def</span> <span class="n">people</span><span class="o">()</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">Vector</span><span class="o">[</span><span class="kt">Person</span><span class="o">]]</span>
+</span><span class="line"><span class="o">}</span>
+</span><span class="line">
+</span><span class="line"><span class="k">trait</span> <span class="nc">MoviesService</span> <span class="o">{</span>
+</span><span class="line">  <span class="k">def</span> <span class="n">movies</span><span class="o">()</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">Vector</span><span class="o">[</span><span class="kt">Movie</span><span class="o">]]</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">def</span> <span class="n">movies</span><span class="o">(</span><span class="n">year</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">Vector</span><span class="o">[</span><span class="kt">Movie</span><span class="o">]]</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">def</span> <span class="n">movies</span><span class="o">(</span><span class="n">genre</span><span class="k">:</span> <span class="kt">Genre</span><span class="o">)</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">Vector</span><span class="o">[</span><span class="kt">Movie</span><span class="o">]]</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">def</span> <span class="n">movies</span><span class="o">(</span><span class="n">person</span><span class="k">:</span> <span class="kt">Person</span><span class="o">)</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">Vector</span><span class="o">[</span><span class="kt">Movie</span><span class="o">]]</span>
+</span><span class="line"><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
-
-<h3>Mock data access layer</h3>
+<h3 id="mock-data-access-layer">Mock data access layer</h3>
 
 <p>In real application we probably would have SQL database or some other type of storage with movies data.
-Let&rsquo;s assume that this storage is <code>blocking resource</code>, and quite expensive to access.
+Let’s assume that this storage is <code>blocking resource</code>, and quite expensive to access.
 However for this example application I will use small in-memory mock implementation of access layer with only two movies directed by <a href="http://www.imdb.com/name/nm0000233/">Quentin Tarantino</a>: <a href="http://www.imdb.com/title/tt1853728/?ref_=nm_flmg_dr_3">Django Unchained</a>, and <a href="http://www.imdb.com/title/tt0361748/?ref_=nm_flmg_dr_4">Inglourious Basterds</a></p>
 
-<blockquote><p>Source code for access layer on Github: <a href="https://github.com/ezhulenev/finagled-movie-db/blob/master/core/src/main/scala/com/fmdb/MovieDatabaseAccess.scala">MovieDatabaseAccess.scala</a></p></blockquote>
+<blockquote>
+  <p>Source code for access layer on Github: <a href="https://github.com/ezhulenev/finagled-movie-db/blob/master/core/src/main/scala/com/fmdb/MovieDatabaseAccess.scala">MovieDatabaseAccess.scala</a></p>
+</blockquote>
 
-<h3>Let&rsquo;s be reactive</h3>
+<h3 id="lets-be-reactive">Let’s be reactive</h3>
 
-<p>I hope we all agree that applications needs to be <code>reactive</code>, that&rsquo;s why I&rsquo;m wrapping <code>blocking</code> calls into <code>scala.concurrent.future</code>.</p>
+<p>I hope we all agree that applications needs to be <code>reactive</code>, that’s why I’m wrapping <code>blocking</code> calls into <code>scala.concurrent.future</code>.</p>
 
 <p>Straightforward services layer implementation:</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">package</span> <span class="nn">object</span> <span class="n">monolithic</span> <span class="o">{</span>
-</span><span class='line'><span class="k">trait</span> <span class="nc">PeopleServiceImpl</span> <span class="k">extends</span> <span class="nc">PeopleService</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">override</span> <span class="k">def</span> <span class="n">people</span><span class="o">()</span> <span class="k">=</span>
-</span><span class='line'>       <span class="n">future</span> <span class="o">{</span> <span class="nc">MovieDatabaseAccess</span><span class="o">.</span><span class="n">people</span><span class="o">()</span> <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">trait</span> <span class="nc">MoviesServiceImpl</span> <span class="k">extends</span> <span class="nc">MoviesService</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">override</span> <span class="k">def</span> <span class="n">movies</span><span class="o">(</span><span class="n">person</span><span class="k">:</span> <span class="kt">Person</span><span class="o">)</span> <span class="k">=</span>
-</span><span class='line'>       <span class="n">future</span> <span class="o">{</span> <span class="nc">MovieDatabaseAccess</span><span class="o">.</span><span class="n">movies</span><span class="o">(</span><span class="n">person</span><span class="o">)</span> <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">override</span> <span class="k">def</span> <span class="n">movies</span><span class="o">(</span><span class="n">genre</span><span class="k">:</span> <span class="kt">Genre</span><span class="o">)</span> <span class="k">=</span>
-</span><span class='line'>       <span class="n">future</span> <span class="o">{</span> <span class="nc">MovieDatabaseAccess</span><span class="o">.</span><span class="n">movies</span><span class="o">(</span><span class="n">genre</span><span class="o">)</span> <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">override</span> <span class="k">def</span> <span class="n">movies</span><span class="o">(</span><span class="n">year</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span> <span class="k">=</span>
-</span><span class='line'>       <span class="n">future</span> <span class="o">{</span> <span class="nc">MovieDatabaseAccess</span><span class="o">.</span><span class="n">movies</span><span class="o">(</span><span class="n">year</span><span class="o">)</span> <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">override</span> <span class="k">def</span> <span class="n">movies</span><span class="o">()</span> <span class="k">=</span>
-</span><span class='line'>       <span class="n">future</span> <span class="o">{</span> <span class="nc">MovieDatabaseAccess</span><span class="o">.</span><span class="n">movies</span><span class="o">()</span> <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+<span class="line-number">15</span>
+<span class="line-number">16</span>
+<span class="line-number">17</span>
+<span class="line-number">18</span>
+<span class="line-number">19</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">package</span> <span class="nn">object</span> <span class="n">monolithic</span> <span class="o">{</span>
+</span><span class="line"><span class="k">trait</span> <span class="nc">PeopleServiceImpl</span> <span class="k">extends</span> <span class="nc">PeopleService</span> <span class="o">{</span>
+</span><span class="line">  <span class="k">override</span> <span class="k">def</span> <span class="n">people</span><span class="o">()</span> <span class="k">=</span>
+</span><span class="line">       <span class="n">future</span> <span class="o">{</span> <span class="nc">MovieDatabaseAccess</span><span class="o">.</span><span class="n">people</span><span class="o">()</span> <span class="o">}</span>
+</span><span class="line"><span class="o">}</span>
+</span><span class="line">
+</span><span class="line"><span class="k">trait</span> <span class="nc">MoviesServiceImpl</span> <span class="k">extends</span> <span class="nc">MoviesService</span> <span class="o">{</span>
+</span><span class="line">  <span class="k">override</span> <span class="k">def</span> <span class="n">movies</span><span class="o">(</span><span class="n">person</span><span class="k">:</span> <span class="kt">Person</span><span class="o">)</span> <span class="k">=</span>
+</span><span class="line">       <span class="n">future</span> <span class="o">{</span> <span class="nc">MovieDatabaseAccess</span><span class="o">.</span><span class="n">movies</span><span class="o">(</span><span class="n">person</span><span class="o">)</span> <span class="o">}</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">override</span> <span class="k">def</span> <span class="n">movies</span><span class="o">(</span><span class="n">genre</span><span class="k">:</span> <span class="kt">Genre</span><span class="o">)</span> <span class="k">=</span>
+</span><span class="line">       <span class="n">future</span> <span class="o">{</span> <span class="nc">MovieDatabaseAccess</span><span class="o">.</span><span class="n">movies</span><span class="o">(</span><span class="n">genre</span><span class="o">)</span> <span class="o">}</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">override</span> <span class="k">def</span> <span class="n">movies</span><span class="o">(</span><span class="n">year</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span> <span class="k">=</span>
+</span><span class="line">       <span class="n">future</span> <span class="o">{</span> <span class="nc">MovieDatabaseAccess</span><span class="o">.</span><span class="n">movies</span><span class="o">(</span><span class="n">year</span><span class="o">)</span> <span class="o">}</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">override</span> <span class="k">def</span> <span class="n">movies</span><span class="o">()</span> <span class="k">=</span>
+</span><span class="line">       <span class="n">future</span> <span class="o">{</span> <span class="nc">MovieDatabaseAccess</span><span class="o">.</span><span class="n">movies</span><span class="o">()</span> <span class="o">}</span>
+</span><span class="line"><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
-
-<h3>Let&rsquo;s combine it together</h3>
+<h3 id="lets-combine-it-together">Let’s combine it together</h3>
 
 <p>After model and services are defined, and basic implementation is provided we can build simple application for querying Fancy Movies Database.</p>
 
-<p>Let&rsquo;s find all movies with Leonardo DiCaprio:</p>
+<p>Let’s find all movies with Leonardo DiCaprio:</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">object</span> <span class="nc">MonolithicExample</span> <span class="k">extends</span> <span class="nc">App</span> <span class="o">{</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="c1">// Lets create services</span>
-</span><span class='line'>  <span class="k">object</span> <span class="nc">Services</span> <span class="k">extends</span> <span class="nc">PeopleServiceImpl</span> <span class="k">with</span> <span class="nc">MoviesServiceImpl</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="c1">// Lets&#39; get all movies for Leonardo DiCaprio</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">leo</span> <span class="k">=</span> <span class="nc">Await</span><span class="o">.</span>
-</span><span class='line'>    <span class="n">result</span><span class="o">(</span><span class="nc">Services</span><span class="o">.</span><span class="n">people</span><span class="o">(),</span> <span class="mf">1.</span><span class="n">second</span><span class="o">).</span><span class="n">find</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">firstName</span> <span class="o">==</span> <span class="s">&quot;Leonardo&quot;</span><span class="o">).</span><span class="n">get</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">val</span> <span class="n">leoMovies</span> <span class="k">=</span> <span class="nc">Await</span><span class="o">.</span>
-</span><span class='line'>    <span class="n">result</span><span class="o">(</span><span class="nc">Services</span><span class="o">.</span><span class="n">movies</span><span class="o">(</span><span class="n">leo</span><span class="o">),</span> <span class="mf">1.</span><span class="n">second</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;Movies with ${leo.firstName} ${leo.secondName}:&quot;</span><span class="o">)</span>
-</span><span class='line'>  <span class="n">leoMovies</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">m</span> <span class="k">=&gt;</span> <span class="n">s</span><span class="s">&quot; - ${m.title}, ${m.year}&quot;</span><span class="o">).</span><span class="n">foreach</span><span class="o">(</span><span class="n">println</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="c1">// Shutdown</span>
-</span><span class='line'>  <span class="nc">System</span><span class="o">.</span><span class="n">exit</span><span class="o">(</span><span class="mi">0</span><span class="o">)</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure>
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+<span class="line-number">15</span>
+<span class="line-number">16</span>
+<span class="line-number">17</span>
+<span class="line-number">18</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">object</span> <span class="nc">MonolithicExample</span> <span class="k">extends</span> <span class="nc">App</span> <span class="o">{</span>
+</span><span class="line">
+</span><span class="line">  <span class="c1">// Lets create services</span>
+</span><span class="line">  <span class="k">object</span> <span class="nc">Services</span> <span class="k">extends</span> <span class="nc">PeopleServiceImpl</span> <span class="k">with</span> <span class="nc">MoviesServiceImpl</span>
+</span><span class="line">
+</span><span class="line">  <span class="c1">// Lets&#39; get all movies for Leonardo DiCaprio</span>
+</span><span class="line">  <span class="k">val</span> <span class="n">leo</span> <span class="k">=</span> <span class="nc">Await</span><span class="o">.</span>
+</span><span class="line">    <span class="n">result</span><span class="o">(</span><span class="nc">Services</span><span class="o">.</span><span class="n">people</span><span class="o">(),</span> <span class="mf">1.</span><span class="n">second</span><span class="o">).</span><span class="n">find</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">firstName</span> <span class="o">==</span> <span class="s">&quot;Leonardo&quot;</span><span class="o">).</span><span class="n">get</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">val</span> <span class="n">leoMovies</span> <span class="k">=</span> <span class="nc">Await</span><span class="o">.</span>
+</span><span class="line">    <span class="n">result</span><span class="o">(</span><span class="nc">Services</span><span class="o">.</span><span class="n">movies</span><span class="o">(</span><span class="n">leo</span><span class="o">),</span> <span class="mf">1.</span><span class="n">second</span><span class="o">)</span>
+</span><span class="line">
+</span><span class="line">  <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;Movies with ${leo.firstName} ${leo.secondName}:&quot;</span><span class="o">)</span>
+</span><span class="line">  <span class="n">leoMovies</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">m</span> <span class="k">=&gt;</span> <span class="n">s</span><span class="s">&quot; - ${m.title}, ${m.year}&quot;</span><span class="o">).</span><span class="n">foreach</span><span class="o">(</span><span class="n">println</span><span class="o">)</span>
+</span><span class="line">
+</span><span class="line">  <span class="c1">// Shutdown</span>
+</span><span class="line">  <span class="nc">System</span><span class="o">.</span><span class="n">exit</span><span class="o">(</span><span class="mi">0</span><span class="o">)</span>
+</span><span class="line"><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
+<h5 id="output">Output</h5>
 
-<h5>Output</h5>
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+</pre></td><td class="code"><pre><code class=""><span class="line">Movies with Leonardo DiCaprio:
+</span><span class="line"> - Django Unchained, 2012</span></code></pre></td></tr></table></div></figure></notextile></div>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>Movies with Leonardo DiCaprio:
-</span><span class='line'> - Django Unchained, 2012</span></code></pre></td></tr></table></div></figure>
+<h3 id="next-step">Next step</h3>
 
+<p>In next part I’m going to divide this application into server and client preserving existing API, such that migration from monolithic application to distributed is completely seamless for <code>service clients</code>.</p>
 
-<h3>Next step</h3>
-
-<p>In next part I&rsquo;m going to divide this application into server and client preserving existing API, such that migration from monolithic application to distributed is completely seamless for <code>service clients</code>.</p>
-
-<h2><a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2">>>> Go to Part 2</a></h2>
+<h2 id="go-to-part-2blog20140409seamless-migration-from-monolithic-application-to-finagle-services-2"><a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2">»&gt; Go to Part 2</a></h2>
 </div>
 
 
@@ -416,6 +414,10 @@ However for this example application I will use small in-memory mock implementat
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/10/18/run-tests-in-standalone-spark-cluster/">Running Spark Tests in Standalone Cluster</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2/">Akka Cluster for Value at Risk Calculation (Part 2/2)</a>
       </li>
     
@@ -429,10 +431,6 @@ However for this example application I will use small in-memory mock implementat
     
       <li class="post">
         <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1/">Seamless Migration From Monolithic Application to Finagle Services (Part 1/2)</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/04/01/scalaz-stream-concurrent-process/">Scalaz-Stream: Feed `Process` Through the Given Effectful `Channel` Concurrently</a>
       </li>
     
   </ul>

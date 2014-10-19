@@ -9,7 +9,7 @@
   <meta name="author" content="Eugene Zhulenev">
 
   
-  <meta name="description" content="Akka Cluster for Value at Risk calculation (Part 2/2) May 1st, 2014 akka cluster grid scala scalaz-stream value-at-risk Comments Synopsis The code & &hellip;">
+  <meta name="description" content="Running Spark tests in standalone cluster Oct 18th, 2014 sbt scala spark Comments The code for this application app can be found on Github Running &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -99,6 +99,90 @@
     <header>
   
   <h1 class="beta">
+    <a href="/blog/2014/10/18/run-tests-in-standalone-spark-cluster/">Running Spark tests in standalone cluster</a>
+  </h1>
+  
+
+  
+  <div class="meta clearfix">
+    
+
+
+
+
+
+
+
+
+  
+
+
+<time class="pull-left" datetime="2014-10-18T21:01:15-04:00" pubdate data-updated="true"><i class="icon-calendar"></i> Oct 18<span>th</span>, 2014</time>
+    
+
+  <div class="pull-left">
+    <i class="icon-tags"></i>
+    <ul class="tags unstyled">
+    
+      
+        <li><a class='category' href='/blog/categories/sbt/'>sbt</a></li>
+      
+        <li><a class='category' href='/blog/categories/scala/'>scala</a></li>
+      
+        <li><a class='category' href='/blog/categories/spark/'>spark</a></li>
+      
+    
+    </ul>
+  </div>
+
+    
+      <a class="pull-right" href="http://eugenezhulenev.com/blog/2014/10/18/run-tests-in-standalone-spark-cluster/#disqus_thread">
+        Comments <i class="icon-comment"></i>
+      </a>
+    
+  </div>
+  
+</header>
+
+
+
+
+<div class="entry-content clearfix">
+  <blockquote>
+  <p>The code for this application app can be found on <a href="https://github.com/ezhulenev/spark-testing">Github</a></p>
+</blockquote>
+
+<h3 id="running-spark-applications">Running Spark Applications</h3>
+
+<p>To be able to run Spark jobs, Spark cluster needs to have all classes used by your application in it’s classpath.
+You can put manually all jar files required by your application to Spark nodes, but it’s not cool.
+Another solution is to manually set jar files that required to distribute to worker nodes
+when you create SparkConf. One way to do it, is to package your application as a “fat-jar”,
+so you need to distribute only single jar.
+Industry standard for packaging Spark application is <a href="https://github.com/sbt/sbt-assembly">sbt-assembly</a> plugin,
+and it’s used by Spark itself.</p>
+
+<h3 id="testing-spark-applications">Testing Spark Applications</h3>
+
+<p>If you need to test your Spark application, easiest way is to create local Spark Context for each test, or maybe shared between all tests.
+When Spark is running in local mode, it’s running in the same JVM as your tests with same jar files in classpath.</p>
+
+<p>If your tests requires data that doesn’t fit into single node, obvious solution is to run them in standalone Spark cluster
+with sufficient number of nodes. At this time everything becomes more difficult. Now you need to package you application with tests
+in single jar file, and submit it to Spark cluster with each test.</p>
+
+
+  <a class="btn pull-right" href="/blog/2014/10/18/run-tests-in-standalone-spark-cluster/">Read on &rarr;</a>
+</div>
+
+  </article>
+  <hr>
+
+  
+  <article class="listing">
+    <header>
+  
+  <h1 class="beta">
     <a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2/">Akka Cluster for Value at Risk calculation (Part 2/2)</a>
   </h1>
   
@@ -154,16 +238,18 @@
 
 
 <div class="entry-content clearfix">
-  <h3>Synopsis</h3>
+  <h3 id="synopsis">Synopsis</h3>
 
-<blockquote><p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/akka-var-calculation">Github</a></p></blockquote>
+<blockquote>
+  <p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/akka-var-calculation">Github</a></p>
+</blockquote>
 
 <p>Risk Management in finance is one of the most common <a href="http://www.gridgain.com/usecases/risk-management/">case studies</a>
 for Grid Computing, and Value-at-Risk is most widely used risk measure.
-In this article I&rsquo;m going to show how to <code>scale-out</code> Value-at-Risk calculation to multiple nodes with latest <a href="http://akka.io">Akka</a> middleware.
-In Part 1 I&rsquo;m describing the problem and <code>single-node</code> solution, and in Part 2 I&rsquo;m scaling it to multiple nodes.</p>
+In this article I’m going to show how to <code>scale-out</code> Value-at-Risk calculation to multiple nodes with latest <a href="http://akka.io">Akka</a> middleware.
+In Part 1 I’m describing the problem and <code>single-node</code> solution, and in Part 2 I’m scaling it to multiple nodes.</p>
 
-<h2>[Part 2/2] Scale-out VaR calculation to multiple nodes</h2>
+<h2 id="part-22-scale-out-var-calculation-to-multiple-nodes">[Part 2/2] Scale-out VaR calculation to multiple nodes</h2>
 
 <p>Go to <a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1">Part 1</a> where Value at Risk calculator defined.</p>
 
@@ -234,16 +320,18 @@ In Part 1 I&rsquo;m describing the problem and <code>single-node</code> solution
 
 
 <div class="entry-content clearfix">
-  <h3>Synopsis</h3>
+  <h3 id="synopsis">Synopsis</h3>
 
-<blockquote><p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/akka-var-calculation">Github</a></p></blockquote>
+<blockquote>
+  <p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/akka-var-calculation">Github</a></p>
+</blockquote>
 
 <p>Risk Management in finance is one of the most common <a href="http://www.gridgain.com/usecases/risk-management/">case studies</a>
 for Grid Computing, and Value-at-Risk is most widely used risk measure.
-In this article I&rsquo;m going to show how to <code>scale-out</code> Value-at-Risk calculation to multiple nodes with latest <a href="http://akka.io">Akka</a> middleware.
-In Part 1 I&rsquo;m describing the problem and <code>single-node</code> solution, and in Part 2 I&rsquo;m scaling it to multiple nodes.</p>
+In this article I’m going to show how to <code>scale-out</code> Value-at-Risk calculation to multiple nodes with latest <a href="http://akka.io">Akka</a> middleware.
+In Part 1 I’m describing the problem and <code>single-node</code> solution, and in Part 2 I’m scaling it to multiple nodes.</p>
 
-<h2>[Part 1] Introduction to Value at Risk calculation</h2>
+<h2 id="part-1-introduction-to-value-at-risk-calculation">[Part 1] Introduction to Value at Risk calculation</h2>
 
 <p>Go to <a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2">Part 2</a> where VaR calculation scaled-out to multiple nodes.</p>
 
@@ -312,20 +400,22 @@ In Part 1 I&rsquo;m describing the problem and <code>single-node</code> solution
 
 
 <div class="entry-content clearfix">
-  <h3>Synopsis</h3>
+  <h3 id="synopsis">Synopsis</h3>
 
-<blockquote><p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/finagled-movie-db">Github</a></p></blockquote>
+<blockquote>
+  <p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/finagled-movie-db">Github</a></p>
+</blockquote>
 
-<p>Distributed micro-services architecture is hot trend right now, it&rsquo;s widely adopted by <a href="https://blog.twitter.com/2011/finagle-a-protocol-agnostic-rpc-system">Twitter</a>, <a href="https://engineering.linkedin.com/architecture/restli-restful-service-architecture-scale">LinkedIn</a> and <a href="http://www.slideshare.net/LappleApple/gilt-from-monolith-ruby-app-to-micro-service-scala-service-architecture">Gilt</a>.
-However it can be difficult if data model is already defined, and services accessed via existing API throughout all your code. I’ll show how it&rsquo;s possible to split monoliths app into standalone services built with Finagle and SBinary for custom communication protocol.</p>
+<p>Distributed micro-services architecture is hot trend right now, it’s widely adopted by <a href="https://blog.twitter.com/2011/finagle-a-protocol-agnostic-rpc-system">Twitter</a>, <a href="https://engineering.linkedin.com/architecture/restli-restful-service-architecture-scale">LinkedIn</a> and <a href="http://www.slideshare.net/LappleApple/gilt-from-monolith-ruby-app-to-micro-service-scala-service-architecture">Gilt</a>.
+However it can be difficult if data model is already defined, and services accessed via existing API throughout all your code. I’ll show how it’s possible to split monoliths app into standalone services built with Finagle and SBinary for custom communication protocol.</p>
 
-<p>I&rsquo;m going to show it on example of small Fancy Movie Database application.</p>
+<p>I’m going to show it on example of small Fancy Movie Database application.</p>
 
-<h2>[Part 2/2] Spit application to distributed services</h2>
+<h2 id="part-22-spit-application-to-distributed-services">[Part 2/2] Spit application to distributed services</h2>
 
 <p>Go to <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1">Part 1</a> where fancy movie database application defined.</p>
 
-<h3>What is Finagle</h3>
+<h3 id="what-is-finagle">What is Finagle</h3>
 
 <p>Finagle is a protocol-agnostic, asynchronous RPC system for the JVM that makes it easy to build robust clients and servers in Java, Scala, or any JVM-hosted language.</p>
 
@@ -392,16 +482,18 @@ However it can be difficult if data model is already defined, and services acces
 
 
 <div class="entry-content clearfix">
-  <h3>Synopsis</h3>
+  <h3 id="synopsis">Synopsis</h3>
 
-<blockquote><p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/finagled-movie-db">Github</a></p></blockquote>
+<blockquote>
+  <p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/finagled-movie-db">Github</a></p>
+</blockquote>
 
-<p>Distributed micro-services architecture is hot trend right now, it&rsquo;s widely adopted by <a href="https://blog.twitter.com/2011/finagle-a-protocol-agnostic-rpc-system">Twitter</a>, <a href="https://engineering.linkedin.com/architecture/restli-restful-service-architecture-scale">LinkedIn</a> and <a href="http://www.slideshare.net/LappleApple/gilt-from-monolith-ruby-app-to-micro-service-scala-service-architecture">Gilt</a>.
-However it can be difficult if data model is already defined, and services accessed via existing API throughout all your code. I’ll show how it&rsquo;s possible to split monoliths app into standalone services built with Finagle and SBinary for custom communication protocol.</p>
+<p>Distributed micro-services architecture is hot trend right now, it’s widely adopted by <a href="https://blog.twitter.com/2011/finagle-a-protocol-agnostic-rpc-system">Twitter</a>, <a href="https://engineering.linkedin.com/architecture/restli-restful-service-architecture-scale">LinkedIn</a> and <a href="http://www.slideshare.net/LappleApple/gilt-from-monolith-ruby-app-to-micro-service-scala-service-architecture">Gilt</a>.
+However it can be difficult if data model is already defined, and services accessed via existing API throughout all your code. I’ll show how it’s possible to split monoliths app into standalone services built with Finagle and SBinary for custom communication protocol.</p>
 
-<p>I&rsquo;m going to show it on example of small Fancy Movie Database application.</p>
+<p>I’m going to show it on example of small Fancy Movie Database application.</p>
 
-<h2>[Part 1] Fancy Movie Database application</h2>
+<h2 id="part-1-fancy-movie-database-application">[Part 1] Fancy Movie Database application</h2>
 
 <p>Go to <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2">Part 2</a> where fancy movie database application is divided into server and client using Finagle.</p>
 
@@ -466,100 +558,98 @@ However it can be difficult if data model is already defined, and services acces
 
 
 <div class="entry-content clearfix">
-  <p>Let&rsquo;s assume that we have some input process, and want to run some &lsquo;heavy computation&rsquo; on each element.
+  <p>Let’s assume that we have some input process, and want to run some ‘heavy computation’ on each element.
 Obviously we want utilize all available cores and use thread pool. However scalaz-stream by default is deterministic
 and in following example all computation steps will run consecutively.</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'>  <span class="k">val</span> <span class="n">timeFormat</span> <span class="k">=</span> <span class="nc">DateTimeFormat</span><span class="o">.</span><span class="n">forPattern</span><span class="o">(</span><span class="s">&quot;HH:mm:ss:SSS&quot;</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">val</span> <span class="n">counter</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">AtomicInteger</span><span class="o">(</span><span class="mi">0</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="c1">// ThreadPool for running effectful functions</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">executor</span> <span class="k">=</span> <span class="nc">Executors</span><span class="o">.</span><span class="n">newFixedThreadPool</span><span class="o">(</span><span class="mi">3</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="c1">// channel of effectful functions</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">effectfulChannel</span> <span class="k">=</span> <span class="n">channel</span><span class="o">[</span><span class="kt">Int</span>, <span class="kt">Int</span><span class="o">]</span> <span class="o">{</span>
-</span><span class='line'>    <span class="n">in</span> <span class="k">=&gt;</span> <span class="nc">Task</span> <span class="o">{</span>
-</span><span class='line'>      <span class="k">val</span> <span class="n">taskN</span> <span class="k">=</span> <span class="n">counter</span><span class="o">.</span><span class="n">incrementAndGet</span><span class="o">()</span>
-</span><span class='line'>
-</span><span class='line'>      <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;${Thread.currentThread().getName}: &quot;</span> <span class="o">+</span>
-</span><span class='line'>        <span class="n">s</span><span class="s">&quot;Run for $in, &quot;</span> <span class="o">+</span>
-</span><span class='line'>        <span class="n">s</span><span class="s">&quot;TaskN = $taskN &quot;</span> <span class="o">+</span>
-</span><span class='line'>        <span class="n">s</span><span class="s">&quot;(time = ${timeFormat.print(System.currentTimeMillis())})&quot;</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>      <span class="c1">// Long running computation</span>
-</span><span class='line'>      <span class="k">val</span> <span class="n">computed</span> <span class="k">=</span> <span class="o">{</span>
-</span><span class='line'>        <span class="nc">Thread</span><span class="o">.</span><span class="n">sleep</span><span class="o">(</span><span class="mi">1000</span><span class="o">)</span>
-</span><span class='line'>        <span class="n">in</span> <span class="o">*</span> <span class="n">in</span>
-</span><span class='line'>      <span class="o">}</span>
-</span><span class='line'>      <span class="n">computed</span>
-</span><span class='line'>    <span class="o">}(</span><span class="n">executor</span><span class="o">)</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">val</span> <span class="n">start</span> <span class="k">=</span> <span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">()</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">output</span> <span class="k">=</span> <span class="nc">Process</span><span class="o">.</span><span class="n">range</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">11</span><span class="o">).</span><span class="n">through</span><span class="o">(</span><span class="n">effectfulChannel</span><span class="o">).</span><span class="n">runLog</span><span class="o">.</span><span class="n">run</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">end</span> <span class="k">=</span> <span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">()</span>
-</span><span class='line'>  <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;Output = $output, in ${end-start} ms&quot;</span><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure>
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+<span class="line-number">15</span>
+<span class="line-number">16</span>
+<span class="line-number">17</span>
+<span class="line-number">18</span>
+<span class="line-number">19</span>
+<span class="line-number">20</span>
+<span class="line-number">21</span>
+<span class="line-number">22</span>
+<span class="line-number">23</span>
+<span class="line-number">24</span>
+<span class="line-number">25</span>
+<span class="line-number">26</span>
+<span class="line-number">27</span>
+<span class="line-number">28</span>
+<span class="line-number">29</span>
+<span class="line-number">30</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line">  <span class="k">val</span> <span class="n">timeFormat</span> <span class="k">=</span> <span class="nc">DateTimeFormat</span><span class="o">.</span><span class="n">forPattern</span><span class="o">(</span><span class="s">&quot;HH:mm:ss:SSS&quot;</span><span class="o">)</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">val</span> <span class="n">counter</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">AtomicInteger</span><span class="o">(</span><span class="mi">0</span><span class="o">)</span>
+</span><span class="line">
+</span><span class="line">  <span class="c1">// ThreadPool for running effectful functions</span>
+</span><span class="line">  <span class="k">val</span> <span class="n">executor</span> <span class="k">=</span> <span class="nc">Executors</span><span class="o">.</span><span class="n">newFixedThreadPool</span><span class="o">(</span><span class="mi">3</span><span class="o">)</span>
+</span><span class="line">
+</span><span class="line">  <span class="c1">// channel of effectful functions</span>
+</span><span class="line">  <span class="k">val</span> <span class="n">effectfulChannel</span> <span class="k">=</span> <span class="n">channel</span><span class="o">[</span><span class="kt">Int</span>, <span class="kt">Int</span><span class="o">]</span> <span class="o">{</span>
+</span><span class="line">    <span class="n">in</span> <span class="k">=&gt;</span> <span class="nc">Task</span> <span class="o">{</span>
+</span><span class="line">      <span class="k">val</span> <span class="n">taskN</span> <span class="k">=</span> <span class="n">counter</span><span class="o">.</span><span class="n">incrementAndGet</span><span class="o">()</span>
+</span><span class="line">
+</span><span class="line">      <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;${Thread.currentThread().getName}: &quot;</span> <span class="o">+</span>
+</span><span class="line">        <span class="n">s</span><span class="s">&quot;Run for $in, &quot;</span> <span class="o">+</span>
+</span><span class="line">        <span class="n">s</span><span class="s">&quot;TaskN = $taskN &quot;</span> <span class="o">+</span>
+</span><span class="line">        <span class="n">s</span><span class="s">&quot;(time = ${timeFormat.print(System.currentTimeMillis())})&quot;</span><span class="o">)</span>
+</span><span class="line">
+</span><span class="line">      <span class="c1">// Long running computation</span>
+</span><span class="line">      <span class="k">val</span> <span class="n">computed</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class="line">        <span class="nc">Thread</span><span class="o">.</span><span class="n">sleep</span><span class="o">(</span><span class="mi">1000</span><span class="o">)</span>
+</span><span class="line">        <span class="n">in</span> <span class="o">*</span> <span class="n">in</span>
+</span><span class="line">      <span class="o">}</span>
+</span><span class="line">      <span class="n">computed</span>
+</span><span class="line">    <span class="o">}(</span><span class="n">executor</span><span class="o">)</span>
+</span><span class="line">  <span class="o">}</span>
+</span><span class="line">
+</span><span class="line">  <span class="k">val</span> <span class="n">start</span> <span class="k">=</span> <span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">()</span>
+</span><span class="line">  <span class="k">val</span> <span class="n">output</span> <span class="k">=</span> <span class="nc">Process</span><span class="o">.</span><span class="n">range</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">11</span><span class="o">).</span><span class="n">through</span><span class="o">(</span><span class="n">effectfulChannel</span><span class="o">).</span><span class="n">runLog</span><span class="o">.</span><span class="n">run</span>
+</span><span class="line">  <span class="k">val</span> <span class="n">end</span> <span class="k">=</span> <span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">()</span>
+</span><span class="line">  <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;Output = $output, in ${end-start} ms&quot;</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
 
+<h3 id="deterministic-output">Deterministic Output</h3>
 
-<h3>Deterministic Output</h3>
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+</pre></td><td class="code"><pre><code class=""><span class="line">pool-1-thread-1: Run for 1, TaskN = 1   (time = 22:59:14:720)
+</span><span class="line">pool-1-thread-2: Run for 2, TaskN = 2   (time = 22:59:15:811)
+</span><span class="line">pool-1-thread-3: Run for 3, TaskN = 3   (time = 22:59:16:813)
+</span><span class="line">pool-1-thread-3: Run for 4, TaskN = 4   (time = 22:59:17:815)
+</span><span class="line">pool-1-thread-3: Run for 5, TaskN = 5   (time = 22:59:18:817)
+</span><span class="line">pool-1-thread-3: Run for 6, TaskN = 6   (time = 22:59:19:818)
+</span><span class="line">pool-1-thread-3: Run for 7, TaskN = 7   (time = 22:59:20:819)
+</span><span class="line">pool-1-thread-3: Run for 8, TaskN = 8   (time = 22:59:21:821)
+</span><span class="line">pool-1-thread-3: Run for 9, TaskN = 9   (time = 22:59:22:822)
+</span><span class="line">pool-1-thread-3: Run for 10, TaskN = 10 (time = 22:59:23:823)
+</span><span class="line">Output = Vector(1, 4, 9, 16, 25, 36, 49, 64, 81, 100), in 10196 ms</span></code></pre></td></tr></table></div></figure></notextile></div>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>pool-1-thread-1: Run for 1, TaskN = 1   (time = 22:59:14:720)
-</span><span class='line'>pool-1-thread-2: Run for 2, TaskN = 2   (time = 22:59:15:811)
-</span><span class='line'>pool-1-thread-3: Run for 3, TaskN = 3   (time = 22:59:16:813)
-</span><span class='line'>pool-1-thread-3: Run for 4, TaskN = 4   (time = 22:59:17:815)
-</span><span class='line'>pool-1-thread-3: Run for 5, TaskN = 5   (time = 22:59:18:817)
-</span><span class='line'>pool-1-thread-3: Run for 6, TaskN = 6   (time = 22:59:19:818)
-</span><span class='line'>pool-1-thread-3: Run for 7, TaskN = 7   (time = 22:59:20:819)
-</span><span class='line'>pool-1-thread-3: Run for 8, TaskN = 8   (time = 22:59:21:821)
-</span><span class='line'>pool-1-thread-3: Run for 9, TaskN = 9   (time = 22:59:22:822)
-</span><span class='line'>pool-1-thread-3: Run for 10, TaskN = 10 (time = 22:59:23:823)
-</span><span class='line'>Output = Vector(1, 4, 9, 16, 25, 36, 49, 64, 81, 100), in 10196 ms</span></code></pre></td></tr></table></div></figure>
-
-
-<h3>Concurrent Process</h3>
+<h3 id="concurrent-process">Concurrent Process</h3>
 
 <p>To run effectful functions concurrently, with controlled number of queued tasks we can use <code>scalaz.stream.merge.mergeN</code> which is for now available only in <code>snapshot-0.4</code>.</p>
 

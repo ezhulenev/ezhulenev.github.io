@@ -1,0 +1,602 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Running Spark Tests in Standalone Cluster - Eugene Zhulenev</title>
+  <meta name="author" content="Eugene Zhulenev">
+
+  
+  <meta name="description" content="The code for this application app can be found on Github Running Spark Applications To be able to run Spark jobs, Spark cluster needs to have all &hellip;">
+  <meta name="keywords" content="spark, scala, sbt">
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://eugenezhulenev.com/blog/2014/10/18/run-tests-in-standalone-spark-cluster">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Eugene Zhulenev" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href='https://fonts.googleapis.com/css?family=Noto+Serif:400,700' rel='stylesheet' type='text/css'>
+<link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-49585535-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+  <script>
+    $(document).ready(function(){
+      $('a#github').attr('target','_blank');
+      $('a#github').on('click', function() {
+         _gaq.push(['_trackEvent', 'ContactMe', 'Click', 'Github']);
+      });
+
+      $('a#linkedin').attr('target','_blank');
+      $('a#linkedin').on('click', function() {
+         _gaq.push(['_trackEvent', 'ContactMe', 'Click', 'LinkedIn']);
+       });
+
+      $('a#twitter').attr('target','_blank');
+      $('a#twitter').on('click', function() {
+         _gaq.push(['_trackEvent', 'ContactMe', 'Click', 'Twitter']);
+      });
+     });
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Eugene Zhulenev</a></h1>
+  
+    <h2>Java, Scala, Finance, Engineering Big Data plarform at <a href="http://pellucid.com">Pellucid Analytics</a></h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  
+  
+</ul>
+
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+  <li><a href="/atom.xml">RSS</a></li>
+  <li><a id="github" href="http://github.com/ezhulenev">Github</a></li>
+  <li><a id="twitter" href="http://twitter.com/ezhulenev">Twitter</a></li>
+  <li><a id="linkedin" href="http://linkedin.com/in/eugenezhulenev">Linkedin</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Running Spark Tests in Standalone Cluster</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-10-18T21:01:15-04:00" pubdate data-updated="true">Oct 18<span>th</span>, 2014</time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://eugenezhulenev.com">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><blockquote>
+  <p>The code for this application app can be found on <a href="https://github.com/ezhulenev/spark-testing">Github</a></p>
+</blockquote>
+
+<h3 id="running-spark-applications">Running Spark Applications</h3>
+
+<p>To be able to run Spark jobs, Spark cluster needs to have all classes used by your application in it’s classpath.
+You can put manually all jar files required by your application to Spark nodes, but it’s not cool.
+Another solution is to manually set jar files that required to distribute to worker nodes
+when you create SparkConf. One way to do it, is to package your application as a “fat-jar”,
+so you need to distribute only single jar.
+Industry standard for packaging Spark application is <a href="https://github.com/sbt/sbt-assembly">sbt-assembly</a> plugin,
+and it’s used by Spark itself.</p>
+
+<h3 id="testing-spark-applications">Testing Spark Applications</h3>
+
+<p>If you need to test your Spark application, easiest way is to create local Spark Context for each test, or maybe shared between all tests.
+When Spark is running in local mode, it’s running in the same JVM as your tests with same jar files in classpath.</p>
+
+<p>If your tests requires data that doesn’t fit into single node, obvious solution is to run them in standalone Spark cluster
+with sufficient number of nodes. At this time everything becomes more difficult. Now you need to package you application with tests
+in single jar file, and submit it to Spark cluster with each test.</p>
+
+<!-- more -->
+
+<h3 id="example-application">Example Application</h3>
+
+<p>To show how to run and test Spark applications I prepared very <a href="https://github.com/ezhulenev/spark-testing">simple application</a>.
+It uses <a href="https://github.com/ezhulenev/scala-openbook">Scala OpenBook</a>
+library to parse <a href="http://www.nyxdata.com/Data-Products/NYSE-OpenBook-History">NYSE OpenBook</a> messages (orders log from New York Stock Exchange),
+distribute them to cluster as RDD, and count Buy and Sell orders by ticker.
+Only purpose of this application is to have dependency on a library that for sure is not available on Spark nodes.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="type">class</span> <span class="class">OrdersFunctions</span>(<span class="annotation">@transient</span> <span class="key">sc</span>: SparkContext, <span class="key">orders</span>: <span class="predefined-type">Iterator</span>[OpenBookMsg]) <span class="directive">extends</span> <span class="predefined-type">Serializable</span> {
+
+  <span class="directive">private</span> val ordersRDD = sc.parallelize(orders.toSeq)
+
+  <span class="keyword">def</span> <span class="function">countBuyOrders</span>(): <span class="predefined-type">Map</span>[<span class="predefined-type">String</span>, <span class="predefined-type">Long</span>] = countOrders(OrderFunctions.isBuySide)
+
+  <span class="keyword">def</span> <span class="function">countSellOrders</span>(): <span class="predefined-type">Map</span>[<span class="predefined-type">String</span>, <span class="predefined-type">Long</span>] = countOrders(OrderFunctions.isSellSide)
+
+  <span class="directive">private</span> <span class="keyword">def</span> <span class="function">countOrders</span>(<span class="key">filter</span>: OpenBookMsg =&gt; <span class="predefined-type">Boolean</span>): <span class="predefined-type">Map</span>[<span class="predefined-type">String</span>, <span class="predefined-type">Long</span>] =
+    ordersRDD.filter(filter).
+      map(order =&gt; (order.symbol, order)).
+      countByKey().toMap
+
+}
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<p> </p>
+
+<h3 id="assembly-main-application">Assembly Main Application</h3>
+
+<p>Add sbt-assembly plugin in project/plugin.sbt</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+addSbtPlugin(<span class="string"><span class="delimiter">&quot;</span><span class="content">com.eed3si9n</span><span class="delimiter">&quot;</span></span> % <span class="string"><span class="delimiter">&quot;</span><span class="content">sbt-assembly</span><span class="delimiter">&quot;</span></span> % <span class="string"><span class="delimiter">&quot;</span><span class="content">0.11.2</span><span class="delimiter">&quot;</span></span>)
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<p>Add assembly settings to build.sbt</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="comment">// Merge strategy shared between app &amp; test</span>
+
+val <span class="key">sharedMergeStrategy</span>: (<span class="predefined-type">String</span> =&gt; MergeStrategy) =&gt; <span class="predefined-type">String</span> =&gt; MergeStrategy =
+  old =&gt; {
+    <span class="keyword">case</span> x <span class="keyword">if</span> x.startsWith(<span class="string"><span class="delimiter">&quot;</span><span class="content">META-INF/ECLIPSEF.RSA</span><span class="delimiter">&quot;</span></span>) =&gt; MergeStrategy.last
+    <span class="keyword">case</span> x <span class="keyword">if</span> x.startsWith(<span class="string"><span class="delimiter">&quot;</span><span class="content">META-INF/mailcap</span><span class="delimiter">&quot;</span></span>) =&gt; MergeStrategy.last
+    <span class="keyword">case</span> x <span class="keyword">if</span> x.endsWith(<span class="string"><span class="delimiter">&quot;</span><span class="content">plugin.properties</span><span class="delimiter">&quot;</span></span>) =&gt; MergeStrategy.last
+    <span class="keyword">case</span> x =&gt; old(x)
+  }
+
+<span class="comment">// Load Assembly Settings</span>
+
+assemblySettings
+
+<span class="comment">// Assembly App</span>
+
+mainClass <span class="keyword">in</span> assembly := Some(<span class="string"><span class="delimiter">&quot;</span><span class="content">com.github.ezhulenev.spark.RunSparkApp</span><span class="delimiter">&quot;</span></span>)
+
+jarName <span class="keyword">in</span> assembly := <span class="string"><span class="delimiter">&quot;</span><span class="content">spark-testing-example-app.jar</span><span class="delimiter">&quot;</span></span>
+
+mergeStrategy <span class="keyword">in</span> assembly &lt;&lt;= (mergeStrategy <span class="keyword">in</span> assembly)(sharedMergeStrategy)
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<p>Inside your application you need to create SparkConf and add current jar to it.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+  <span class="keyword">new</span> SparkConf().
+      setMaster(<span class="string"><span class="delimiter">&quot;</span><span class="content">spark://spark-host:7777</span><span class="delimiter">&quot;</span></span>).
+      setJars(SparkContext.jarOfClass(<span class="local-variable">this</span>.getClass).toSeq).
+      setAppName(<span class="string"><span class="delimiter">&quot;</span><span class="content">SparkTestingExample</span><span class="delimiter">&quot;</span></span>)
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<p>After that you can use assembly command, and run assembled application in your Spark Cluster</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+&gt; sbt assembly
+&gt; java -Dspark.master=spark://spark-host:7777 target/scala_2.10/spark-testing-example-app.jar
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<p> </p>
+
+<h3 id="assembly-tests">Assembly Tests</h3>
+
+<p>First step to run tests in standalone Spark Cluster is to package all main and test classes into single jar, that will be
+transfered to each worker node before running tests. It’s very similar to assemblying main app.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="comment">// Assembly Tests</span>
+
+Project.inConfig(Test)(assemblySettings)
+
+jarName <span class="keyword">in</span> (Test, assembly) := <span class="string"><span class="delimiter">&quot;</span><span class="content">spark-testing-example-tests.jar</span><span class="delimiter">&quot;</span></span>
+
+mergeStrategy <span class="keyword">in</span> (Test, assembly) &lt;&lt;= (mergeStrategy <span class="keyword">in</span> assembly)(sharedMergeStrategy)
+
+test <span class="keyword">in</span> (Test, assembly) := {} <span class="comment">// disable tests in assembly</span>
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<p>I wrote simple sbt plugin that has <code>test-assembly</code> task. First this task assemblies jar
+file with test classes and all dependencies, then set it’s location
+to environment variable, and then starts tests.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+object TestWithSparkPlugin <span class="directive">extends</span> sbt.Plugin {
+
+  <span class="keyword">import</span> <span class="include">TestWithSparkKeys._</span>
+  <span class="keyword">import</span> <span class="include">AssemblyKeys._</span>
+
+  object TestWithSparkKeys {
+    lazy val testAssembled        = TaskKey[Unit](<span class="string"><span class="delimiter">&quot;</span><span class="content">test-assembled</span><span class="delimiter">&quot;</span></span>, <span class="string"><span class="delimiter">&quot;</span><span class="content">Run tests with standalone Spark cluster</span><span class="delimiter">&quot;</span></span>)
+    lazy val assembledTestsProp   = SettingKey[<span class="predefined-type">String</span>](<span class="string"><span class="delimiter">&quot;</span><span class="content">assembled-tests-prop</span><span class="delimiter">&quot;</span></span>, <span class="string"><span class="delimiter">&quot;</span><span class="content">Environment variable name used to pass assembled jar name to test</span><span class="delimiter">&quot;</span></span>)
+  }
+
+  lazy val <span class="key">baseTestWithSparkSettings</span>: Seq[sbt.Def.Setting[_]] = Seq(
+    testAssembled        := TestWithSpark.testWithSparkTask.value,
+    assembledTestsProp   := <span class="string"><span class="delimiter">&quot;</span><span class="content">ASSEMBLED_TESTS</span><span class="delimiter">&quot;</span></span>
+  )
+
+  lazy val <span class="key">testWithSparkSettings</span>: Seq[sbt.Def.Setting[_]] = baseTestWithSparkSettings
+
+  object TestWithSpark {
+
+    <span class="keyword">def</span> <span class="key">assemblyTestsJarTask</span>: Initialize[Task[<span class="predefined-type">File</span>]] = Def.task {
+      val assembled = (assembly <span class="keyword">in</span> Test).value
+      sys.props(assembledTestsProp.value) = assembled.getAbsolutePath
+      assembled
+    }
+
+    <span class="directive">private</span> <span class="keyword">def</span> runTests = Def.task {
+      (test <span class="keyword">in</span> Test).value
+    }
+
+    <span class="keyword">def</span> <span class="key">testWithSparkTask</span>: Initialize[Task[Unit]] = Def.sequentialTask {
+      assemblyTestsJarTask.value
+      runTests.value
+    }
+  }
+}
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<p>All Spark tests should inherit <code>ConfiguredSparkFlatSpec</code> with configured Spark Context. If assembled tests jar file
+is available, it’s distributed to Spark worker nodes. If not, only local mode is supported.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+trait ConfiguredSparkFlatSpec <span class="directive">extends</span> FlatSpec with BeforeAndAfterAll {
+  <span class="directive">private</span> val log = LoggerFactory.getLogger(classOf[ConfiguredSparkFlatSpec])
+
+  <span class="directive">private</span> val config = ConfigFactory.load()
+
+  <span class="directive">private</span> lazy val sparkConf = {
+    val master = config.getString(<span class="string"><span class="delimiter">&quot;</span><span class="content">spark.master</span><span class="delimiter">&quot;</span></span>)
+
+    log.info(s<span class="string"><span class="delimiter">&quot;</span><span class="content">Create spark context. Master: </span><span class="inline"><span class="inline-delimiter">$</span>master</span><span class="delimiter">&quot;</span></span>)
+    val assembledTests = sys.props.get(<span class="string"><span class="delimiter">&quot;</span><span class="content">ASSEMBLED_TESTS</span><span class="delimiter">&quot;</span></span>)
+
+    val baseConf = <span class="keyword">new</span> SparkConf().
+      setMaster(master).
+      setAppName(<span class="string"><span class="delimiter">&quot;</span><span class="content">SparkTestingExample</span><span class="delimiter">&quot;</span></span>)
+
+    assembledTests match {
+      <span class="keyword">case</span> None =&gt;
+        log.warn(s<span class="string"><span class="delimiter">&quot;</span><span class="content">Assembled tests jar not found. Standalone Spark mode is not supported</span><span class="delimiter">&quot;</span></span>)
+        baseConf
+      <span class="keyword">case</span> Some(path) =&gt;
+        log.info(s<span class="string"><span class="delimiter">&quot;</span><span class="content">Add assembled tests to Spark Context from: </span><span class="inline"><span class="inline-delimiter">$</span>path</span><span class="delimiter">&quot;</span></span>)
+        baseConf.setJars(path :: Nil)
+    }
+  }
+
+  lazy val sc = <span class="keyword">new</span> SparkContext(sparkConf)
+
+  override <span class="directive">protected</span> <span class="keyword">def</span> <span class="function">afterAll</span>(): Unit = {
+    <span class="local-variable">super</span>.afterAll()
+    sc.stop()
+  }
+}
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<p> </p>
+
+<h3 id="running-tests">Running Tests</h3>
+
+<p>By default <code>spark.master</code> property is set to local[2]. So you can run tests in local mode. If you want run tests
+in standalone Spark, you need to override <code>spark.master</code> with your master node.</p>
+
+<p>If you’ll try to run <code>test</code> command with standalone cluster it will fail with ClassNotFoundException</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+&gt; sbt -Dspark.master=spark://spark-host:7777 test
+&gt;
+&gt; Create spark context. Master: spark://Eugenes-MacBook-Pro.local:7077
+&gt; Assembled tests jar not found. Standalone Spark mode is not supported
+&gt;
+&gt; [error] Failed tests:
+&gt; org.apache.spark.SparkException: Job aborted due to stage failure:
+&gt; Task 2 in stage 1.0 failed 4 times, most recent failure:
+&gt; Lost task 2.3 in stage 1.0 (TID 30, 192.168.0.11):
+&gt; java.lang.ClassNotFoundException: com.scalafi.openbook.OpenBookMsg
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<p>However <code>test-assembled</code> will be successfull</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+&gt; sbt -Dspark.master=spark://spark-host:7777 test-assembled
+&gt;
+&gt; Create spark context. Master: spark://Eugenes-MacBook-Pro.local:7077
+&gt; Add assembled tests to Spark Context from: /Users/ezhulenev/spark-testing/target/scala-2.10/spark-testing-example-tests.jar
+&gt;
+&gt; [info] Run completed in 7 seconds, 587 milliseconds.
+&gt; [info] Total number of tests run: 2
+&gt; [info] Suites: completed 1, aborted 0
+&gt; [info] Tests: succeeded 2, failed 0, canceled 0, ignored 0, pending 0
+&gt; [info] All tests passed.
+&gt; [success] Total time: 37 s
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<p> </p>
+
+<blockquote>
+  <p>The code for this application app can be found on <a href="https://github.com/ezhulenev/spark-testing">Github</a></p>
+</blockquote>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Eugene Zhulenev</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-10-18T21:01:15-04:00" pubdate data-updated="true">Oct 18<span>th</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/sbt/'>sbt</a>, <a class='category' href='/blog/categories/scala/'>scala</a>, <a class='category' href='/blog/categories/spark/'>spark</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://eugenezhulenev.com/blog/2014/10/18/run-tests-in-standalone-spark-cluster/" data-via="ezhulenev" data-counturl="http://eugenezhulenev.com/blog/2014/10/18/run-tests-in-standalone-spark-cluster/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2/" title="Previous Post: Akka Cluster for Value at Risk calculation (Part 2/2)">&laquo; Akka Cluster for Value at Risk calculation (Part 2/2)</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+  <aside class="sidebar">
+   
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:eugenezhulenev.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/10/18/run-tests-in-standalone-spark-cluster/">Running Spark Tests in Standalone Cluster</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2/">Akka Cluster for Value at Risk Calculation (Part 2/2)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1/">Akka Cluster for Value at Risk Calculation (Part 1/2)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/">Seamless Migration From Monolithic Application to Finagle Services (Part 2/2)</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1/">Seamless Migration From Monolithic Application to Finagle Services (Part 1/2)</a>
+      </li>
+    
+  </ul>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/ezhulenev">@ezhulenev</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'ezhulenev',
+            count: 0,
+            skip_forks: true,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - Eugene Zhulenev -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'eugenezhulenev';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://eugenezhulenev.com/blog/2014/10/18/run-tests-in-standalone-spark-cluster/';
+        var disqus_url = 'http://eugenezhulenev.com/blog/2014/10/18/run-tests-in-standalone-spark-cluster/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+<script>
+  $(document).ready(function() {  
+  var stickyNavTop = $('nav').offset().top;  
+    
+  var stickyNav = function(){  
+  var scrollTop = $(window).scrollTop();  
+         
+  if (scrollTop > stickyNavTop) {   
+      $('nav').addClass('sticky');  
+  } else {  
+      $('nav').removeClass('sticky');   
+  }  
+  };  
+    
+  stickyNav();  
+    
+  $(window).scroll(function() {  
+      stickyNav();  
+  });  
+  });  
+</script>
+
+
+</body>
+</html>

@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Scalaz | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/scalaz/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2014-10-03T23:50:15-04:00</updated>
+  <updated>2014-10-18T21:34:58-04:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -18,7 +18,7 @@
     <link href="http://eugenezhulenev.com/blog/2014/04/01/scalaz-stream-concurrent-process/"/>
     <updated>2014-04-01T22:03:03-04:00</updated>
     <id>http://eugenezhulenev.com/blog/2014/04/01/scalaz-stream-concurrent-process</id>
-    <content type="html"><![CDATA[<p>Let&rsquo;s assume that we have some input process, and want to run some &lsquo;heavy computation&rsquo; on each element.
+    <content type="html"><![CDATA[<p>Let’s assume that we have some input process, and want to run some ‘heavy computation’ on each element.
 Obviously we want utilize all available cores and use thread pool. However scalaz-stream by default is deterministic
 and in following example all computation steps will run consecutively.</p>
 
@@ -52,23 +52,19 @@ and in following example all computation steps will run consecutively.</p>
 <span class='line-number'>28</span>
 <span class='line-number'>29</span>
 <span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'>  <span class="k">val</span> <span class="n">timeFormat</span> <span class="k">=</span> <span class="nc">DateTimeFormat</span><span class="o">.</span><span class="n">forPattern</span><span class="o">(&amp;</span><span class="n">ldquo</span><span class="o">;</span><span class="nc">HH</span><span class="k">:</span><span class="kt">mm:ss:SSS&amp;rdquo</span><span class="o">;)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'>  <span class="k">val</span> <span class="n">timeFormat</span> <span class="k">=</span> <span class="nc">DateTimeFormat</span><span class="o">.</span><span class="n">forPattern</span><span class="o">(</span><span class="err">“</span><span class="nc">HH</span><span class="k">:</span><span class="kt">mm:ss:SSS</span><span class="err">”</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
 </span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span>  <span class="k">val</span> <span class="n">counter</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">AtomicInteger</span><span class="o">(</span><span class="mi">0</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">val</span> <span class="n">counter</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">AtomicInteger</span><span class="o">(</span><span class="mi">0</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
 </span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span>  <span class="c1">// ThreadPool for running effectful functions</span>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;//</span> <span class="nc">ThreadPool</span> <span class="k">for</span> <span class="n">running</span> <span class="n">effectful</span> <span class="n">functions</span>
 </span><span class='line'>  <span class="k">val</span> <span class="n">executor</span> <span class="k">=</span> <span class="nc">Executors</span><span class="o">.</span><span class="n">newFixedThreadPool</span><span class="o">(</span><span class="mi">3</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
 </span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span>  <span class="c1">// channel of effectful functions</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">effectfulChannel</span> <span class="k">=</span> <span class="n">channel</span><span class="o">[</span><span class="kt">Int</span>, <span class="kt">Int</span><span class="o">]</span> <span class="o">{&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;//</span> <span class="n">channel</span> <span class="n">of</span> <span class="n">effectful</span> <span class="n">functions</span>
+</span><span class='line'>  <span class="k">val</span> <span class="n">effectfulChannel</span> <span class="k">=</span> <span class="n">channel</span><span class="o">[</span><span class="kt">Int</span>, <span class="kt">Int</span><span class="o">]</span> <span class="o">{</span>
+</span><span class='line'>    <span class="n">in</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span> <span class="nc">Task</span> <span class="o">{</span>
+</span><span class='line'>      <span class="k">val</span> <span class="n">taskN</span> <span class="k">=</span> <span class="n">counter</span><span class="o">.</span><span class="n">incrementAndGet</span><span class="o">()&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
 </span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span><span class="n">in</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span> <span class="nc">Task</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">taskN</span> <span class="k">=</span> <span class="n">counter</span><span class="o">.</span><span class="n">incrementAndGet</span><span class="o">()</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;${Thread.currentThread().getName}: &quot;</span> <span class="o">+</span>
+</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span>  <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;${Thread.currentThread().getName}: &quot;</span> <span class="o">+</span>
 </span><span class='line'>    <span class="n">s</span><span class="s">&quot;Run for $in, &quot;</span> <span class="o">+</span>
 </span><span class='line'>    <span class="n">s</span><span class="s">&quot;TaskN = $taskN &quot;</span> <span class="o">+</span>
 </span><span class='line'>    <span class="n">s</span><span class="s">&quot;(time = ${timeFormat.print(System.currentTimeMillis())})&quot;</span><span class="o">)</span>
@@ -79,18 +75,16 @@ and in following example all computation steps will run consecutively.</p>
 </span><span class='line'>    <span class="n">in</span> <span class="o">*</span> <span class="n">in</span>
 </span><span class='line'>  <span class="o">}</span>
 </span><span class='line'>  <span class="n">computed</span>
-</span><span class='line'><span class="o">}(</span><span class="n">executor</span><span class="o">)</span>
+</span><span class='line'><span class="o">}(</span><span class="n">executor</span><span class="o">)</span>   <span class="o">}</span>
 </span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
 </span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span>  <span class="o">}&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span>  <span class="k">val</span> <span class="n">start</span> <span class="k">=</span> <span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">()</span>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">val</span> <span class="n">start</span> <span class="k">=</span> <span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">()</span>
 </span><span class='line'>  <span class="k">val</span> <span class="n">output</span> <span class="k">=</span> <span class="nc">Process</span><span class="o">.</span><span class="n">range</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">11</span><span class="o">).</span><span class="n">through</span><span class="o">(</span><span class="n">effectfulChannel</span><span class="o">).</span><span class="n">runLog</span><span class="o">.</span><span class="n">run</span>
 </span><span class='line'>  <span class="k">val</span> <span class="n">end</span> <span class="k">=</span> <span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">()</span>
-</span><span class='line'>  <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;Output = $output, in ${end-start} ms&quot;</span><span class="o">)</span>
+</span><span class='line'>  <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="err">”</span><span class="nc">Output</span> <span class="k">=</span> <span class="nc">$output</span><span class="o">,</span> <span class="n">in</span> <span class="n">$</span><span class="o">{</span><span class="n">end</span><span class="o">-</span><span class="n">start</span><span class="o">}</span> <span class="n">ms</span><span class="err">”</span><span class="o">)</span>
 </span></code></pre></td></tr></table></div></figure></notextile></div></p>
 
-<h3>Deterministic Output</h3>
+<h3 id="deterministic-output">Deterministic Output</h3>
 
 <p><div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -115,12 +109,11 @@ and in following example all computation steps will run consecutively.</p>
 </span><span class='line'>pool-1-thread-3: Run for 10, TaskN = 10 (time = 22:59:23:823)
 </span><span class='line'>Output = Vector(1, 4, 9, 16, 25, 36, 49, 64, 81, 100), in 10196 ms</span></code></pre></td></tr></table></div></figure></notextile></div></p>
 
-<h3>Concurrent Process</h3>
+<h3 id="concurrent-process">Concurrent Process</h3>
 
 <p>To run effectful functions concurrently, with controlled number of queued tasks we can use <code>scalaz.stream.merge.mergeN</code> which is for now available only in <code>snapshot-0.4</code>.</p>
 
 <!-- more -->
-
 
 <p><div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -139,48 +132,33 @@ and in following example all computation steps will run consecutively.</p>
 <span class='line-number'>15</span>
 <span class='line-number'>16</span>
 <span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
 </pre></td><td class='code'><pre><code class='scala'><span class='line'>  <span class="k">val</span> <span class="n">P</span> <span class="k">=</span> <span class="n">scalaz</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="nc">Process</span><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
 </span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span>  <span class="k">implicit</span> <span class="k">class</span> <span class="nc">ConcurrentProcess</span><span class="o">&lt;</span><span class="n">a</span> <span class="n">href</span><span class="o">=</span><span class="s">&quot;val%20process:%20Process[Task,%20O]&quot;</span><span class="o">&gt;</span><span class="n">O</span><span class="o">&lt;/</span><span class="n">a</span><span class="o">&gt;</span> <span class="o">{&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
+</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">implicit</span> <span class="k">class</span> <span class="nc">ConcurrentProcess</span><span class="o">&lt;</span><span class="n">a</span> <span class="n">href</span><span class="o">=</span><span class="s">&quot;val process: Process[Task, O]&quot;</span><span class="o">&gt;</span><span class="n">O</span><span class="o">&lt;/</span><span class="n">a</span><span class="o">&gt;</span> <span class="o">{</span>
+</span><span class='line'>    <span class="cm">/**</span>
+</span><span class='line'><span class="cm">     * Run process through channel with given level of concurrency</span>
+</span><span class='line'><span class="cm">     */</span>
+</span><span class='line'>    <span class="k">def</span> <span class="n">concurrently</span><span class="o">&lt;</span><span class="n">a</span> <span class="n">href</span><span class="o">=</span><span class="s">&quot;concurrencyLevel: Int&quot;</span><span class="o">&gt;</span><span class="n">O2</span><span class="o">&lt;/</span><span class="n">a</span><span class="o">&gt;</span>
+</span><span class='line'>                        <span class="o">(</span><span class="n">f</span><span class="k">:</span> <span class="kt">Channel</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">O</span>, <span class="kt">O2</span><span class="o">])</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">O2</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class='line'>      <span class="k">val</span> <span class="n">actions</span> <span class="k">=</span>
+</span><span class='line'>        <span class="n">process</span><span class="o">.</span>
+</span><span class='line'>          <span class="n">zipWith</span><span class="o">(</span><span class="n">f</span><span class="o">)((</span><span class="n">data</span><span class="o">,</span> <span class="n">f</span><span class="o">)</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span> <span class="n">f</span><span class="o">(</span><span class="n">data</span><span class="o">))&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
 </span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;/**</span>
-</span><span class='line'> <span class="o">*</span> <span class="nc">Run</span> <span class="n">process</span> <span class="n">through</span> <span class="n">channel</span> <span class="k">with</span> <span class="n">given</span> <span class="n">level</span> <span class="n">of</span> <span class="n">concurrency</span>
-</span><span class='line'> <span class="o">*/</span>
-</span><span class='line'><span class="k">def</span> <span class="n">concurrently</span><span class="o">[</span><span class="kt">O2</span><span class="o">](</span><span class="n">concurrencyLevel</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span>
-</span><span class='line'>                    <span class="o">(</span><span class="n">f</span><span class="k">:</span> <span class="kt">Channel</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">O</span>, <span class="kt">O2</span><span class="o">])</span><span class="k">:</span> <span class="kt">Process</span><span class="o">[</span><span class="kt">Task</span>, <span class="kt">O2</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">actions</span> <span class="k">=</span>
-</span><span class='line'>    <span class="n">process</span><span class="o">.</span>
-</span><span class='line'>      <span class="n">zipWith</span><span class="o">(</span><span class="n">f</span><span class="o">)((</span><span class="n">data</span><span class="o">,</span> <span class="n">f</span><span class="o">)</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span> <span class="n">f</span><span class="o">(</span><span class="n">data</span><span class="o">))</span>
-</span><span class='line'>
-</span><span class='line'>  <span class="k">val</span> <span class="n">nestedActions</span> <span class="k">=</span>
+</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span>  <span class="k">val</span> <span class="n">nestedActions</span> <span class="k">=</span>
 </span><span class='line'>    <span class="n">actions</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">P</span><span class="o">.</span><span class="n">eval</span><span class="o">)</span>
 </span><span class='line'>
 </span><span class='line'>  <span class="n">merge</span><span class="o">.</span><span class="n">mergeN</span><span class="o">(</span><span class="n">concurrencyLevel</span><span class="o">)(</span><span class="n">nestedActions</span><span class="o">)</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span>  <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div></p>
+</span><span class='line'><span class="o">}</span>   <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+</code></pre>
 
 <p><div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'>  <span class="k">val</span> <span class="n">output</span> <span class="k">=</span> <span class="nc">Process</span><span class="o">.</span><span class="n">range</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">11</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span>           <span class="o">.</span><span class="n">concurrently</span><span class="o">(</span><span class="mi">5</span><span class="o">)(</span><span class="n">effectfulChannel</span><span class="o">).</span><span class="n">runLog</span><span class="o">.</span><span class="n">run</span>
-</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span>
+</pre></td><td class='code'><pre><code class='scala'><span class='line'>  <span class="k">val</span> <span class="n">output</span> <span class="k">=</span> <span class="nc">Process</span><span class="o">.</span><span class="n">range</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">11</span><span class="o">)</span>
+</span><span class='line'>               <span class="o">.</span><span class="n">concurrently</span><span class="o">(</span><span class="mi">5</span><span class="o">)(</span><span class="n">effectfulChannel</span><span class="o">).</span><span class="n">runLog</span><span class="o">.</span><span class="n">run</span>
 </span></code></pre></td></tr></table></div></figure></notextile></div></p>
 
-<h3>Concurrent Process Output</h3>
+<h3 id="concurrent-process-output">Concurrent Process Output</h3>
 
 <p><div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
@@ -205,7 +183,7 @@ and in following example all computation steps will run consecutively.</p>
 </span><span class='line'>pool-1-thread-3: Run for 10, TaskN = 10 (time = 12:00:18:685)
 </span><span class='line'>Output = Vector(4, 9, 1, 25, 16, 36, 49, 64, 81, 100), in 4234 ms</span></code></pre></td></tr></table></div></figure></notextile></div></p>
 
-<h3>Result</h3>
+<h3 id="result">Result</h3>
 
 <p>As you can see in second case computations run concurrently and total time spent is much smaller, and final result is the same, as expected.</p>
 
