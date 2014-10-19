@@ -4,7 +4,7 @@ title: "Running Spark tests in standalone cluster"
 date: 2014-10-18 21:01:15 -0400
 comments: true
 categories: [spark, scala, sbt]
-keywords: spark, scala, sbt
+keywords: Spark, Scala, sbt, Apache Spark, Apache Spark tutorial, Big Data Spark, How to make Spark Single Jar, Spark assembly, Spark fat jar, Spark sbt, Spark sbt assembly, Spark Scala, Spark uber jar
 ---
 
 > The code for this application app can be found on [Github](https://github.com/ezhulenev/spark-testing)
