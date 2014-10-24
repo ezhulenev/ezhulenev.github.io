@@ -13,7 +13,7 @@ Spark and MLLib for building price movement prediction model based from order lo
 
 This post is based on [Modeling high-frequency limit order book dynamics with support vector machines](https://raw.github.com/ezhulenev/scala-openbook/master/assets/Modeling-high-frequency-limit-order-book-dynamics-with-support-vector-machines.pdf) paper.
 Roughly speaking I'm implementing ideas introduced in this paper in scala with [Spark](https://spark.apache.org/) and [Spark MLLib](https://spark.apache.org/mllib/).
-Authors are using sampling, I'm going to use full order log from [NYSE](http://www.nyxdata.com/Data-Products/NYSE-OpenBook-History) (sample data is available from NYSE FTP), just because
+Authors are using sampling, I'm going to use full order log from [NYSE](http://www.nyxdata.com/Data-Products/NYSE-OpenBook-History) (sample data is available from [NYSE FTP](ftp://ftp.nyxdata.com/Historical%20Data%20Samples/TAQ%20NYSE%20OpenBook/)), just because
 I can easily do it with Spark.
 
 If you want to get deep understanding of the problem and proposed solution, you need to read the paper. I'm going to describe it in less academic language in one or two paragraphs.
