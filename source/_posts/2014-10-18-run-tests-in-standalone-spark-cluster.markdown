@@ -7,6 +7,8 @@ categories: [spark, scala, sbt]
 keywords: Spark, Scala, sbt, Apache Spark, Apache Spark tutorial, Big Data Spark, How to make Spark Single Jar, Spark assembly, Spark fat jar, Spark sbt, Spark sbt assembly, Spark Scala, Spark uber jar
 ---
 
+Unit testing Spark Applications with standalone Apache Spark Cluster.
+
 > The code for this application app can be found on [Github](https://github.com/ezhulenev/spark-testing)
 
 ### Running Spark Applications
@@ -19,12 +21,13 @@ so you need to distribute only single jar.
 Industry standard for packaging Spark application is [sbt-assembly](https://github.com/sbt/sbt-assembly) plugin,
 and it's used by Spark itself.
 
-### Testing Spark Applications
+### Unit Testing Spark Applications
 
 If you need to test your Spark application, easiest way is to create local Spark Context for each test, or maybe shared between all tests.
 When Spark is running in local mode, it's running in the same JVM as your tests with same jar files in classpath.
 
-If your tests requires data that doesn't fit into single node, obvious solution is to run them in standalone Spark cluster
+If your tests requires data that doesn't fit into single node, for example in integration or acceptance tests,
+obvious solution is to run them in standalone Spark cluster
 with sufficient number of nodes. At this time everything becomes more difficult. Now you need to package you application with tests
 in single jar file, and submit it to Spark cluster with each test.
 
@@ -168,7 +171,7 @@ object TestWithSparkPlugin extends sbt.Plugin {
 }
 {% endcoderay %}
 
-All Spark tests should inherit `ConfiguredSparkFlatSpec` with configured Spark Context. If assembled tests jar file
+All Apache Spark tests should inherit `ConfiguredSparkFlatSpec` with configured Spark Context. If assembled tests jar file
 is available, it's distributed to Spark worker nodes. If not, only local mode is supported.
 
 {% coderay lang:groovy %}
@@ -211,7 +214,7 @@ trait ConfiguredSparkFlatSpec extends FlatSpec with BeforeAndAfterAll {
 ### Running Tests
 
 By default `spark.master` property is set to local[2]. So you can run tests in local mode. If you want run tests
-in standalone Spark, you need to override `spark.master` with your master node.
+in standalone Apache Spark, you need to override `spark.master` with your master node.
 
 If you'll try to run `test` command with standalone cluster it will fail with ClassNotFoundException
 
