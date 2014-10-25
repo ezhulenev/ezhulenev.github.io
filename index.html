@@ -9,7 +9,7 @@
   <meta name="author" content="Eugene Zhulenev">
 
   
-  <meta name="description" content="The code for this application app can be found on Github Running Spark Applications To be able to run Spark jobs, Spark cluster needs to have all &hellip;">
+  <meta name="description" content="Unit testing Spark Applications with standalone Apache Spark Cluster. The code for this application app can be found on Github Running Spark &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -125,7 +125,9 @@
   </header>
 
 
-  <div class="entry-content"><blockquote>
+  <div class="entry-content"><p>Unit testing Spark Applications with standalone Apache Spark Cluster.</p>
+
+<blockquote>
   <p>The code for this application app can be found on <a href="https://github.com/ezhulenev/spark-testing">Github</a></p>
 </blockquote>
 
@@ -139,12 +141,13 @@ so you need to distribute only single jar.
 Industry standard for packaging Spark application is <a href="https://github.com/sbt/sbt-assembly">sbt-assembly</a> plugin,
 and it’s used by Spark itself.</p>
 
-<h3 id="testing-spark-applications">Testing Spark Applications</h3>
+<h3 id="unit-testing-spark-applications">Unit Testing Spark Applications</h3>
 
 <p>If you need to test your Spark application, easiest way is to create local Spark Context for each test, or maybe shared between all tests.
 When Spark is running in local mode, it’s running in the same JVM as your tests with same jar files in classpath.</p>
 
-<p>If your tests requires data that doesn’t fit into single node, obvious solution is to run them in standalone Spark cluster
+<p>If your tests requires data that doesn’t fit into single node, for example in integration or acceptance tests,
+obvious solution is to run them in standalone Spark cluster
 with sufficient number of nodes. At this time everything becomes more difficult. Now you need to package you application with tests
 in single jar file, and submit it to Spark cluster with each test.</p>
 
