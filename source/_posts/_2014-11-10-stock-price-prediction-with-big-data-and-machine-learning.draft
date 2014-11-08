@@ -103,7 +103,8 @@ library. It's easiest data set to get, free sample data for 2 trading days is av
 
 I was able to relatively easy reproduce fairly complicated research and machine learning problem at large scale.
 
-Leveraging latest Big Data technologies, and Apache Spark specifically, allows switch from building models
-using sampling and only small fraction of data, to iterative research workflow with all the data you can get access to.
+Latest Big Data technologies allows to build models using all available data, and stop doing samplings.
+Using all of the data helps to build best possible models and capture all details from full data set.
+
 
 > The code for this application app can be found on [Github](https://github.com/ezhulenev/svm-orderbook-dynamics)
