@@ -3,8 +3,8 @@ layout: post
 title: "Stock price prediction with Big Data and Machine Learning"
 date: 2014-11-10 22:03:35 -0400
 comments: true
-categories: [spark, mllib, machine learning, finance, scala]
-keywords: spark, mllib, machine learning, finance, scala
+categories: [spark, mllib, machine learning, predictive analytics, finance, scala]
+keywords: spark, mllib, machine learning, predictive analytics, finance, scala
 ---
 
 Apache Spark and Spark MLLib for building price movement prediction model based from order log data.
@@ -101,7 +101,7 @@ library. It's easiest data set to get, free sample data for 2 trading days is av
 
 ### Results
 
-I was able to relatively easy reproduce fairly complicated research and machine learning problem at large scale.
+I was able to relatively easy reproduce fairly complicated research project at much lager scale than in original paper.
 
 Latest Big Data technologies allows to build models using all available data, and stop doing samplings.
 Using all of the data helps to build best possible models and capture all details from full data set.
