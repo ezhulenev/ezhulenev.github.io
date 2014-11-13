@@ -9,7 +9,7 @@ keywords: spark, mllib, machine learning, predictive analytics, finance, scala
 
 Apache Spark and Spark MLLib for building price movement prediction model based from order log data.
 
-> The code for this application app can be found on [Github](https://github.com/ezhulenev/svm-orderbook-dynamics)
+> The code for this application app can be found on [Github](https://github.com/ezhulenev/orderbook-dynamics)
 
 ### Synopsis
 
@@ -327,4 +327,4 @@ Latest Big Data technologies allows to build models using all available data, an
 Using all of the data helps to build best possible models and capture all details from full data set.
 
 
-> The code for this application app can be found on [Github](https://github.com/ezhulenev/svm-orderbook-dynamics)
+> The code for this application app can be found on [Github](https://github.com/ezhulenev/orderbook-dynamics)
