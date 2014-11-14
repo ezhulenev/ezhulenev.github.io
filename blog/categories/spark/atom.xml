@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Spark | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/spark/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2014-11-13T21:41:09-05:00</updated>
+  <updated>2014-11-13T21:46:00-05:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -18,7 +18,7 @@
     <link href="http://eugenezhulenev.com/blog/2014/11/14/stock-price-prediction-with-big-data-and-machine-learning/"/>
     <updated>2014-11-14T21:03:35-05:00</updated>
     <id>http://eugenezhulenev.com/blog/2014/11/14/stock-price-prediction-with-big-data-and-machine-learning</id>
-    <content type="html"><![CDATA[<p>Apache Spark and Spark MLLib for building price movement prediction model based from order log data.</p>
+    <content type="html"><![CDATA[<p>Apache Spark and Spark MLLib for building price movement prediction model from order log data.</p>
 
 <blockquote>
   <p>The code for this application app can be found on <a href="https://github.com/ezhulenev/orderbook-dynamics">Github</a></p>
