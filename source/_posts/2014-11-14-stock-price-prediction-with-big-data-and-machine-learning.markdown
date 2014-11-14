@@ -24,6 +24,8 @@ I'm going to give high level overview of the problem in less academic language, 
 
 > Predictive modelling is the process by which a model is created or chosen to try to best predict the probability of an outcome.
 
+<!-- more -->
+
 #### Model Architecture
 
 Authors are proposing framework for extracting feature vectors from from raw order log data, that can be used as input to
