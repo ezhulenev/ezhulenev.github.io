@@ -4,7 +4,7 @@
   <title><![CDATA[Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2014-11-13T21:17:39-05:00</updated>
+  <updated>2014-11-13T21:41:09-05:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -38,6 +38,8 @@ I’m going to give high level overview of the problem in less academic language
 <blockquote>
   <p>Predictive modelling is the process by which a model is created or chosen to try to best predict the probability of an outcome.</p>
 </blockquote>
+
+<!-- more -->
 
 <h4 id="model-architecture">Model Architecture</h4>
 
