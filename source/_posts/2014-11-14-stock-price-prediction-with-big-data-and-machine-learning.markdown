@@ -7,7 +7,7 @@ categories: [spark, mllib, machine learning, predictive analytics, finance, scal
 keywords: spark, mllib, machine learning, predictive analytics, finance, scala
 ---
 
-Apache Spark and Spark MLLib for building price movement prediction model based from order log data.
+Apache Spark and Spark MLLib for building price movement prediction model from order log data.
 
 > The code for this application app can be found on [Github](https://github.com/ezhulenev/orderbook-dynamics)
 
