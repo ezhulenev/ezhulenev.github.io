@@ -5,12 +5,12 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Engineering Big Data in Finance - Eugene Zhulenev</title>
+  <title>Stock Price Prediction With Big Data and Machine Learning - Eugene Zhulenev</title>
   <meta name="author" content="Eugene Zhulenev">
 
   
   <meta name="description" content="Apache Spark and Spark MLLib for building price movement prediction model based from order log data. The code for this application app can be found &hellip;">
-  
+  <meta name="keywords" content="spark, mllib, machine learning, predictive analytics, finance, scala">
 
   <!-- http://t.co/dKP3o1e -->
   <meta name="HandheldFriendly" content="True">
@@ -18,7 +18,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://eugenezhulenev.com">
+  <link rel="canonical" href="http://eugenezhulenev.com/blog/2014/11/14/stock-price-prediction-with-big-data-and-machine-learning">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/atom.xml" rel="alternate" title="Eugene Zhulenev" type="application/atom+xml">
@@ -91,15 +91,12 @@
 </nav>
   <div id="main">
     <div id="content">
-      <div class="blog-index">
+      <div>
+<article class="hentry" role="article">
   
-  
-  
-    <article>
-      
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2014/11/14/stock-price-prediction-with-big-data-and-machine-learning/">Stock Price Prediction With Big Data and Machine Learning</a></h1>
+      <h1 class="entry-title">Stock Price Prediction With Big Data and Machine Learning</h1>
     
     
       <p class="meta">
@@ -117,15 +114,15 @@
 
 <time datetime="2014-11-14T21:03:35-05:00" pubdate data-updated="true">Nov 14<span>th</span>, 2014</time>
         
-           | <a href="/blog/2014/11/14/stock-price-prediction-with-big-data-and-machine-learning/#disqus_thread"
-             data-disqus-identifier="http://eugenezhulenev.com/blog/2014/11/14/stock-price-prediction-with-big-data-and-machine-learning/">Comments</a>
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://eugenezhulenev.com">Comments</a>
         
       </p>
     
   </header>
 
 
-  <div class="entry-content"><p>Apache Spark and Spark MLLib for building price movement prediction model based from order log data.</p>
+<div class="entry-content"><p>Apache Spark and Spark MLLib for building price movement prediction model based from order log data.</p>
 
 <blockquote>
   <p>The code for this application app can be found on <a href="https://github.com/ezhulenev/orderbook-dynamics">Github</a></p>
@@ -486,90 +483,16 @@ Using all of the data helps to build best possible models and capture all detail
   <p>The code for this application app can be found on <a href="https://github.com/ezhulenev/orderbook-dynamics">Github</a></p>
 </blockquote>
 </div>
-  
-  
 
 
-    </article>
-  
-  
-    <article>
+  <footer>
+    <p class="meta">
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/10/18/run-tests-in-standalone-spark-cluster/">Running Spark Tests in Standalone Cluster</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
   
 
+<span class="byline author vcard">Posted by <span class="fn">Eugene Zhulenev</span></span>
 
-<time datetime="2014-10-18T21:01:15-04:00" pubdate data-updated="true">Oct 18<span>th</span>, 2014</time>
-        
-           | <a href="/blog/2014/10/18/run-tests-in-standalone-spark-cluster/#disqus_thread"
-             data-disqus-identifier="http://eugenezhulenev.com/blog/2014/10/18/run-tests-in-standalone-spark-cluster/">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Unit testing Spark Applications with standalone Apache Spark Cluster.</p>
-
-<blockquote>
-  <p>The code for this application app can be found on <a href="https://github.com/ezhulenev/spark-testing">Github</a></p>
-</blockquote>
-
-<h3 id="running-spark-applications">Running Spark Applications</h3>
-
-<p>To be able to run Spark jobs, Spark cluster needs to have all classes used by your application in it’s classpath.
-You can put manually all jar files required by your application to Spark nodes, but it’s not cool.
-Another solution is to manually set jar files that required to distribute to worker nodes
-when you create SparkConf. One way to do it, is to package your application as a “fat-jar”,
-so you need to distribute only single jar.
-Industry standard for packaging Spark application is <a href="https://github.com/sbt/sbt-assembly">sbt-assembly</a> plugin,
-and it’s used by Spark itself.</p>
-
-<h3 id="unit-testing-spark-applications">Unit Testing Spark Applications</h3>
-
-<p>If you need to test your Spark application, easiest way is to create local Spark Context for each test, or maybe shared between all tests.
-When Spark is running in local mode, it’s running in the same JVM as your tests with same jar files in classpath.</p>
-
-<p>If your tests requires data that doesn’t fit into single node, for example in integration or acceptance tests,
-obvious solution is to run them in standalone Spark cluster
-with sufficient number of nodes. At this time everything becomes more difficult. Now you need to package you application with tests
-in single jar file, and submit it to Spark cluster with each test.</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/10/18/run-tests-in-standalone-spark-cluster/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2/">Akka Cluster for Value at Risk Calculation (Part 2/2)</a></h1>
-    
-    
-      <p class="meta">
-        
 
 
 
@@ -581,361 +504,45 @@ in single jar file, and submit it to Spark cluster with each test.</p>
   
 
 
-<time datetime="2014-05-01T22:03:45-04:00" pubdate data-updated="true">May 1<span>st</span>, 2014</time>
-        
-           | <a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2/#disqus_thread"
-             data-disqus-identifier="http://eugenezhulenev.com/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2/">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><h3 id="synopsis">Synopsis</h3>
-
-<blockquote>
-  <p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/akka-var-calculation">Github</a></p>
-</blockquote>
-
-<p>Risk Management in finance is one of the most common <a href="http://www.gridgain.com/usecases/risk-management/">case studies</a>
-for Grid Computing, and Value-at-Risk is most widely used risk measure.
-In this article I’m going to show how to <code>scale-out</code> Value-at-Risk calculation to multiple nodes with latest <a href="http://akka.io">Akka</a> middleware.
-In Part 1 I’m describing the problem and <code>single-node</code> solution, and in Part 2 I’m scaling it to multiple nodes.</p>
-
-<h2 id="part-22-scale-out-var-calculation-to-multiple-nodes">[Part 2/2] Scale-out VaR calculation to multiple nodes</h2>
-
-<p>Go to <a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1">Part 1</a> where Value at Risk calculator defined.</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
+<time datetime="2014-11-14T21:03:35-05:00" pubdate data-updated="true">Nov 14<span>th</span>, 2014</time>
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1/">Akka Cluster for Value at Risk Calculation (Part 1/2)</a></h1>
-    
-    
-      <p class="meta">
-        
 
-
-
-
-
-
-
-
+<span class="categories">
   
+    <a class='category' href='/blog/categories/finance/'>finance</a>, <a class='category' href='/blog/categories/machine-learning/'>machine learning</a>, <a class='category' href='/blog/categories/mllib/'>mllib</a>, <a class='category' href='/blog/categories/predictive-analytics/'>predictive analytics</a>, <a class='category' href='/blog/categories/scala/'>scala</a>, <a class='category' href='/blog/categories/spark/'>spark</a>
+  
+</span>
 
 
-<time datetime="2014-05-01T22:03:45-04:00" pubdate data-updated="true">May 1<span>st</span>, 2014</time>
-        
-           | <a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1/#disqus_thread"
-             data-disqus-identifier="http://eugenezhulenev.com/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1/">Comments</a>
-        
-      </p>
+    </p>
     
-  </header>
-
-
-  <div class="entry-content"><h3 id="synopsis">Synopsis</h3>
-
-<blockquote>
-  <p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/akka-var-calculation">Github</a></p>
-</blockquote>
-
-<p>Risk Management in finance is one of the most common <a href="http://www.gridgain.com/usecases/risk-management/">case studies</a>
-for Grid Computing, and Value-at-Risk is most widely used risk measure.
-In this article I’m going to show how to <code>scale-out</code> Value-at-Risk calculation to multiple nodes with latest <a href="http://akka.io">Akka</a> middleware.
-In Part 1 I’m describing the problem and <code>single-node</code> solution, and in Part 2 I’m scaling it to multiple nodes.</p>
-
-<h2 id="part-1-introduction-to-value-at-risk-calculation">[Part 1] Introduction to Value at Risk calculation</h2>
-
-<p>Go to <a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2">Part 2</a> where VaR calculation scaled-out to multiple nodes.</p>
-
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://eugenezhulenev.com/blog/2014/11/14/stock-price-prediction-with-big-data-and-machine-learning/" data-via="ezhulenev" data-counturl="http://eugenezhulenev.com/blog/2014/11/14/stock-price-prediction-with-big-data-and-machine-learning/" >Tweet</a>
+  
+  
+  
 </div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1/">Read on &rarr;</a>
-    </footer>
-  
 
-
-    </article>
-  
-  
-    <article>
+    
+    <p class="meta">
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/">Seamless Migration From Monolithic Application to Finagle Services (Part 2/2)</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-04-09T22:03:45-04:00" pubdate data-updated="true">Apr 9<span>th</span>, 2014</time>
-        
-           | <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/#disqus_thread"
-             data-disqus-identifier="http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><h3 id="synopsis">Synopsis</h3>
-
-<blockquote>
-  <p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/finagled-movie-db">Github</a></p>
-</blockquote>
-
-<p>Distributed micro-services architecture is hot trend right now, it’s widely adopted by <a href="https://blog.twitter.com/2011/finagle-a-protocol-agnostic-rpc-system">Twitter</a>, <a href="https://engineering.linkedin.com/architecture/restli-restful-service-architecture-scale">LinkedIn</a> and <a href="http://www.slideshare.net/LappleApple/gilt-from-monolith-ruby-app-to-micro-service-scala-service-architecture">Gilt</a>.
-However it can be difficult if data model is already defined, and services accessed via existing API throughout all your code. I’ll show how it’s possible to split monoliths app into standalone services built with Finagle and SBinary for custom communication protocol.</p>
-
-<p>I’m going to show it on example of small Fancy Movie Database application.</p>
-
-<h2 id="part-22-spit-application-to-distributed-services">[Part 2/2] Spit application to distributed services</h2>
-
-<p>Go to <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1">Part 1</a> where fancy movie database application defined.</p>
-
-<h3 id="what-is-finagle">What is Finagle</h3>
-
-<p>Finagle is a protocol-agnostic, asynchronous RPC system for the JVM that makes it easy to build robust clients and servers in Java, Scala, or any JVM-hosted language.</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
+        <a class="basic-alignment left" href="/blog/2014/10/18/run-tests-in-standalone-spark-cluster/" title="Previous Post: Running Spark tests in standalone cluster">&laquo; Running Spark tests in standalone cluster</a>
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1/">Seamless Migration From Monolithic Application to Finagle Services (Part 1/2)</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-04-09T22:03:45-04:00" pubdate data-updated="true">Apr 9<span>th</span>, 2014</time>
-        
-           | <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1/#disqus_thread"
-             data-disqus-identifier="http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1/">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><h3 id="synopsis">Synopsis</h3>
-
-<blockquote>
-  <p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/finagled-movie-db">Github</a></p>
-</blockquote>
-
-<p>Distributed micro-services architecture is hot trend right now, it’s widely adopted by <a href="https://blog.twitter.com/2011/finagle-a-protocol-agnostic-rpc-system">Twitter</a>, <a href="https://engineering.linkedin.com/architecture/restli-restful-service-architecture-scale">LinkedIn</a> and <a href="http://www.slideshare.net/LappleApple/gilt-from-monolith-ruby-app-to-micro-service-scala-service-architecture">Gilt</a>.
-However it can be difficult if data model is already defined, and services accessed via existing API throughout all your code. I’ll show how it’s possible to split monoliths app into standalone services built with Finagle and SBinary for custom communication protocol.</p>
-
-<p>I’m going to show it on example of small Fancy Movie Database application.</p>
-
-<h2 id="part-1-fancy-movie-database-application">[Part 1] Fancy Movie Database application</h2>
-
-<p>Go to <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2">Part 2</a> where fancy movie database application is divided into server and client using Finagle.</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
-  
-    <article>
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/04/01/scalaz-stream-concurrent-process/">Scalaz-Stream: Feed `Process` Through the Given Effectful `Channel` Concurrently</a></h1>
-    
-    
-      <p class="meta">
-        
+    </p>
+  </footer>
+</article>
 
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-04-01T22:03:03-04:00" pubdate data-updated="true">Apr 1<span>st</span>, 2014</time>
-        
-           | <a href="/blog/2014/04/01/scalaz-stream-concurrent-process/#disqus_thread"
-             data-disqus-identifier="http://eugenezhulenev.com/blog/2014/04/01/scalaz-stream-concurrent-process/">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Let’s assume that we have some input process, and want to run some ‘heavy computation’ on each element.
-Obviously we want utilize all available cores and use thread pool. However scalaz-stream by default is deterministic
-and in following example all computation steps will run consecutively.</p>
-
-<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
-<span class="line-number">2</span>
-<span class="line-number">3</span>
-<span class="line-number">4</span>
-<span class="line-number">5</span>
-<span class="line-number">6</span>
-<span class="line-number">7</span>
-<span class="line-number">8</span>
-<span class="line-number">9</span>
-<span class="line-number">10</span>
-<span class="line-number">11</span>
-<span class="line-number">12</span>
-<span class="line-number">13</span>
-<span class="line-number">14</span>
-<span class="line-number">15</span>
-<span class="line-number">16</span>
-<span class="line-number">17</span>
-<span class="line-number">18</span>
-<span class="line-number">19</span>
-<span class="line-number">20</span>
-<span class="line-number">21</span>
-<span class="line-number">22</span>
-<span class="line-number">23</span>
-<span class="line-number">24</span>
-<span class="line-number">25</span>
-<span class="line-number">26</span>
-<span class="line-number">27</span>
-<span class="line-number">28</span>
-<span class="line-number">29</span>
-<span class="line-number">30</span>
-</pre></td><td class="code"><pre><code class="scala"><span class="line">  <span class="k">val</span> <span class="n">timeFormat</span> <span class="k">=</span> <span class="nc">DateTimeFormat</span><span class="o">.</span><span class="n">forPattern</span><span class="o">(</span><span class="s">&quot;HH:mm:ss:SSS&quot;</span><span class="o">)</span>
-</span><span class="line">
-</span><span class="line">  <span class="k">val</span> <span class="n">counter</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">AtomicInteger</span><span class="o">(</span><span class="mi">0</span><span class="o">)</span>
-</span><span class="line">
-</span><span class="line">  <span class="c1">// ThreadPool for running effectful functions</span>
-</span><span class="line">  <span class="k">val</span> <span class="n">executor</span> <span class="k">=</span> <span class="nc">Executors</span><span class="o">.</span><span class="n">newFixedThreadPool</span><span class="o">(</span><span class="mi">3</span><span class="o">)</span>
-</span><span class="line">
-</span><span class="line">  <span class="c1">// channel of effectful functions</span>
-</span><span class="line">  <span class="k">val</span> <span class="n">effectfulChannel</span> <span class="k">=</span> <span class="n">channel</span><span class="o">[</span><span class="kt">Int</span>, <span class="kt">Int</span><span class="o">]</span> <span class="o">{</span>
-</span><span class="line">    <span class="n">in</span> <span class="k">=&gt;</span> <span class="nc">Task</span> <span class="o">{</span>
-</span><span class="line">      <span class="k">val</span> <span class="n">taskN</span> <span class="k">=</span> <span class="n">counter</span><span class="o">.</span><span class="n">incrementAndGet</span><span class="o">()</span>
-</span><span class="line">
-</span><span class="line">      <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;${Thread.currentThread().getName}: &quot;</span> <span class="o">+</span>
-</span><span class="line">        <span class="n">s</span><span class="s">&quot;Run for $in, &quot;</span> <span class="o">+</span>
-</span><span class="line">        <span class="n">s</span><span class="s">&quot;TaskN = $taskN &quot;</span> <span class="o">+</span>
-</span><span class="line">        <span class="n">s</span><span class="s">&quot;(time = ${timeFormat.print(System.currentTimeMillis())})&quot;</span><span class="o">)</span>
-</span><span class="line">
-</span><span class="line">      <span class="c1">// Long running computation</span>
-</span><span class="line">      <span class="k">val</span> <span class="n">computed</span> <span class="k">=</span> <span class="o">{</span>
-</span><span class="line">        <span class="nc">Thread</span><span class="o">.</span><span class="n">sleep</span><span class="o">(</span><span class="mi">1000</span><span class="o">)</span>
-</span><span class="line">        <span class="n">in</span> <span class="o">*</span> <span class="n">in</span>
-</span><span class="line">      <span class="o">}</span>
-</span><span class="line">      <span class="n">computed</span>
-</span><span class="line">    <span class="o">}(</span><span class="n">executor</span><span class="o">)</span>
-</span><span class="line">  <span class="o">}</span>
-</span><span class="line">
-</span><span class="line">  <span class="k">val</span> <span class="n">start</span> <span class="k">=</span> <span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">()</span>
-</span><span class="line">  <span class="k">val</span> <span class="n">output</span> <span class="k">=</span> <span class="nc">Process</span><span class="o">.</span><span class="n">range</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">11</span><span class="o">).</span><span class="n">through</span><span class="o">(</span><span class="n">effectfulChannel</span><span class="o">).</span><span class="n">runLog</span><span class="o">.</span><span class="n">run</span>
-</span><span class="line">  <span class="k">val</span> <span class="n">end</span> <span class="k">=</span> <span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">()</span>
-</span><span class="line">  <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;Output = $output, in ${end-start} ms&quot;</span><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
-
-<h3 id="deterministic-output">Deterministic Output</h3>
-
-<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
-<span class="line-number">2</span>
-<span class="line-number">3</span>
-<span class="line-number">4</span>
-<span class="line-number">5</span>
-<span class="line-number">6</span>
-<span class="line-number">7</span>
-<span class="line-number">8</span>
-<span class="line-number">9</span>
-<span class="line-number">10</span>
-<span class="line-number">11</span>
-</pre></td><td class="code"><pre><code class=""><span class="line">pool-1-thread-1: Run for 1, TaskN = 1   (time = 22:59:14:720)
-</span><span class="line">pool-1-thread-2: Run for 2, TaskN = 2   (time = 22:59:15:811)
-</span><span class="line">pool-1-thread-3: Run for 3, TaskN = 3   (time = 22:59:16:813)
-</span><span class="line">pool-1-thread-3: Run for 4, TaskN = 4   (time = 22:59:17:815)
-</span><span class="line">pool-1-thread-3: Run for 5, TaskN = 5   (time = 22:59:18:817)
-</span><span class="line">pool-1-thread-3: Run for 6, TaskN = 6   (time = 22:59:19:818)
-</span><span class="line">pool-1-thread-3: Run for 7, TaskN = 7   (time = 22:59:20:819)
-</span><span class="line">pool-1-thread-3: Run for 8, TaskN = 8   (time = 22:59:21:821)
-</span><span class="line">pool-1-thread-3: Run for 9, TaskN = 9   (time = 22:59:22:822)
-</span><span class="line">pool-1-thread-3: Run for 10, TaskN = 10 (time = 22:59:23:823)
-</span><span class="line">Output = Vector(1, 4, 9, 16, 25, 36, 49, 64, 81, 100), in 10196 ms</span></code></pre></td></tr></table></div></figure></notextile></div>
-
-<h3 id="concurrent-process">Concurrent Process</h3>
-
-<p>To run effectful functions concurrently, with controlled number of queued tasks we can use <code>scalaz.stream.merge.mergeN</code> which is for now available only in <code>snapshot-0.4</code>.</p>
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/04/01/scalaz-stream-concurrent-process/">Read on &rarr;</a>
-    </footer>
-  
 
-
-    </article>
-  
-  <div class="pagination">
-    
-    <a href="/blog/archives">Blog Archives</a>
-    
-  </div>
-</div>
-<aside class="sidebar">
+  <aside class="sidebar">
    
 <form action="https://www.google.com/search" method="get">
   <fieldset role="search">
@@ -975,7 +582,7 @@ and in following example all computation steps will run consecutively.</p>
 <section>
   <h1>GitHub Repos</h1>
   <ul id="gh_repos">
-    <li class="loading">Status updating&#8230;</li>
+    <li class="loading">Status updating...</li>
   </ul>
   
   <a href="https://github.com/ezhulenev">@ezhulenev</a> on GitHub
@@ -1009,6 +616,7 @@ and in following example all computation steps will run consecutively.</p>
 </aside>
 
 
+
     </div>
   </div>
   <footer role="contentinfo"><p>
@@ -1023,7 +631,10 @@ and in following example all computation steps will run consecutively.</p>
       var disqus_shortname = 'eugenezhulenev';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://eugenezhulenev.com/blog/2014/11/14/stock-price-prediction-with-big-data-and-machine-learning/';
+        var disqus_url = 'http://eugenezhulenev.com/blog/2014/11/14/stock-price-prediction-with-big-data-and-machine-learning/';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

@@ -4,7 +4,7 @@
   <title><![CDATA[Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2014-10-24T20:31:24-04:00</updated>
+  <updated>2014-11-13T21:17:39-05:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -12,6 +12,374 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Stock Price Prediction With Big Data and Machine Learning]]></title>
+    <link href="http://eugenezhulenev.com/blog/2014/11/14/stock-price-prediction-with-big-data-and-machine-learning/"/>
+    <updated>2014-11-14T21:03:35-05:00</updated>
+    <id>http://eugenezhulenev.com/blog/2014/11/14/stock-price-prediction-with-big-data-and-machine-learning</id>
+    <content type="html"><![CDATA[<p>Apache Spark and Spark MLLib for building price movement prediction model based from order log data.</p>
+
+<blockquote>
+  <p>The code for this application app can be found on <a href="https://github.com/ezhulenev/orderbook-dynamics">Github</a></p>
+</blockquote>
+
+<h3 id="synopsis">Synopsis</h3>
+
+<p>This post is based on <a href="https://raw.github.com/ezhulenev/scala-openbook/master/assets/Modeling-high-frequency-limit-order-book-dynamics-with-support-vector-machines.pdf">Modeling high-frequency limit order book dynamics with support vector machines</a> paper.
+Roughly speaking I’m implementing ideas introduced in this paper in scala with <a href="https://spark.apache.org/">Spark</a> and <a href="https://spark.apache.org/mllib/">Spark MLLib</a>.
+Authors are using sampling, I’m going to use full order log from <a href="http://www.nyxdata.com/Data-Products/NYSE-OpenBook-History">NYSE</a> (sample data is available from <a href="ftp://ftp.nyxdata.com/Historical%20Data%20Samples/TAQ%20NYSE%20OpenBook/">NYSE FTP</a>), just because
+I can easily do it with Spark. Instead of using SVM, I’m going to use <a href="http://spark.apache.org/docs/latest/mllib-decision-tree.html">Decision Tree</a> algorithm for classification,
+because in Spark MLLib it supports multiclass classification out of the box.</p>
+
+<p>If you want to get deep understanding of the problem and proposed solution, you need to read the paper.
+I’m going to give high level overview of the problem in less academic language, in one or two paragraphs.</p>
+
+<blockquote>
+  <p>Predictive modelling is the process by which a model is created or chosen to try to best predict the probability of an outcome.</p>
+</blockquote>
+
+<h4 id="model-architecture">Model Architecture</h4>
+
+<p>Authors are proposing framework for extracting feature vectors from from raw order log data, that can be used as input to
+machine learning classification method (SVM or Decision Tree for example) to predict price movement (Up, Down, Stationary). Given a set of training data
+with assigned labels (price movement) classification algorithm builds a model that assigns new examples into one of pre-defined categories.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+Time(sec)            Price($)   Volume      Event Type      Direction
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+34203.011926972      598.68     10          submission      ask
+34203.011926973      594.47     15          submission      bid
+34203.011926974      594.49     20          submission      bid
+34203.011926981      597.68     30          submission      ask
+34203.011926991      594.47     15          execution       ask
+34203.011927072      597.68     10          cancellation    ask
+34203.011927082      599.88     12          submission      ask
+34203.011927097      598.38     11          submission      ask
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<p>In the table, each row of the message book represents a trading event that could be either a order submission,
+order cancellation, or order execution. The arrival time measured from midnight,
+is in seconds and nanoseconds; price is in US dollars, and the Volume is in number of shares.
+Ask - I’m selling and asking for this price, Bid - I want to buy for this price.</p>
+
+<p>From this log it’s very easy to reconstruct state of order book after each entry. You can read more about <a href="http://www.investopedia.com/terms/o/order-book.asp">order book</a>
+and <a href="http://www.investopedia.com/university/intro-to-order-types/limit-orders.asp">limit order book</a> in Investopedia,
+I’m not going to dive into details. Concepts are super easy for understanding.</p>
+
+<blockquote>
+  <p>An electronic list of buy and sell orders for a specific security or financial instrument, organized by price level.</p>
+</blockquote>
+
+<h4 id="feature-extraction-and-training-data-preparation">Feature Extraction and Training Data Preparation</h4>
+
+<p>After order books are reconstructed from order log, we can derive attributes, that will form feature vectors used as input to <code>classification model</code>.</p>
+
+<p>Attributes are divided into three categories: basic, time-insensitive, and time-sensitive, all of which can be directly computed from the data.
+Attributes in the basic set are the prices and volumes at both ask and bid sides up to n = 10 different levels (that is, price levels in the order book at a given moment),
+which can be directly fetched from the order book. Attributes in the time-insensitive set are easily computed from the basic set at a single point in time.
+Of this, bid-ask spread and mid-price, price ranges, as well as average price and volume at different price levels are calculated in feature sets <code>v2</code>, <code>v3</code>, and <code>v5</code>, respectively;
+while <code>v5</code> is designed to track the accumulated differences of price and volume between ask and bid sides. By further taking the recent history of current data into consideration,
+we devise the features in the time-sensitive set. More about calculating other attributes can be found in <a href="https://raw.github.com/ezhulenev/scala-openbook/master/assets/Modeling-high-frequency-limit-order-book-dynamics-with-support-vector-machines.pdf">original paper</a>.</p>
+
+<p><img class="center" src="https://raw.github.com/ezhulenev/scala-openbook/master/assets/features.png" /></p>
+
+<h4 id="labeling-training-data">Labeling Training Data</h4>
+
+<p>To prepare training data for machine learning it’s also required to label each point with price movement observed over some time horizon (1 second fo example).
+It’s straightforward task that only requires two order books: current order book and order book after some period of time.</p>
+
+<p>I’m going to use <code>MeanPriceMove</code> label that can be: <code>Stationary</code>, <code>Up</code> or <code>Down</code>.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+
+trait <span class="predefined-type">Label</span>[L] <span class="directive">extends</span> <span class="predefined-type">Serializable</span> { label =&gt;
+  <span class="keyword">def</span> <span class="function">apply</span>(<span class="key">current</span>: OrderBook, <span class="key">future</span>: OrderBook): <span class="predefined-type">Option</span>[L]
+}
+
+sealed trait MeanPriceMove
+
+object MeanPriceMove {
+  <span class="keyword">case</span> object Up <span class="directive">extends</span> MeanPriceMove
+  <span class="keyword">case</span> object Down <span class="directive">extends</span> MeanPriceMove
+  <span class="keyword">case</span> object Stationary <span class="directive">extends</span> MeanPriceMove
+}
+
+object MeanPriceMovementLabel <span class="directive">extends</span> <span class="predefined-type">Label</span>[MeanPriceMove] {
+
+  <span class="directive">private</span>[<span class="local-variable">this</span>] val basicSet = BasicSet.apply(BasicSet.Config.default)
+
+  <span class="keyword">def</span> <span class="function">apply</span>(<span class="key">current</span>: OrderBook, <span class="key">future</span>: OrderBook): <span class="predefined-type">Option</span>[MeanPriceMove] = {
+    val currentMeanPrice = basicSet.meanPrice(current)
+    val futureMeanPrice = basicSet.meanPrice(future)
+
+    val <span class="key">cell</span>: Cell[MeanPriceMove] =
+       currentMeanPrice.zipMap(futureMeanPrice) {
+        (currentMeanValue, futureMeanValue) =&gt;
+          <span class="keyword">if</span> (currentMeanValue == futureMeanValue)
+            MeanPriceMove.Stationary
+          <span class="keyword">else</span> <span class="keyword">if</span> (currentMeanValue &gt; futureMeanValue)
+            MeanPriceMove.Down
+          <span class="keyword">else</span>
+            MeanPriceMove.Up
+        }
+
+    cell.toOption
+  }
+}
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<h3 id="order-log-data">Order Log Data</h3>
+
+<p>I’m going to use <a href="http://www.nyxdata.com/Data-Products/NYSE-OpenBook-History">NYSE TAQ OpenBook</a> orders data, and parse it with <a href="https://github.com/ezhulenev/scala-openbook">Scala OpenBook</a>
+library. It’s easiest data set to get, free sample data for 2 trading days is available for download at <a href="ftp://ftp.nyxdata.com/Historical%20Data%20Samples/TAQ%20NYSE%20OpenBook/">NYSE FTP</a>.</p>
+
+<blockquote>
+  <p>TAQ (Trades and Quotes) historical data products provide a varying range of market depth on a T+1 basis for covered markets.
+TAQ data products are used to develop and backtest trading strategies, analyze market trends as seen in a real-time ticker plant environment, and research markets for regulatory or audit activity.</p>
+</blockquote>
+
+<h3 id="prepare-training-data">Prepare Training Data</h3>
+
+<p><code>OrderBook</code> is two sorted maps, where key is price and value is volume.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="keyword">case</span> <span class="type">class</span> <span class="class">OrderBook</span>(<span class="key">symbol</span>: <span class="predefined-type">String</span>,
+                     <span class="key">buy</span>: <span class="predefined-type">TreeMap</span>[Int, Int] = <span class="predefined-type">TreeMap</span>.empty,
+                     <span class="key">sell</span>: <span class="predefined-type">TreeMap</span>[Int, Int] = <span class="predefined-type">TreeMap</span>.empty)
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<h4 id="feature-sets">Feature Sets</h4>
+
+<p>I’m using <code>Cell</code> from <a href="https://github.com/pellucidanalytics/framian">Framian</a> library to represent extracted feature values. It can be <code>Value</code>, <code>NA</code> or <code>NM</code>.</p>
+
+<p>As defined in original paper we have three feature sets, first two calculated from <code>OrderBook</code>, last one requires <code>OrdersTrail</code> which effectively is
+window computation over raw order log.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+sealed trait <span class="predefined-type">BasicAttribute</span>[T] <span class="directive">extends</span> <span class="predefined-type">Serializable</span> { self =&gt;
+  <span class="keyword">def</span> <span class="function">apply</span>(<span class="key">orderBook</span>: OrderBook): Cell[T]
+
+  <span class="keyword">def</span> map[T2](<span class="key">f</span>: T =&gt; T2): <span class="predefined-type">BasicAttribute</span>[T2] = <span class="keyword">new</span> <span class="predefined-type">BasicAttribute</span>[T2] {
+    <span class="keyword">def</span> <span class="function">apply</span>(<span class="key">orderBook</span>: OrderBook): Cell[T2] = self(orderBook).map(f)
+  }
+}
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+sealed trait TimeInsensitiveAttribute[T] <span class="directive">extends</span> <span class="predefined-type">Serializable</span> { self =&gt;
+  <span class="keyword">def</span> <span class="function">apply</span>(<span class="key">orderBook</span>: OrderBook): Cell[T]
+
+  <span class="keyword">def</span> map[T2](<span class="key">f</span>: T =&gt; T2): TimeInsensitiveAttribute[T2] = <span class="keyword">new</span> TimeInsensitiveAttribute[T2] {
+    <span class="keyword">def</span> <span class="function">apply</span>(<span class="key">orderBook</span>: OrderBook): Cell[T2] = self(orderBook).map(f)
+  }
+}
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+trait TimeSensitiveAttribute[T] <span class="directive">extends</span> <span class="predefined-type">Serializable</span> { self =&gt;
+  <span class="keyword">def</span> <span class="function">apply</span>(<span class="key">ordersTrail</span>: <span class="predefined-type">Vector</span>[OpenBookMsg]): Cell[T]
+
+  <span class="keyword">def</span> map[T2](<span class="key">f</span>: T =&gt; T2): TimeSensitiveAttribute[T2] = <span class="keyword">new</span> TimeSensitiveAttribute[T2] {
+    <span class="keyword">def</span> <span class="function">apply</span>(<span class="key">ordersTrail</span>: <span class="predefined-type">Vector</span>[OpenBookMsg]): Cell[T2] = self(ordersTrail).map(f)
+  }
+}
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<p>and it’s how features calculation looks like</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="type">class</span> <span class="class">BasicSet</span> <span class="directive">private</span>[attribute] (val <span class="key">config</span>: BasicSet.Config) <span class="directive">extends</span> <span class="predefined-type">Serializable</span> {
+  <span class="directive">private</span>[attribute] <span class="keyword">def</span> <span class="function">askPrice</span>(<span class="key">orderBook</span>: OrderBook)(<span class="key">i</span>: Int): Cell[Int] = {
+    Cell.fromOption {
+      orderBook.sell.keySet.drop(i - <span class="integer">1</span>).headOption
+    }
+  }
+
+  <span class="directive">private</span>[attribute] <span class="keyword">def</span> <span class="function">bidPrice</span>(<span class="key">orderBook</span>: OrderBook)(<span class="key">i</span>: Int): Cell[Int] = {
+    Cell.fromOption {
+      val bidPrices = orderBook.buy.keySet
+      <span class="keyword">if</span> (bidPrices.size &gt;= i) {
+        bidPrices.drop(bidPrices.size - i).headOption
+      } <span class="keyword">else</span> None
+    }
+  }
+
+  <span class="directive">private</span> <span class="keyword">def</span> attribute[T](<span class="key">f</span>: OrderBook =&gt; Cell[T]): <span class="predefined-type">BasicAttribute</span>[T] = <span class="keyword">new</span> <span class="predefined-type">BasicAttribute</span>[T] {
+    <span class="keyword">def</span> <span class="function">apply</span>(<span class="key">orderBook</span>: OrderBook): Cell[T] = f(orderBook)
+  }
+
+  <span class="keyword">def</span> <span class="function">askPrice</span>(<span class="key">i</span>: Int): <span class="predefined-type">BasicAttribute</span>[Int] = attribute(askPrice(_)(i))
+
+  <span class="keyword">def</span> <span class="function">bidPrice</span>(<span class="key">i</span>: Int): <span class="predefined-type">BasicAttribute</span>[Int] = attribute(bidPrice(_)(i))
+
+ val <span class="key">meanPrice</span>: <span class="predefined-type">BasicAttribute</span>[<span class="predefined-type">Double</span>] = {
+    val ask1 = askPrice(<span class="integer">1</span>)
+    val bid1 = bidPrice(<span class="integer">1</span>)
+    <span class="predefined-type">BasicAttribute</span>.from(orderBook =&gt;
+      ask1(orderBook).zipMap(bid1(orderBook)) {
+        (ask, bid) =&gt; (ask.toDouble + bid.toDouble) / <span class="integer">2</span>
+      })
+  }
+}
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<h4 id="label-training-data">Label Training Data</h4>
+
+<p>To extract labeled data from orders I’m using <code>LabeledPointsExtractor</code></p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="type">class</span> <span class="class">LabeledPointsExtractor</span>[<span class="key">L</span>: LabelEncode] {
+
+  <span class="keyword">def</span> <span class="function">labeledPoints</span>(<span class="key">orders</span>: <span class="predefined-type">Vector</span>[OpenBookMsg]): <span class="predefined-type">Vector</span>[LabeledPoint] = {
+    log.debug(s<span class="string"><span class="delimiter">&quot;</span><span class="content">Extract labeled points from orders log. Log size: </span><span class="inline"><span class="inline-delimiter">${</span>orders.size<span class="inline-delimiter">}</span></span><span class="delimiter">&quot;</span></span>)
+
+    <span class="comment">// ...</span>
+  }
+}
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<p>and it can be constructed nicely with builder</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+val extractor = {
+    <span class="keyword">import</span> <span class="include">com.scalafi.dynamics.attribute.LabeledPointsExtractor._</span>
+    (LabeledPointsExtractor.newBuilder()
+      += basic(_.askPrice(<span class="integer">1</span>))
+      += basic(_.bidPrice(<span class="integer">1</span>))
+      += basic(_.meanPrice)
+      ).result(symbol, MeanPriceMovementLabel, LabeledPointsExtractor.Config(<span class="integer">1</span>.millisecond))
+  }
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<p>This <code>extractor</code> will prepare labeled points using <code>MeanPriceMovementLabel</code> with 3 features: ask price, bid price and mean price</p>
+
+<h3 id="run-classification-model">Run Classification Model</h3>
+
+<p>In “real” application I’m using 36 features from all 3 feature sets. I run my tests with sample data from NYSE ftp,
+<code>EQY_US_NYSE_BOOK_20130403</code> for model training and <code>EQY_US_NYSE_BOOK_20130404</code> for model validation.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+object DecisionTreeDynamics <span class="directive">extends</span> App with ConfiguredSparkContext with FeaturesExtractor {
+  <span class="directive">private</span> val log = LoggerFactory.getLogger(<span class="local-variable">this</span>.getClass)
+
+  <span class="keyword">case</span> <span class="type">class</span> <span class="class">Config</span>(<span class="key">training</span>: <span class="predefined-type">String</span> = <span class="string"><span class="delimiter">&quot;</span><span class="delimiter">&quot;</span></span>,
+                    <span class="key">validation</span>: <span class="predefined-type">String</span> = <span class="string"><span class="delimiter">&quot;</span><span class="delimiter">&quot;</span></span>,
+                    <span class="key">filter</span>: <span class="predefined-type">Option</span>[<span class="predefined-type">String</span>] = None,
+                    <span class="key">symbol</span>: <span class="predefined-type">Option</span>[<span class="predefined-type">String</span>] = None)
+
+  val parser = <span class="keyword">new</span> OptionParser[Config](<span class="string"><span class="delimiter">&quot;</span><span class="content">Order Book Dynamics</span><span class="delimiter">&quot;</span></span>) {
+    <span class="comment">// ....</span>
+  }
+
+  parser.parse(args, Config()) map { implicit config =&gt;
+    val trainingFiles = openBookFiles(<span class="string"><span class="delimiter">&quot;</span><span class="content">Training</span><span class="delimiter">&quot;</span></span>, config.training, config.filter)
+    val validationFiles = openBookFiles(<span class="string"><span class="delimiter">&quot;</span><span class="content">Validation</span><span class="delimiter">&quot;</span></span>, config.validation, config.filter)
+
+    val trainingOrderLog = orderLog(trainingFiles)
+    log.info(s<span class="string"><span class="delimiter">&quot;</span><span class="content">Training order log size: </span><span class="inline"><span class="inline-delimiter">${</span>trainingOrderLog.count()<span class="inline-delimiter">}</span></span><span class="delimiter">&quot;</span></span>)
+
+    <span class="comment">// Configure DecisionTree model</span>
+    val labelEncode = implicitly[LabelEncode[MeanPriceMove]]
+    val numClasses = labelEncode.numClasses
+    val categoricalFeaturesInfo = <span class="predefined-type">Map</span>.empty[Int, Int]
+    val impurity = <span class="string"><span class="delimiter">&quot;</span><span class="content">gini</span><span class="delimiter">&quot;</span></span>
+    val maxDepth = <span class="integer">5</span>
+    val maxBins = <span class="integer">100</span>
+
+    val trainingData = trainingOrderLog.extractLabeledData(featuresExtractor(<span class="key">_</span>: <span class="predefined-type">String</span>))
+    val trainedModels = (trainingData map { <span class="keyword">case</span> LabeledOrderLog(symbol, labeledPoints) =&gt;
+      log.info(s<span class="string"><span class="delimiter">&quot;</span><span class="inline"><span class="inline-delimiter">$</span>symbol</span><span class="content">: Train Decision Tree model. Training data size: </span><span class="inline"><span class="inline-delimiter">${</span>labeledPoints.count()<span class="inline-delimiter">}</span></span><span class="delimiter">&quot;</span></span>)
+      val model = DecisionTree.trainClassifier(labeledPoints, numClasses, categoricalFeaturesInfo, impurity, maxDepth, maxBins)
+      val labelCounts = labeledPoints.map(_.label).countByValue().map {
+        <span class="keyword">case</span> (key, count) =&gt; (labelEncode.decode(key.toInt), count)
+      }
+      log.info(s<span class="string"><span class="delimiter">&quot;</span><span class="inline"><span class="inline-delimiter">$</span>symbol</span><span class="content">: Label counts: [</span><span class="inline"><span class="inline-delimiter">${</span>labelCounts.mkString(<span class="string"><span class="delimiter">&quot;</span><span class="content">, </span><span class="delimiter">&quot;</span></span>)<span class="inline-delimiter">}</span></span><span class="content">]</span><span class="delimiter">&quot;</span></span>)
+      symbol -&gt; model
+    }).toMap
+
+    val validationOrderLog = orderLog(validationFiles)
+    log.info(s<span class="string"><span class="delimiter">&quot;</span><span class="content">Validation order log size: </span><span class="inline"><span class="inline-delimiter">${</span>validationOrderLog.count()<span class="inline-delimiter">}</span></span><span class="delimiter">&quot;</span></span>)
+    val validationData = validationOrderLog.extractLabeledData(featuresExtractor(<span class="key">_</span>: <span class="predefined-type">String</span>))
+
+    <span class="comment">// Evaluate model on validation data and compute training error</span>
+    validationData.map { <span class="keyword">case</span> LabeledOrderLog(symbol, labeledPoints) =&gt;
+
+      val model = trainedModels(symbol)
+
+      log.info(s<span class="string"><span class="delimiter">&quot;</span><span class="inline"><span class="inline-delimiter">$</span>symbol</span><span class="content">: Evaluate model on validation data. Validation data size: </span><span class="inline"><span class="inline-delimiter">${</span>labeledPoints.count()<span class="inline-delimiter">}</span></span><span class="delimiter">&quot;</span></span>)
+      log.info(s<span class="string"><span class="delimiter">&quot;</span><span class="inline"><span class="inline-delimiter">$</span>symbol</span><span class="content">: Learned classification tree model: </span><span class="inline"><span class="inline-delimiter">$</span>model</span><span class="delimiter">&quot;</span></span>)
+
+      val labelAndPrediction = labeledPoints.map { point =&gt;
+        val prediction = model.predict(point.features)
+        (point.label, prediction)
+      }
+      val trainingError = labelAndPrediction.filter(r =&gt; r._1 != r._2).count().toDouble / labeledPoints.count
+      log.info(s<span class="string"><span class="delimiter">&quot;</span><span class="inline"><span class="inline-delimiter">$</span>symbol</span><span class="content">: Training Error = </span><span class="delimiter">&quot;</span></span> + trainingError)
+    }
+  }
+}
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<h4 id="training-error">Training Error</h4>
+
+<p>Output of running Decision Tree classification for single symbol <code>ORCL</code>:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+ORCL: Train Decision Tree model. Training data size: 64064
+ORCL: Trained model in 3740 millis
+ORCL: Label counts: [Stationary -&gt; 42137, Down -&gt; 10714, Up -&gt; 11213]
+ORCL: Evaluate model on validation data. Validation data size: 54749
+ORCL: Training Error = 0.28603262160039455
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<p>As you can see this pretty simple model was able to successfully classify ~70% of the data.</p>
+
+<h3 id="results">Results</h3>
+
+<p>I was able to relatively easy reproduce fairly complicated research project at much lager scale than in original paper.</p>
+
+<p>Latest Big Data technologies allows to build models using all available data, and stop doing samplings.
+Using all of the data helps to build best possible models and capture all details from full data set.</p>
+
+<blockquote>
+  <p>The code for this application app can be found on <a href="https://github.com/ezhulenev/orderbook-dynamics">Github</a></p>
+</blockquote>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Running Spark Tests in Standalone Cluster]]></title>
