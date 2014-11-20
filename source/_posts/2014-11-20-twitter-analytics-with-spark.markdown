@@ -1,50 +1,50 @@
 ---
 layout: post
-title: "Building Twitter live stream analytics with Spark and Cassandra"
-date: 2014-10-20 21:01:15 -0400
+title: "Building Twitter Live Stream Analytics With Spark and Cassandra"
+date: 2014-11-20 21:01:15 -0400
 comments: true
 categories: [spark, spark-streaming, cassandra, twitter, finance, scala]
 keywords: spark, spark-streaming, cassandra, twitter, finance, scala
 ---
 
+> This is repost of my article from [Pellucid Tech Blog](http://io.pellucid.com/blog/building-twitter-live-stream-analytics-with-spark-and-cassandra)
+
 ### Background
 
-At [Pellucid Analytics](http://pellucid.com) we build platform that automates and simplifies
-creation data-driven chartbooks, so it takes minutes rather than hours to go from raw data to powerful
-visualizations and compelling stories.
+At [Pellucid Analytics](http://pellucid.com) we we are building a platform that
+automates and simplifies the creation of data-driven chartbooks, so that it takes
+minutes instead of hours to get from raw data to powerful visualizations and compelling stories.
 
-One of industries in our focus is Investment Banking. We help IB advisory professionals build pitch-books, provide them
-analytical and quantitative support to sell their ideas. [Comparable Companies Analysis](http://www.investopedia.com/terms/c/comparable-company-analysis-cca.asp) is
-central to this business.
+One of industries we are focusing on is Investment Banking. We are helping IB advisory
+professionals build pitch-books, and provide them with analytical and quantitative support
+to sell their ideas. Comparable Companies Analysis is central to this business.
 
 > Comparable company analysis starts with establishing a peer group consisting of similar companies of similar size in the same industry and region.
 
-We faced with a problem of finding scalable solution to establish a peer group for any company.
+The problem we are faced with is finding a scalable solution to establish a peer group for any chosen company.
 
+<!-- more -->
 
 ### Approaches That We Tried
 
 #### Company Industry
 
-Data vendors provide [industry classification](http://en.wikipedia.org/wiki/Industry_classification) for each company,
-and it helps a lot in industries like retail (Wal-Mart is good comparable to Costco), energy (Chevron and Exxon Mobil)
-but it stumbles with many other companies. People tend to compare Amazon with Google as a two major players in it business,
-but data vendors tend to put Amazon in retail industry with Wal-Mart/Costco as comparables.
+Data vendors provide [industry classification](http://en.wikipedia.org/wiki/Industry_classification)
+for each company, and it helps a lot in industries like retail (Wal-Mart is good comparable to Costco),
+energy (Chevron and Exxon Mobil) but it stumbles with many other companies. People tend to compare
+Amazon with Google as a two major players in it business, but data vendors tend to put Amazon in retail industry with Wal-Mart/Costco as comparables.
 
 #### Company Financials and Valuation Multiples
 
-We tried cluster analysis and k-nearest neighbors to group companies based on their financials (Sales, Revenue)
-and valuation multiples (EV/EBIDTA, P/E). However assumption that similar companies will have similar
-valuations multiples is wrong. People compare Twitter with Facebook as two biggest companies in social media, but
-based on their financials they don't have too much in common. Facebook 2013 revenue is almost $8 billions
-and Twitter has only $600 millions.
+We tried cluster analysis and k-nearest neighbors to group companies based on their
+financials (Sales, Revenue) and valuation multiples (EV/EBIDTA, P/E). However assumptions
+that similar companies will have similar valuations multiples is wrong. People compare
+Twitter with Facebook as two biggest companies in social media, but based on their financials
+they don't have too much in common. Facebook 2013 revenue is almost $8 billion and Twitter has only $600 million.
 
 ### Novel Approach
 
-We came up with idea, that if companies often mentioned in news, articles and tweets together, probably it's a sign
-that people this about them as comparable companies. In this post I'll show how we built proof of concept for this idea
-with Spark, Spark Streaming and Cassandra. We use only Twitter live stream data for now, accessing high quality news data is
-a bit more complicated problem.
+We came up with an idea that if companies are often mentioned in news articles and tweets together, it's probably a sign that people think about them as comparable companies. In this post I'll show how we built proof of concept for this idea with Spark, Spark Streaming and Cassandra. We use only Twitter live stream data for now, accessing high quality news data is a bit more complicated problem.
 
 <!-- more -->
 
@@ -53,9 +53,7 @@ Let's take for example this tweet from CNN:
 <blockquote class="twitter-tweet" lang="en"><p>Trying to spot the next <a href="https://twitter.com/search?q=%24FB&amp;src=ctag">$FB</a> or <a href="https://twitter.com/search?q=%24TWTR&amp;src=ctag">$TWTR</a>? These 10 startups are worth keeping an eye on <a href="http://t.co/FEKNtm7QqB">http://t.co/FEKNtm7QqB</a></p>&mdash; CNN Public Relations (@CNNPR) <a href="https://twitter.com/CNNPR/status/518083527863435264">October 3, 2014</a></blockquote>
 <script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
 
-From this tweet we can derive 2 mentions for 2 companies. For Facebook it will be Twitter and vice-versa. If we collect
-tweets for all companies over some period of time, and take a ratio of joint appearance in same tweet as a
-measure of "similarity", we can build comparable company recommendations based on this measure.
+From this tweet we can derive 2 mentions for 2 companies. For Facebook it will be Twitter and vice-versa. If we collect tweets for all companies over some period of time, and take a ratio of joint appearance in same tweet as a measure of "similarity", we can build comparable company recommendations based on this measure.
 
 ### Data Model
 
@@ -281,11 +279,8 @@ class Recommend(@transient sc: SparkContext, keyspace: String)
 
 ### Results
 
-You can check comparable company recommendations build from Twitter stream on Pellucid [web site](http://comparables.io.pellucid.com).
+You can check comparable company recommendations build from Twitter stream using [this link](http://pellucidanalytics.github.io/tweet-driven-comparable-companies/comparables/comps.html).
 
-Cassandra and Spark works perfectly together and allows to build scalable data-driven applications,
-that super easy to scale out and handle gigabytes and terabytes of data. In this particular case, it's
-probably an overkill. Twitter doesn't have enough finance-related activity to produce serious load. However it's easy to
-extend this application and add other streams: Bloomberg News Feed, Thompson Reuters, etc.
+Cassandra and Spark works perfectly together and allows you to build scalable data-driven applications, that are super easy to scale out and handle gigabytes and terabytes of data. In this particular case, it's probably an overkill. Twitter doesn't have enough finance-related activity to produce serious load. However it's easy to extend this application and add other streams: Bloomberg News Feed, Thompson Reuters, etc.
 
-> The code for this application app can be found on [Github](https://github.com/pellucidanalytics/hackday)
+> The code for this application app can be found on [Github](https://github.com/ezhulenev/tweet-driven-comparable-companies)
