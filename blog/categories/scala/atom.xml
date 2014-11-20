@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Scala | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/scala/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2014-11-13T21:46:00-05:00</updated>
+  <updated>2014-11-19T22:10:30-05:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -12,6 +12,307 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Building Twitter Live Stream Analytics With Spark and Cassandra]]></title>
+    <link href="http://eugenezhulenev.com/blog/2014/11/20/twitter-analytics-with-spark/"/>
+    <updated>2014-11-20T20:01:15-05:00</updated>
+    <id>http://eugenezhulenev.com/blog/2014/11/20/twitter-analytics-with-spark</id>
+    <content type="html"><![CDATA[<blockquote>
+  <p>This is repost of my article from <a href="http://io.pellucid.com/blog/building-twitter-live-stream-analytics-with-spark-and-cassandra">Pellucid Tech Blog</a></p>
+</blockquote>
+
+<h3 id="background">Background</h3>
+
+<p>At <a href="http://pellucid.com">Pellucid Analytics</a> we we are building a platform that
+automates and simplifies the creation of data-driven chartbooks, so that it takes
+minutes instead of hours to get from raw data to powerful visualizations and compelling stories.</p>
+
+<p>One of industries we are focusing on is Investment Banking. We are helping IB advisory
+professionals build pitch-books, and provide them with analytical and quantitative support
+to sell their ideas. Comparable Companies Analysis is central to this business.</p>
+
+<blockquote>
+  <p>Comparable company analysis starts with establishing a peer group consisting of similar companies of similar size in the same industry and region.</p>
+</blockquote>
+
+<p>The problem we are faced with is finding a scalable solution to establish a peer group for any chosen company.</p>
+
+<!-- more -->
+
+<h3 id="approaches-that-we-tried">Approaches That We Tried</h3>
+
+<h4 id="company-industry">Company Industry</h4>
+
+<p>Data vendors provide <a href="http://en.wikipedia.org/wiki/Industry_classification">industry classification</a>
+for each company, and it helps a lot in industries like retail (Wal-Mart is good comparable to Costco),
+energy (Chevron and Exxon Mobil) but it stumbles with many other companies. People tend to compare
+Amazon with Google as a two major players in it business, but data vendors tend to put Amazon in retail industry with Wal-Mart/Costco as comparables.</p>
+
+<h4 id="company-financials-and-valuation-multiples">Company Financials and Valuation Multiples</h4>
+
+<p>We tried cluster analysis and k-nearest neighbors to group companies based on their
+financials (Sales, Revenue) and valuation multiples (EV/EBIDTA, P/E). However assumptions
+that similar companies will have similar valuations multiples is wrong. People compare
+Twitter with Facebook as two biggest companies in social media, but based on their financials
+they don’t have too much in common. Facebook 2013 revenue is almost $8 billion and Twitter has only $600 million.</p>
+
+<h3 id="novel-approach">Novel Approach</h3>
+
+<p>We came up with an idea that if companies are often mentioned in news articles and tweets together, it’s probably a sign that people think about them as comparable companies. In this post I’ll show how we built proof of concept for this idea with Spark, Spark Streaming and Cassandra. We use only Twitter live stream data for now, accessing high quality news data is a bit more complicated problem.</p>
+
+<!-- more -->
+
+<p>Let’s take for example this tweet from CNN:</p>
+
+<blockquote class="twitter-tweet" lang="en"><p>Trying to spot the next <a href="https://twitter.com/search?q=%24FB&amp;src=ctag">$FB</a> or <a href="https://twitter.com/search?q=%24TWTR&amp;src=ctag">$TWTR</a>? These 10 startups are worth keeping an eye on <a href="http://t.co/FEKNtm7QqB">http://t.co/FEKNtm7QqB</a></p>&mdash; CNN Public Relations (@CNNPR) <a href="https://twitter.com/CNNPR/status/518083527863435264">October 3, 2014</a></blockquote>
+<script async="" src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+<p>From this tweet we can derive 2 mentions for 2 companies. For Facebook it will be Twitter and vice-versa. If we collect tweets for all companies over some period of time, and take a ratio of joint appearance in same tweet as a measure of “similarity”, we can build comparable company recommendations based on this measure.</p>
+
+<h3 id="data-model">Data Model</h3>
+
+<p>We use <a href="http://cassandra.apache.org/">Cassandra</a> to store all mentions, aggregates and final recommendations.
+We use <a href="https://github.com/websudos/phantom">Phantom DSL</a> for scala to define schema
+and for most of Cassandra operations (spark integration is not yet supported in Phantom).</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="comment">/**
+ * Mention of focus company
+ *
+ * @param ticker   ticker of focus company
+ * @param source   source of this mention (Twitter, RSS, etc…)
+ * @param sourceId source specific id
+ * @param time     time
+ * @param mentions set of other tickers including focus ticker itself
+ */</span>
+<span class="keyword">case</span> <span class="type">class</span> <span class="class">Mention</span>(<span class="key">ticker</span>: Ticker, <span class="key">source</span>: <span class="predefined-type">String</span>, <span class="key">sourceId</span>: <span class="predefined-type">String</span>, <span class="key">time</span>: DateTime, <span class="key">mentions</span>: <span class="predefined-type">Set</span>[Ticker])&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;sealed <span class="type">class</span> <span class="class">MentionRecord</span> <span class="directive">extends</span> CassandraTable[MentionRecord, Mention] with <span class="predefined-type">Serializable</span> {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;override val <span class="key">tableName</span>: <span class="predefined-type">String</span> = <span class="error">“</span>mention<span class="error">”</span>&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;object ticker    <span class="directive">extends</span> StringColumn    (<span class="local-variable">this</span>)  with PartitionKey[<span class="predefined-type">String</span>]
+  object source    <span class="directive">extends</span> StringColumn    (<span class="local-variable">this</span>)  with PrimaryKey[<span class="predefined-type">String</span>]
+  object time      <span class="directive">extends</span> DateTimeColumn  (<span class="local-variable">this</span>)  with PrimaryKey[DateTime]
+  object source_id <span class="directive">extends</span> StringColumn    (<span class="local-variable">this</span>)  with PrimaryKey[<span class="predefined-type">String</span>]
+  object mentions  <span class="directive">extends</span> SetColumn[MentionRecord, Mention, <span class="predefined-type">String</span>] (<span class="local-variable">this</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">def</span> <span class="function">fromRow</span>(<span class="key">r</span>: Row): Mention = {
+    Mention(Ticker(ticker(r)), source(r), source_id(r), time(r), mentions(r) map Ticker)
+  }
+}
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="comment">/**
+ * Count mentions for each ticker pair
+ *
+ * @param ticker        ticker of focus company
+ * @param mentionedWith mentioned with this ticker
+ * @param count         number of mentions
+ */</span>
+<span class="keyword">case</span> <span class="type">class</span> <span class="class">MentionsAggregate</span>(<span class="key">ticker</span>: Ticker, <span class="key">mentionedWith</span>: Ticker, <span class="key">count</span>: <span class="predefined-type">Long</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;sealed <span class="type">class</span> <span class="class">MentionsAggregateRecord</span> <span class="directive">extends</span> CassandraTable[MentionsAggregateRecord, MentionsAggregate] {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;override val <span class="key">tableName</span>: <span class="predefined-type">String</span> = <span class="error">“</span>mentions_aggregate<span class="error">”</span>&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;object ticker         <span class="directive">extends</span> StringColumn (<span class="local-variable">this</span>) with PartitionKey[<span class="predefined-type">String</span>]
+  object mentioned_with <span class="directive">extends</span> StringColumn (<span class="local-variable">this</span>) with PrimaryKey[<span class="predefined-type">String</span>]
+  object counter        <span class="directive">extends</span> LongColumn   (<span class="local-variable">this</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">def</span> <span class="function">fromRow</span>(<span class="key">r</span>: Row): MentionsAggregate = {
+    MentionsAggregate(Ticker(ticker(r)), Ticker(mentioned_with(r)), counter(r))
+  }
+}
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="comment">/**
+ * Recommendation built based on company mentions with other companies
+ *
+ * @param ticker         focus company ticker
+ * @position             recommendation position
+ * @param recommendation recommended company ticker
+ * @param p              number of times recommended company mentioned together
+ *                       with focus company divided by total focus company mentions
+ */</span>
+<span class="keyword">case</span> <span class="type">class</span> <span class="class">Recommendation</span>(<span class="key">ticker</span>: Ticker, <span class="key">position</span>: <span class="predefined-type">Long</span>, <span class="key">recommendation</span>: Ticker, <span class="key">p</span>: <span class="predefined-type">Double</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;sealed <span class="type">class</span> <span class="class">RecommendationRecord</span> <span class="directive">extends</span> CassandraTable[RecommendationRecord, Recommendation] {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;override val <span class="key">tableName</span>: <span class="predefined-type">String</span> = <span class="error">“</span>recommendation<span class="error">”</span>&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;object ticker         <span class="directive">extends</span> StringColumn (<span class="local-variable">this</span>) with PartitionKey[<span class="predefined-type">String</span>]
+  object position       <span class="directive">extends</span> LongColumn   (<span class="local-variable">this</span>) with PrimaryKey[<span class="predefined-type">Long</span>]
+  object recommendation <span class="directive">extends</span> StringColumn (<span class="local-variable">this</span>)
+  object p              <span class="directive">extends</span> DoubleColumn (<span class="local-variable">this</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">def</span> <span class="function">fromRow</span>(<span class="key">r</span>: Row): Recommendation = {
+    Recommendation(Ticker(ticker(r)), position(r), Ticker(recommendation(r)), p(r))
+  }
+}
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<h3 id="ingest-real-time-twitter-stream">Ingest Real-Time Twitter Stream</h3>
+
+<p>We use <a href="https://spark.apache.org/streaming/">Spark Streaming</a> Twitter integration to subscribe for
+real-time twitter updates, then we extract company mentions and put them to Cassandra. Unfortunately Phantom
+doesn’t support Spark yet, so we used <a href="https://github.com/datastax/spark-cassandra-connector">Datastax Spark Cassandra Connector</a>
+with custom type mappers to map from Phantom-record types into Cassandra tables.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="type">class</span> <span class="class">MentionStreamFunctions</span>(<span class="annotation">@transient</span> <span class="key">stream</span>: DStream[Mention]) <span class="directive">extends</span> <span class="predefined-type">Serializable</span> {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">import</span> <span class="include">TickerTypeConverter._</span>&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;TypeConverter.registerConverter(StringToTickerTypeConverter)
+  TypeConverter.registerConverter(TickerToStringTypeConverter)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;implicit object MentionMapper <span class="directive">extends</span> DefaultColumnMapper&lt;a href=<span class="string"><span class="delimiter">&quot;</span><span class="content">Map(</span><span class="delimiter">&quot;</span></span> title=<span class="string"><span class="delimiter">&quot;</span><span class="content">ticker&amp;quot;        -&amp;gt; &amp;quot;ticker&amp;quot;,</span></span><span class="error">
+</span>    &amp;quot;source&amp;quot;        -&amp;gt; &amp;quot;source&amp;quot;,
+    &amp;quot;sourceId&amp;quot;      -&amp;gt; &amp;quot;source_id&amp;quot;,
+    &amp;quot;time&amp;quot;          -&amp;gt; &amp;quot;time&amp;quot;,
+    &amp;quot;mentions&amp;quot;      -&amp;gt; &amp;quot;mentions<span class="string"><span class="delimiter">&quot;</span><span class="content">&gt;Mention&lt;/a&gt;)&lt;/p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">def</span> <span class="function">saveMentionsToCassandra</span>(<span class="key">keyspace</span>: <span class="predefined-type">String</span>) = {
+    stream.saveToCassandra(keyspace, MentionRecord.tableName)
+  }
+}
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+  <span class="directive">private</span> val filters = Companies.load().map(c =&amp;gt; s<span class="error">”</span><span class="error">$</span><span class="error">$</span><span class="error">$</span>{c.ticker.value}<span class="error">”</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;val sc = <span class="keyword">new</span> SparkContext(sparkConf)
+  val ssc = <span class="keyword">new</span> StreamingContext(sc, Seconds(<span class="integer">2</span>))&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;val stream = TwitterUtils.createStream(ssc, None, filters = filters)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="comment">// Save Twitter Stream to cassandra</span>
+  stream.foreachRDD(updates =&amp;gt; log.info(s<span class="error">”</span>Received Twitter stream updates. Count: <span class="error">$</span>{updates.count()}<span class="error">”</span>))
+  stream.extractMentions.saveMentionsToCassandra(keySpace)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="comment">// Start Streaming Application</span>
+  ssc.start()
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<h3 id="spark-for-aggregation-and-recommendation">Spark For Aggregation and Recommendation</h3>
+
+<p>To come up with comparable company recommendation we use 2-step process.</p>
+
+<h5 id="count-mentions-for-each-pair-of-tickers">1. Count mentions for each pair of tickers</h5>
+
+<p>After <code>Mentions</code> table loaded in Spark as <code>RDD[Mention]</code> we extract pairs of tickers,
+and it enables bunch of aggregate and reduce functions from Spark <code>PairRDDFunctions</code>.
+With <code>aggregateByKey</code> and given combine functions we efficiently build counter map <code>Map[Ticker, Long]</code> for each
+ticker distributed in cluster. From single <code>Map[Ticker, Long]</code> we emit multiple aggregates for each ticket pair.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="type">class</span> <span class="class">AggregateMentions</span>(<span class="annotation">@transient</span> <span class="key">sc</span>: SparkContext, <span class="key">keyspace</span>: <span class="predefined-type">String</span>)
+  <span class="directive">extends</span> CassandraMappers with <span class="predefined-type">Serializable</span> {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="directive">private</span> type Counter = <span class="predefined-type">Map</span>[Ticker, <span class="predefined-type">Long</span>]&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="directive">private</span> implicit lazy val summ = Semigroup.instance&lt;a href=<span class="string"><span class="delimiter">&quot;</span><span class="content">_ + _</span><span class="delimiter">&quot;</span></span>&gt;<span class="predefined-type">Long</span>&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">a&gt;&lt;</span><span class="delimiter">/</span></span>p&gt;
+
+&lt;p&gt;<span class="directive">private</span> lazy val <span class="key">seqOp</span>: (Counter, Ticker) =&amp;gt; Counter = {
+    <span class="keyword">case</span> (counter, ticker) <span class="keyword">if</span> counter.isDefinedAt(ticker) =&amp;gt; counter.updated(ticker, counter(ticker) + <span class="integer">1</span>)
+    <span class="keyword">case</span> (counter, ticker) =&amp;gt; counter + (ticker -&amp;gt; <span class="integer">1</span>)
+  }&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="directive">private</span> lazy val <span class="key">combOp</span>: (Counter, Counter) =&amp;gt; Counter = {
+    <span class="keyword">case</span> (l, r) =&amp;gt; implicitly[Monoid[Counter]].append(l, r)
+  }&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">def</span> <span class="function">aggregate</span>(): Unit = {
+    <span class="comment">// Emit pairs of (Focus Company Ticker, Mentioned With)</span>
+    val pairs = sc.cassandraTable&lt;a href=<span class="string"><span class="delimiter">&quot;</span><span class="content">keyspace, MentionRecord.tableName</span><span class="delimiter">&quot;</span></span>&gt;Mention&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">a&gt;.</span></span><span class="error">
+</span>      flatMap(mention =&amp;gt; mention.mentions.map((mention.ticker, _)))&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;pre&gt;&lt;code&gt;<span class="comment">// Calculate mentions for each ticker</span>
+val aggregated = pairs.aggregateByKey(<span class="predefined-type">Map</span>.empty[Ticker, <span class="predefined-type">Long</span>])(seqOp, combOp)
+
+<span class="comment">// Build MentionsAggregate from counters</span>
+val mentionsAggregate = aggregated flatMap {
+  <span class="keyword">case</span> (ticker, counter) =&amp;gt; counter map {
+    <span class="keyword">case</span> (mentionedWith, count) =&amp;gt; MentionsAggregate(ticker, mentionedWith, count)
+  }
+}
+
+mentionsAggregate.saveToCassandra(keyspace, MentionsAggregateRecord.tableName)   } } </pre></div>
+</div>
+ </figure></notextile></div>
+</code></pre>
+
+<h5 id="sort-aggregates-and-build-recommendations">2. Sort aggregates and build recommendations</h5>
+
+<p>After aggregates computed, we sort them globally and then group them by key (Ticker). After
+all aggregates grouped we produce <code>Recommendation</code> in single traverse distributed for each key.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="type">class</span> <span class="class">Recommend</span>(<span class="annotation">@transient</span> <span class="key">sc</span>: SparkContext, <span class="key">keyspace</span>: <span class="predefined-type">String</span>)
+  <span class="directive">extends</span> CassandraMappers with <span class="predefined-type">Serializable</span> {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="directive">private</span> <span class="keyword">def</span> <span class="key">toRecommendation</span>: (MentionsAggregate, Int) =&amp;gt; Recommendation = {
+    var <span class="key">totalMentions</span>: <span class="predefined-type">Option</span>[<span class="predefined-type">Long</span>] = None&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;pre&gt;&lt;code&gt;{
+  <span class="keyword">case</span> (aggregate, idx) <span class="keyword">if</span> totalMentions.isEmpty =&amp;gt;
+    totalMentions = Some(aggregate.count)
+    Recommendation(aggregate.ticker, idx, aggregate.mentionedWith, <span class="integer">1</span>)
+
+  <span class="keyword">case</span> (aggregate, idx) =&amp;gt;
+    Recommendation(aggregate.ticker, idx,
+                   aggregate.mentionedWith,
+                   aggregate.count.toDouble / totalMentions.get)
+}   }
+&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">code&gt;&lt;</span><span class="delimiter">/</span></span>pre&gt;
+
+&lt;p&gt;<span class="keyword">def</span> <span class="function">recommend</span>(): Unit = {
+    val aggregates = sc.
+               cassandraTable&lt;a href=<span class="string"><span class="delimiter">&quot;</span><span class="content">keyspace, MentionsAggregateRecord.tableName</span><span class="delimiter">&quot;</span></span>&gt;MentionsAggregate&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">a&gt;.</span></span><span class="error">
+</span>               sortBy(_.count, ascending = <span class="predefined-constant">false</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;pre&gt;&lt;code&gt;val recommendations = aggregates.
+  groupBy(_.ticker).
+  mapValues(_.zipWithIndex).
+  flatMapValues(_ map toRecommendation.tupled).values
+
+recommendations.saveToCassandra(keyspace, RecommendationRecord.tableName)   } } </pre></div>
+</div>
+ </figure></notextile></div>
+</code></pre>
+
+<h3 id="results">Results</h3>
+
+<p>You can check comparable company recommendations build from Twitter stream using <a href="http://pellucidanalytics.github.io/tweet-driven-comparable-companies/comparables/comps.html">this link</a>.</p>
+
+<p>Cassandra and Spark works perfectly together and allows you to build scalable data-driven applications, that are super easy to scale out and handle gigabytes and terabytes of data. In this particular case, it’s probably an overkill. Twitter doesn’t have enough finance-related activity to produce serious load. However it’s easy to extend this application and add other streams: Bloomberg News Feed, Thompson Reuters, etc.</p>
+
+<blockquote>
+  <p>The code for this application app can be found on <a href="https://github.com/ezhulenev/tweet-driven-comparable-companies">Github</a></p>
+</blockquote>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Stock Price Prediction With Big Data and Machine Learning]]></title>
@@ -1625,485 +1926,6 @@ and explained why it’s a perfect fit for grid computing and spreading calculat
 <p>In next part I’m going to scale-out VaR calculation to multiple nodes, and I will be using latest Akka Cluster for it.</p>
 
 <h2 id="go-to-part-2blog20140501akka-cluster-for-value-at-risk-calculation-2"><a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2">»&gt; Go to Part 2</a></h2>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Seamless Migration From Monolithic Application to Finagle Services (Part 2/2)]]></title>
-    <link href="http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/"/>
-    <updated>2014-04-09T22:03:45-04:00</updated>
-    <id>http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2</id>
-    <content type="html"><![CDATA[<h3 id="synopsis">Synopsis</h3>
-
-<blockquote>
-  <p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/finagled-movie-db">Github</a></p>
-</blockquote>
-
-<p>Distributed micro-services architecture is hot trend right now, it’s widely adopted by <a href="https://blog.twitter.com/2011/finagle-a-protocol-agnostic-rpc-system">Twitter</a>, <a href="https://engineering.linkedin.com/architecture/restli-restful-service-architecture-scale">LinkedIn</a> and <a href="http://www.slideshare.net/LappleApple/gilt-from-monolith-ruby-app-to-micro-service-scala-service-architecture">Gilt</a>.
-However it can be difficult if data model is already defined, and services accessed via existing API throughout all your code. I’ll show how it’s possible to split monoliths app into standalone services built with Finagle and SBinary for custom communication protocol.</p>
-
-<p>I’m going to show it on example of small Fancy Movie Database application.</p>
-
-<h2 id="part-22-spit-application-to-distributed-services">[Part 2/2] Spit application to distributed services</h2>
-
-<p>Go to <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1">Part 1</a> where fancy movie database application defined.</p>
-
-<h3 id="what-is-finagle">What is Finagle</h3>
-
-<p>Finagle is a protocol-agnostic, asynchronous RPC system for the JVM that makes it easy to build robust clients and servers in Java, Scala, or any JVM-hosted language.</p>
-
-<!-- more -->
-
-<h6 id="finagle-provides-a-robust-implementation-of">Finagle provides a robust implementation of:</h6>
-<ul>
-  <li>connection pools, with throttling to avoid TCP connection churn;</li>
-  <li>failure detectors, to identify slow or crashed hosts;</li>
-  <li>failover strategies, to direct traffic away from unhealthy hosts;</li>
-  <li>load-balancers, including “least-connections” and other strategies; and</li>
-</ul>
-
-<p>You can read more about finagle on <a href="http://twitter.github.io/finagle/">official web site</a></p>
-
-<h4 id="whats-wrong-with-finagle">What’s wrong with finagle</h4>
-
-<p>Finagle is protocol agnostic system, and can work independently of underlying protocol, however suggested protocol is Thrift, and tooling support is built around Thrift (code generators, etc).
-One biggest drawbacks of Thrift, is that it’s required to define model and services using interface definition language (IDL).
-However if model and services already defined (as in this example), it can be painful to migrate well-typed scala model to IDL.</p>
-
-<p>In this case we can use protocol-agnostic property of Finagle and write out own binary protocol for existing scala model.</p>
-
-<h3 id="sbinary">SBinary</h3>
-
-<p><a href="https://github.com/harrah/sbinary">SBinary</a> is a library for describing binary protocols, in the form of mappings between Scala types and binary formats. It can be used as a robust serialization mechanism for Scala objects or a way of dealing with existing binary formats found in the wild.</p>
-
-<blockquote>
-  <p>Great <a href="https://code.google.com/p/sbinary/wiki/IntroductionToSBinary">Introduction to SBinary</a> article</p>
-</blockquote>
-
-<h3 id="binary-format-for-data-model">Binary format for data model</h3>
-
-<p>First we need a way to read/write data model from binary representation:</p>
-
-<p><div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">trait</span> <span class="nc">ModelProtocol</span> <span class="o">{&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">import</span> <span class="nn">sbinary.DefaultProtocol._</span>
-</span><span class='line'>  <span class="k">import</span> <span class="nn">sbinary.Operations._</span>
-</span><span class='line'>  <span class="k">import</span> <span class="nn">sbinary._&lt;/p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">implicit</span> <span class="k">object</span> <span class="nc">genreFormat</span> <span class="k">extends</span> <span class="nc">Format</span><span class="o">[</span><span class="kt">Genre</span><span class="o">]</span> <span class="o">{</span>
-</span><span class='line'>    <span class="k">import</span> <span class="nn">Genre._&lt;/p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span><span class="k">override</span> <span class="k">def</span> <span class="n">reads</span><span class="o">(</span><span class="n">in</span><span class="k">:</span> <span class="kt">Input</span><span class="o">)</span><span class="k">:</span> <span class="kt">Genre</span> <span class="o">=</span> <span class="n">read</span><span class="o">[</span><span class="kt">Byte</span><span class="o">](</span><span class="n">in</span><span class="o">)</span> <span class="k">match</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">case</span> <span class="mi">0</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span> <span class="nc">Action</span>
-</span><span class='line'>  <span class="k">case</span> <span class="mi">1</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span> <span class="nc">Adventure</span>
-</span><span class='line'>  <span class="o">....</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">override</span> <span class="k">def</span> <span class="n">writes</span><span class="o">(</span><span class="n">out</span><span class="k">:</span> <span class="kt">Output</span><span class="o">,</span> <span class="n">value</span><span class="k">:</span> <span class="kt">Genre</span><span class="o">)</span> <span class="k">=</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">genreCode</span><span class="k">:</span> <span class="kt">Byte</span> <span class="o">=</span> <span class="n">value</span> <span class="k">match</span> <span class="o">{</span>
-</span><span class='line'>    <span class="k">case</span> <span class="nc">Action</span>      <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span> <span class="mi">0</span>
-</span><span class='line'>    <span class="k">case</span> <span class="nc">Adventure</span>   <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span> <span class="mi">1</span>
-</span><span class='line'>    <span class="o">....</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'>  <span class="n">write</span><span class="o">[</span><span class="kt">Byte</span><span class="o">](</span><span class="n">out</span><span class="o">,</span> <span class="n">genreCode</span><span class="o">)</span>
-</span><span class='line'><span class="o">}</span>   <span class="o">}</span>
-</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">implicit</span> <span class="k">object</span> <span class="nc">personFormat</span> <span class="k">extends</span> <span class="nc">Format</span><span class="o">[</span><span class="kt">Person</span><span class="o">]</span> <span class="o">{</span>
-</span><span class='line'>    <span class="k">override</span> <span class="k">def</span> <span class="n">reads</span><span class="o">(</span><span class="n">in</span><span class="k">:</span> <span class="kt">Input</span><span class="o">)</span> <span class="k">=</span>
-</span><span class='line'>      <span class="nc">Person</span><span class="o">(</span><span class="n">read</span><span class="o">&lt;</span><span class="n">a</span> <span class="n">href</span><span class="o">=</span><span class="s">&quot;in&quot;</span><span class="o">&gt;</span><span class="nc">String</span><span class="o">&lt;/</span><span class="n">a</span><span class="o">&gt;,</span> <span class="n">read</span><span class="o">&lt;</span><span class="n">a</span> <span class="n">href</span><span class="o">=</span><span class="s">&quot;in&quot;</span><span class="o">&gt;</span><span class="nc">String</span><span class="o">&lt;/</span><span class="n">a</span><span class="o">&gt;,</span> <span class="n">read</span><span class="o">&lt;</span><span class="n">a</span> <span class="n">href</span><span class="o">=</span><span class="s">&quot;in&quot;</span><span class="o">&gt;</span><span class="nc">LocalDate</span><span class="o">&lt;/</span><span class="n">a</span><span class="o">&gt;)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span><span class="k">override</span> <span class="k">def</span> <span class="n">writes</span><span class="o">(</span><span class="n">out</span><span class="k">:</span> <span class="kt">Output</span><span class="o">,</span> <span class="n">person</span><span class="k">:</span> <span class="kt">Person</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>  <span class="n">write</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="n">out</span><span class="o">,</span> <span class="n">person</span><span class="o">.</span><span class="n">firstName</span><span class="o">)</span>
-</span><span class='line'>  <span class="n">write</span><span class="o">[</span><span class="kt">String</span><span class="o">](</span><span class="n">out</span><span class="o">,</span> <span class="n">person</span><span class="o">.</span><span class="n">secondName</span><span class="o">)</span>
-</span><span class='line'>  <span class="n">write</span><span class="o">[</span><span class="kt">LocalDate</span><span class="o">](</span><span class="n">out</span><span class="o">,</span> <span class="n">person</span><span class="o">.</span><span class="n">born</span><span class="o">)</span>
-</span><span class='line'><span class="o">}</span>   <span class="o">}</span>
-</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;//</span> <span class="err">…</span> <span class="n">much</span> <span class="n">more</span> <span class="n">on</span> <span class="nc">Github</span><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;}</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div></p>
-
-<h3 id="binary-format-for-requestresponse">Binary format for Request/Response</h3>
-
-<p>Nest step, is to build request-response commands that going to be passed between server and client:</p>
-
-<p><div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">object</span> <span class="nc">ServiceProtocol</span> <span class="k">extends</span> <span class="nc">ModelProtocol</span> <span class="o">{&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">sealed</span> <span class="k">trait</span> <span class="nc">FmdbReq</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">object</span> <span class="nc">GetPeople</span> <span class="k">extends</span> <span class="nc">FmdbReq</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">class</span> <span class="nc">GetMovies</span><span class="o">(</span><span class="n">year</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">Int</span><span class="o">],</span> <span class="n">genre</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">Genre</span><span class="o">],</span> <span class="n">person</span><span class="k">:</span> <span class="kt">Option</span><span class="o">[</span><span class="kt">Person</span><span class="o">])</span> <span class="k">extends</span> <span class="nc">FmdbReq</span><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">sealed</span> <span class="k">trait</span> <span class="nc">FmdbRep</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">class</span> <span class="nc">GotPeople</span><span class="o">(</span><span class="n">people</span><span class="k">:</span> <span class="kt">Vector</span><span class="o">[</span><span class="kt">Person</span><span class="o">])</span> <span class="k">extends</span> <span class="nc">FmdbRep</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">class</span> <span class="nc">GotMovies</span><span class="o">(</span><span class="n">movies</span><span class="k">:</span> <span class="kt">Vector</span><span class="o">[</span><span class="kt">Movie</span><span class="o">])</span> <span class="k">extends</span> <span class="nc">FmdbRep</span><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">implicit</span> <span class="k">object</span> <span class="nc">requestFormat</span> <span class="k">extends</span> <span class="nc">Format</span><span class="o">[</span><span class="kt">FmdbReq</span><span class="o">]</span> <span class="o">{</span>
-</span><span class='line'>    <span class="k">override</span> <span class="k">def</span> <span class="n">reads</span><span class="o">(</span><span class="n">in</span><span class="k">:</span> <span class="kt">Input</span><span class="o">)</span> <span class="k">=</span> <span class="n">read</span><span class="o">&lt;</span><span class="n">a</span> <span class="n">href</span><span class="o">=</span><span class="s">&quot;in&quot;</span><span class="o">&gt;</span><span class="nc">Byte</span><span class="o">&lt;/</span><span class="n">a</span><span class="o">&gt;</span> <span class="k">match</span> <span class="o">{</span>
-</span><span class='line'>      <span class="k">case</span> <span class="mi">0</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span>
-</span><span class='line'>           <span class="nc">GetPeople</span><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span>  <span class="k">case</span> <span class="mi">1</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span>
-</span><span class='line'>       <span class="nc">GetMovies</span><span class="o">(</span><span class="n">read</span><span class="o">[</span><span class="kt">Option</span><span class="o">[</span><span class="kt">Int</span><span class="o">]](</span><span class="n">in</span><span class="o">),</span>
-</span><span class='line'>                 <span class="n">read</span><span class="o">[</span><span class="kt">Option</span><span class="o">[</span><span class="kt">Genre</span><span class="o">]](</span><span class="n">in</span><span class="o">),</span>
-</span><span class='line'>                 <span class="n">read</span><span class="o">[</span><span class="kt">Option</span><span class="o">[</span><span class="kt">Person</span><span class="o">]](</span><span class="n">in</span><span class="o">))</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">override</span> <span class="k">def</span> <span class="n">writes</span><span class="o">(</span><span class="n">out</span><span class="k">:</span> <span class="kt">Output</span><span class="o">,</span> <span class="n">req</span><span class="k">:</span> <span class="kt">FmdbReq</span><span class="o">)</span> <span class="o">{</span>
-</span><span class='line'>  <span class="n">req</span> <span class="k">match</span> <span class="o">{</span>
-</span><span class='line'>    <span class="k">case</span> <span class="nc">GetPeople</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span>
-</span><span class='line'>      <span class="n">write</span><span class="o">[</span><span class="kt">Byte</span><span class="o">](</span><span class="n">out</span><span class="o">,</span> <span class="mi">0</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'>    <span class="k">case</span> <span class="nc">GetMovies</span><span class="o">(</span><span class="n">year</span><span class="o">,</span> <span class="n">genre</span><span class="o">,</span> <span class="n">person</span><span class="o">)</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span>
-</span><span class='line'>       <span class="n">write</span><span class="o">[</span><span class="kt">Byte</span><span class="o">](</span><span class="n">out</span><span class="o">,</span> <span class="mi">1</span><span class="o">)</span>
-</span><span class='line'>       <span class="n">write</span><span class="o">[</span><span class="kt">Option</span><span class="o">[</span><span class="kt">Int</span><span class="o">]](</span><span class="n">out</span><span class="o">,</span> <span class="n">year</span><span class="o">)</span>
-</span><span class='line'>       <span class="n">write</span><span class="o">[</span><span class="kt">Option</span><span class="o">[</span><span class="kt">Genre</span><span class="o">]](</span><span class="n">out</span><span class="o">,</span> <span class="n">genre</span><span class="o">)</span>
-</span><span class='line'>       <span class="n">write</span><span class="o">[</span><span class="kt">Option</span><span class="o">[</span><span class="kt">Person</span><span class="o">]](</span><span class="n">out</span><span class="o">,</span> <span class="n">person</span><span class="o">)</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>   <span class="o">}</span>
-</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;//</span> <span class="err">…</span> <span class="n">the</span> <span class="n">same</span> <span class="k">for</span> <span class="nc">Response</span><span class="o">,</span> <span class="n">see</span> <span class="n">more</span> <span class="n">on</span> <span class="nc">Github</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div></p>
-
-<h3 id="combine-it-all-together">Combine it all together</h3>
-
-<p>Now we need to combine together binary protocol defined earlier with Finagle channel pipelines, and create Client/Server builders.</p>
-
-<p>For sure we want to update this binary protocol at some later point, adding new commands and updating application model, and to be it still safe.
-For this reason I’m wrapping each message into <code>versioned envelop</code>, however I’m not going to describe it in this post, full code is available on Github.</p>
-
-<p><div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-<span class='line-number'>43</span>
-<span class='line-number'>44</span>
-<span class='line-number'>45</span>
-<span class='line-number'>46</span>
-<span class='line-number'>47</span>
-<span class='line-number'>48</span>
-<span class='line-number'>49</span>
-<span class='line-number'>50</span>
-<span class='line-number'>51</span>
-<span class='line-number'>52</span>
-<span class='line-number'>53</span>
-<span class='line-number'>54</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">object</span> <span class="nc">Fmdb</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">import</span> <span class="nn">ServiceProtocol._</span>
-</span><span class='line'>  <span class="k">import</span> <span class="nn">envelopeCodec._&lt;/p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">private</span><span class="o">[</span><span class="kt">this</span><span class="o">]</span> <span class="k">val</span> <span class="nc">ProtocolVersion</span><span class="k">:</span> <span class="kt">Long</span> <span class="o">=</span> <span class="mi">1</span><span class="n">l</span>
-</span><span class='line'>  <span class="k">private</span><span class="o">[</span><span class="kt">this</span><span class="o">]</span> <span class="k">val</span> <span class="nc">ReqDecoder</span> <span class="k">=</span>
-</span><span class='line'>     <span class="n">versionCheckingEnvelopeToContentDecoder</span><span class="o">&lt;</span><span class="n">a</span> <span class="n">href</span><span class="o">=</span><span class="s">&quot;ProtocolVersion&quot;</span><span class="o">&gt;</span><span class="nc">FmdbReq</span><span class="o">&lt;/</span><span class="n">a</span><span class="o">&gt;</span>
-</span><span class='line'>  <span class="k">private</span><span class="o">[</span><span class="kt">this</span><span class="o">]</span> <span class="k">val</span> <span class="nc">RepDecoder</span> <span class="k">=</span>
-</span><span class='line'>     <span class="n">versionCheckingEnvelopeToContentDecoder</span><span class="o">&lt;</span><span class="n">a</span> <span class="n">href</span><span class="o">=</span><span class="s">&quot;ProtocolVersion&quot;</span><span class="o">&gt;</span><span class="nc">FmdbRep</span><span class="o">&lt;/</span><span class="n">a</span><span class="o">&gt;</span>
-</span><span class='line'>  <span class="k">private</span><span class="o">[</span><span class="kt">this</span><span class="o">]</span> <span class="k">val</span> <span class="nc">ReqEncoder</span> <span class="k">=</span> <span class="n">typeSafeEncoder</span><span class="o">[</span><span class="kt">FmdbReq</span><span class="o">]</span>
-</span><span class='line'>  <span class="k">private</span><span class="o">[</span><span class="kt">this</span><span class="o">]</span> <span class="k">val</span> <span class="nc">RepEncoder</span> <span class="k">=</span> <span class="n">typeSafeEncoder</span><span class="o">[</span><span class="kt">FmdbRep</span><span class="o">]&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">private</span><span class="o">[</span><span class="kt">this</span><span class="o">]</span> <span class="k">object</span> <span class="nc">FmdbServerPipeline</span> <span class="k">extends</span> <span class="nc">ChannelPipelineFactory</span> <span class="o">{</span>
-</span><span class='line'>    <span class="k">def</span> <span class="n">getPipeline</span> <span class="k">=</span> <span class="o">{</span>
-</span><span class='line'>      <span class="k">val</span> <span class="n">pipeline</span> <span class="k">=</span> <span class="nc">Channels</span><span class="o">.</span><span class="n">pipeline</span><span class="o">()</span>
-</span><span class='line'>      <span class="n">pipeline</span><span class="o">.</span><span class="n">addLast</span><span class="o">(</span><span class="err">“</span><span class="n">envDecoder</span><span class="err">”</span><span class="o">,</span> <span class="k">new</span> <span class="nc">EnvelopeDecoder</span><span class="o">)</span>
-</span><span class='line'>      <span class="n">pipeline</span><span class="o">.</span><span class="n">addLast</span><span class="o">(</span><span class="err">“</span><span class="n">reqDecoder</span><span class="err">”</span><span class="o">,</span> <span class="nc">ReqDecoder</span><span class="o">)</span>
-</span><span class='line'>      <span class="n">pipeline</span><span class="o">.</span><span class="n">addLast</span><span class="o">(</span><span class="err">“</span><span class="n">envEncoder</span><span class="err">”</span><span class="o">,</span> <span class="k">new</span> <span class="nc">EnvelopeEncoder</span><span class="o">(</span><span class="nc">ProtocolVersion</span><span class="o">))</span>
-</span><span class='line'>      <span class="n">pipeline</span><span class="o">.</span><span class="n">addLast</span><span class="o">(</span><span class="err">“</span><span class="n">repEncoder</span><span class="err">”</span><span class="o">,</span> <span class="nc">RepEncoder</span><span class="o">)</span>
-</span><span class='line'>      <span class="n">pipeline</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>  <span class="o">}&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">private</span><span class="o">[</span><span class="kt">this</span><span class="o">]</span> <span class="k">object</span> <span class="nc">FmdbClientPipeline</span> <span class="k">extends</span> <span class="nc">ChannelPipelineFactory</span> <span class="o">{</span>
-</span><span class='line'>    <span class="k">def</span> <span class="n">getPipeline</span> <span class="k">=</span> <span class="o">{</span>
-</span><span class='line'>      <span class="k">val</span> <span class="n">pipeline</span> <span class="k">=</span> <span class="nc">Channels</span><span class="o">.</span><span class="n">pipeline</span><span class="o">()</span>
-</span><span class='line'>      <span class="n">pipeline</span><span class="o">.</span><span class="n">addLast</span><span class="o">(</span><span class="err">“</span><span class="n">envEncode</span><span class="err">”</span><span class="o">,</span> <span class="k">new</span> <span class="nc">EnvelopeEncoder</span><span class="o">(</span><span class="nc">ProtocolVersion</span><span class="o">))</span>
-</span><span class='line'>      <span class="n">pipeline</span><span class="o">.</span><span class="n">addLast</span><span class="o">(</span><span class="err">“</span><span class="n">reqEncode</span><span class="err">”</span><span class="o">,</span> <span class="nc">ReqEncoder</span><span class="o">)</span>
-</span><span class='line'>      <span class="n">pipeline</span><span class="o">.</span><span class="n">addLast</span><span class="o">(</span><span class="err">“</span><span class="n">envDecode</span><span class="err">”</span><span class="o">,</span> <span class="k">new</span> <span class="nc">EnvelopeDecoder</span><span class="o">)</span>
-</span><span class='line'>      <span class="n">pipeline</span><span class="o">.</span><span class="n">addLast</span><span class="o">(</span><span class="err">“</span><span class="n">repDecode</span><span class="err">”</span><span class="o">,</span> <span class="nc">RepDecoder</span><span class="o">)</span>
-</span><span class='line'>      <span class="n">pipeline</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>  <span class="o">}&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">private</span><span class="o">[</span><span class="kt">this</span><span class="o">]</span> <span class="k">object</span> <span class="nc">FmdbClientTransporter</span> <span class="k">extends</span> <span class="nc">Netty3Transporter</span><span class="o">[</span><span class="kt">FmdbReq</span>, <span class="kt">FmdbRep</span><span class="o">](</span>
-</span><span class='line'>    <span class="err">“</span><span class="n">fmdbClientTransporter</span><span class="err">”</span><span class="o">,</span> <span class="nc">FmdbClientPipeline</span>
-</span><span class='line'>  <span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">private</span><span class="o">[</span><span class="kt">distributed</span><span class="o">]</span> <span class="k">object</span> <span class="nc">Client</span> <span class="k">extends</span> <span class="nc">DefaultClient</span><span class="o">[</span><span class="kt">FmdbReq</span>, <span class="kt">FmdbRep</span><span class="o">](</span>
-</span><span class='line'>    <span class="err">“</span><span class="n">fmdbClient</span><span class="err">”</span><span class="o">,</span> <span class="n">endpointer</span> <span class="k">=</span> <span class="o">{</span>
-</span><span class='line'>      <span class="k">val</span> <span class="n">bridge</span> <span class="k">=</span>
-</span><span class='line'>        <span class="nc">Bridge</span><span class="o">&lt;</span><span class="n">a</span> <span class="n">href</span><span class="o">=</span><span class="s">&quot;FmdbClientTransporter, new SerialClientDispatcher(_)&quot;</span><span class="o">&gt;</span><span class="nc">FmdbReq</span><span class="o">,</span> <span class="nc">FmdbRep</span><span class="o">,</span> <span class="nc">FmdbReq</span><span class="o">,</span> <span class="nc">FmdbRep</span><span class="o">&lt;/</span><span class="n">a</span><span class="o">&gt;</span>
-</span><span class='line'>      <span class="o">(</span><span class="n">addr</span><span class="o">,</span> <span class="n">stats</span><span class="o">)</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span> <span class="n">bridge</span><span class="o">(</span><span class="n">addr</span><span class="o">,</span> <span class="n">stats</span><span class="o">)</span>
-</span><span class='line'>    <span class="o">}</span>
-</span><span class='line'>  <span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">private</span><span class="o">[</span><span class="kt">this</span><span class="o">]</span> <span class="k">object</span> <span class="nc">FmdbListener</span> <span class="k">extends</span> <span class="nc">Netty3Listener</span><span class="o">[</span><span class="kt">FmdbRep</span>, <span class="kt">FmdbReq</span><span class="o">](</span>
-</span><span class='line'>    <span class="err">“</span><span class="n">fmdbListener</span><span class="err">”</span><span class="o">,</span> <span class="nc">FmdbServerPipeline</span>
-</span><span class='line'>  <span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">protected</span><span class="o">[</span><span class="kt">distributed</span><span class="o">]</span> <span class="k">object</span> <span class="nc">Server</span> <span class="k">extends</span> <span class="nc">DefaultServer</span><span class="o">[</span><span class="kt">FmdbReq</span>, <span class="kt">FmdbRep</span>, <span class="kt">FmdbRep</span>, <span class="kt">FmdbReq</span><span class="o">](</span>
-</span><span class='line'>    <span class="err">“</span><span class="n">fmdbServer</span><span class="err">”</span><span class="o">,</span> <span class="nc">FmdbListener</span><span class="o">,</span> <span class="k">new</span> <span class="nc">SerialServerDispatcher</span><span class="o">(</span><span class="k">_</span><span class="o">,</span> <span class="k">_</span><span class="o">)</span>
-</span><span class='line'>  <span class="o">)</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div></p>
-
-<h3 id="services-implementation">Services implementation</h3>
-
-<p>Now we can implement services defined in first part, that will perform network call to Finagle server, instead of running computations/data-fetching locally:</p>
-
-<p><div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">trait</span> <span class="nc">FmdbServerConfig</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">def</span> <span class="n">serverAddress</span><span class="k">:</span> <span class="kt">SocketAddress&lt;/p&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">import</span> <span class="nn">ServiceProtocol._&lt;/p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">private</span><span class="o">[</span><span class="kt">this</span><span class="o">]</span> <span class="k">val</span> <span class="n">retry</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">RetryingFilter</span><span class="o">&lt;</span><span class="n">a</span> <span class="n">href</span><span class="o">=</span><span class="s">&quot;retryPolicy = RetryPolicy.tries(3),</span>
-</span><span class='line'><span class="s">    timer = DefaultTimer.twitter&quot;</span><span class="o">&gt;</span><span class="nc">FmdbReq</span><span class="o">,</span> <span class="nc">FmdbRep</span><span class="o">&lt;/</span><span class="n">a</span><span class="o">&gt;&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">private</span><span class="o">[</span><span class="kt">this</span><span class="o">]</span> <span class="k">val</span> <span class="n">timeout</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">TimeoutFilter</span><span class="o">&lt;</span><span class="n">a</span> <span class="n">href</span><span class="o">=</span><span class="s">&quot;timeout = Duration.fromSeconds(10),</span>
-</span><span class='line'><span class="s">    timer = DefaultTimer.twitter&quot;</span><span class="o">&gt;</span><span class="nc">FmdbReq</span><span class="o">,</span> <span class="nc">FmdbRep</span><span class="o">&lt;/</span><span class="n">a</span><span class="o">&gt;&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">protected</span> <span class="k">lazy</span> <span class="k">val</span> <span class="n">client</span> <span class="k">=</span>
-</span><span class='line'>    <span class="n">retry</span>      <span class="n">andThen</span>
-</span><span class='line'>    <span class="n">timeout</span>    <span class="n">andThen</span>
-</span><span class='line'>    <span class="nc">Fmdb</span><span class="o">.</span><span class="nc">Client</span><span class="o">.</span><span class="n">newService</span><span class="o">(</span><span class="nc">Name</span><span class="o">.</span><span class="n">bound</span><span class="o">(</span><span class="n">serverAddress</span><span class="o">),</span> <span class="err">“</span><span class="n">fmdbClient</span><span class="err">”</span><span class="o">)</span>
-</span><span class='line'><span class="o">}&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">trait</span> <span class="nc">PeopleServiceImpl</span> <span class="k">extends</span> <span class="nc">PeopleService</span> <span class="k">with</span> <span class="nc">FmdbServerConfig</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">import</span> <span class="nn">ServiceProtocol._&lt;/p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">def</span> <span class="n">people</span><span class="o">()</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">Vector</span><span class="o">[</span><span class="kt">Person</span><span class="o">]]</span> <span class="k">=</span> <span class="n">client</span><span class="o">(</span><span class="nc">GetPeople</span><span class="o">).</span><span class="n">map</span> <span class="o">{</span>
-</span><span class='line'>    <span class="k">case</span> <span class="nc">GotPeople</span><span class="o">(</span><span class="n">people</span><span class="o">)</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span> <span class="n">people</span>
-</span><span class='line'>    <span class="k">case</span> <span class="n">err</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span> <span class="n">sys</span><span class="o">.</span><span class="n">error</span><span class="o">(</span><span class="n">s</span><span class="err">”</span><span class="nc">Unexpected</span> <span class="n">server</span> <span class="n">response</span><span class="k">:</span> <span class="kt">$err</span><span class="err">”</span><span class="o">)</span>
-</span><span class='line'>  <span class="o">}.</span><span class="n">toScala</span><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;}&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;//</span> <span class="err">…</span> <span class="n">more</span> <span class="n">on</span> <span class="nc">Github</span><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div></p>
-
-<p>I’m not going to describe hot convert Twitter Future to Scala Future, it’s all available on <a href="https://github.com/ezhulenev/finagled-movie-db">Github</a>.</p>
-
-<h3 id="lets-run-it">Let’s run it!</h3>
-
-<p>Let’s find all movies with Leonardo DiCaprio, as we did in first part. However now example application will be a client that will be sending requests via network to movies service server.</p>
-
-<p><div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">object</span> <span class="nc">DistributedExample</span> <span class="k">extends</span> <span class="nc">App</span> <span class="o">{&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">val</span> <span class="n">address</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">InetSocketAddress</span><span class="o">(</span><span class="mi">10000</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;//</span> <span class="nc">Lets</span> <span class="n">start</span> <span class="n">server</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">server</span> <span class="k">=</span> <span class="nc">FmdbServer</span><span class="o">.</span><span class="n">serve</span><span class="o">(</span><span class="n">address</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;//</span> <span class="nc">Lets</span> <span class="n">create</span> <span class="n">services</span>
-</span><span class='line'>  <span class="k">object</span> <span class="nc">Services</span> <span class="k">extends</span> <span class="nc">PeopleServiceImpl</span> <span class="k">with</span> <span class="nc">MoviesServiceImpl</span> <span class="o">{</span>
-</span><span class='line'>    <span class="k">val</span> <span class="n">serverAddress</span><span class="k">:</span> <span class="kt">SocketAddress</span> <span class="o">=</span> <span class="n">address</span>
-</span><span class='line'>  <span class="o">}&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;//</span> <span class="nc">Lets</span><span class="err">’</span> <span class="n">get</span> <span class="n">all</span> <span class="n">movies</span> <span class="k">for</span> <span class="nc">Leonardo</span> <span class="nc">DiCaprio</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">leo</span> <span class="k">=</span> <span class="nc">Await</span><span class="o">.</span>
-</span><span class='line'>    <span class="n">result</span><span class="o">(</span><span class="nc">Services</span><span class="o">.</span><span class="n">people</span><span class="o">(),</span> <span class="mf">1.</span><span class="n">second</span><span class="o">).</span><span class="n">find</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">firstName</span> <span class="o">==</span> <span class="err">“</span><span class="nc">Leonardo</span><span class="err">”</span><span class="o">).</span><span class="n">get</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">leoMovies</span> <span class="k">=</span> <span class="nc">Await</span><span class="o">.</span>
-</span><span class='line'>    <span class="n">result</span><span class="o">(</span><span class="nc">Services</span><span class="o">.</span><span class="n">movies</span><span class="o">(</span><span class="n">leo</span><span class="o">),</span> <span class="mf">1.</span><span class="n">second</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="err">”</span><span class="nc">Movies</span> <span class="k">with</span> <span class="n">$</span><span class="o">{</span><span class="n">leo</span><span class="o">.</span><span class="n">firstName</span><span class="o">}</span> <span class="n">$</span><span class="o">{</span><span class="n">leo</span><span class="o">.</span><span class="n">secondName</span><span class="o">}</span><span class="k">:</span><span class="err">”</span><span class="o">)</span>
-</span><span class='line'>  <span class="n">leoMovies</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">m</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span> <span class="n">s</span><span class="err">”</span> <span class="o">-</span> <span class="n">$</span><span class="o">{</span><span class="n">m</span><span class="o">.</span><span class="n">title</span><span class="o">},</span> <span class="n">$</span><span class="o">{</span><span class="n">m</span><span class="o">.</span><span class="n">year</span><span class="o">}</span><span class="err">”</span><span class="o">).</span><span class="n">foreach</span><span class="o">(</span><span class="n">println</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;//</span> <span class="nc">Shutdown</span>
-</span><span class='line'>  <span class="n">server</span><span class="o">.</span><span class="n">close</span><span class="o">()</span>
-</span><span class='line'>  <span class="nc">System</span><span class="o">.</span><span class="n">exit</span><span class="o">(</span><span class="mi">0</span><span class="o">)</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div></p>
-
-<h5 id="output">Output</h5>
-
-<p><div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>Apr 09, 2014 2:02:18 PM com.twitter.finagle.Init$ apply
-</span><span class='line'>INFO: Finagle version 6.13.1 (rev=12bb3f3f5004109a4c2b981091a327b6ba2e7a6a) built at 20140324-225705
-</span><span class='line'>Movies with Leonardo DiCaprio:
-</span><span class='line'> - Django Unchained, 2012</span></code></pre></td></tr></table></div></figure></notextile></div></p>
-
-<h3 id="result">Result</h3>
-
-<p>As you can see final application in Part 1 is pretty the same is in Part 2.
-But with Finagle server-side part of application can be scaled independently, and completely transparent to the client.</p>
-
-<p>Finagle has amazing cluster discovery support, built on top of Zookeeper and ServerGroups, and it’s perfect choice for cloud environment.</p>
-
-<h2 id="go-to-part-1blog20140409seamless-migration-from-monolithic-application-to-finagle-services-1"><a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1">«&lt; Go to Part 1</a></h2>
 ]]></content>
   </entry>
   

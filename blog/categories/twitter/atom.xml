@@ -1,0 +1,317 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Twitter | Eugene Zhulenev]]></title>
+  <link href="http://eugenezhulenev.com/blog/categories/twitter/atom.xml" rel="self"/>
+  <link href="http://eugenezhulenev.com/"/>
+  <updated>2014-11-19T22:10:30-05:00</updated>
+  <id>http://eugenezhulenev.com/</id>
+  <author>
+    <name><![CDATA[Eugene Zhulenev]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Building Twitter Live Stream Analytics With Spark and Cassandra]]></title>
+    <link href="http://eugenezhulenev.com/blog/2014/11/20/twitter-analytics-with-spark/"/>
+    <updated>2014-11-20T20:01:15-05:00</updated>
+    <id>http://eugenezhulenev.com/blog/2014/11/20/twitter-analytics-with-spark</id>
+    <content type="html"><![CDATA[<blockquote>
+  <p>This is repost of my article from <a href="http://io.pellucid.com/blog/building-twitter-live-stream-analytics-with-spark-and-cassandra">Pellucid Tech Blog</a></p>
+</blockquote>
+
+<h3 id="background">Background</h3>
+
+<p>At <a href="http://pellucid.com">Pellucid Analytics</a> we we are building a platform that
+automates and simplifies the creation of data-driven chartbooks, so that it takes
+minutes instead of hours to get from raw data to powerful visualizations and compelling stories.</p>
+
+<p>One of industries we are focusing on is Investment Banking. We are helping IB advisory
+professionals build pitch-books, and provide them with analytical and quantitative support
+to sell their ideas. Comparable Companies Analysis is central to this business.</p>
+
+<blockquote>
+  <p>Comparable company analysis starts with establishing a peer group consisting of similar companies of similar size in the same industry and region.</p>
+</blockquote>
+
+<p>The problem we are faced with is finding a scalable solution to establish a peer group for any chosen company.</p>
+
+<!-- more -->
+
+<h3 id="approaches-that-we-tried">Approaches That We Tried</h3>
+
+<h4 id="company-industry">Company Industry</h4>
+
+<p>Data vendors provide <a href="http://en.wikipedia.org/wiki/Industry_classification">industry classification</a>
+for each company, and it helps a lot in industries like retail (Wal-Mart is good comparable to Costco),
+energy (Chevron and Exxon Mobil) but it stumbles with many other companies. People tend to compare
+Amazon with Google as a two major players in it business, but data vendors tend to put Amazon in retail industry with Wal-Mart/Costco as comparables.</p>
+
+<h4 id="company-financials-and-valuation-multiples">Company Financials and Valuation Multiples</h4>
+
+<p>We tried cluster analysis and k-nearest neighbors to group companies based on their
+financials (Sales, Revenue) and valuation multiples (EV/EBIDTA, P/E). However assumptions
+that similar companies will have similar valuations multiples is wrong. People compare
+Twitter with Facebook as two biggest companies in social media, but based on their financials
+they don’t have too much in common. Facebook 2013 revenue is almost $8 billion and Twitter has only $600 million.</p>
+
+<h3 id="novel-approach">Novel Approach</h3>
+
+<p>We came up with an idea that if companies are often mentioned in news articles and tweets together, it’s probably a sign that people think about them as comparable companies. In this post I’ll show how we built proof of concept for this idea with Spark, Spark Streaming and Cassandra. We use only Twitter live stream data for now, accessing high quality news data is a bit more complicated problem.</p>
+
+<!-- more -->
+
+<p>Let’s take for example this tweet from CNN:</p>
+
+<blockquote class="twitter-tweet" lang="en"><p>Trying to spot the next <a href="https://twitter.com/search?q=%24FB&amp;src=ctag">$FB</a> or <a href="https://twitter.com/search?q=%24TWTR&amp;src=ctag">$TWTR</a>? These 10 startups are worth keeping an eye on <a href="http://t.co/FEKNtm7QqB">http://t.co/FEKNtm7QqB</a></p>&mdash; CNN Public Relations (@CNNPR) <a href="https://twitter.com/CNNPR/status/518083527863435264">October 3, 2014</a></blockquote>
+<script async="" src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+<p>From this tweet we can derive 2 mentions for 2 companies. For Facebook it will be Twitter and vice-versa. If we collect tweets for all companies over some period of time, and take a ratio of joint appearance in same tweet as a measure of “similarity”, we can build comparable company recommendations based on this measure.</p>
+
+<h3 id="data-model">Data Model</h3>
+
+<p>We use <a href="http://cassandra.apache.org/">Cassandra</a> to store all mentions, aggregates and final recommendations.
+We use <a href="https://github.com/websudos/phantom">Phantom DSL</a> for scala to define schema
+and for most of Cassandra operations (spark integration is not yet supported in Phantom).</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="comment">/**
+ * Mention of focus company
+ *
+ * @param ticker   ticker of focus company
+ * @param source   source of this mention (Twitter, RSS, etc…)
+ * @param sourceId source specific id
+ * @param time     time
+ * @param mentions set of other tickers including focus ticker itself
+ */</span>
+<span class="keyword">case</span> <span class="type">class</span> <span class="class">Mention</span>(<span class="key">ticker</span>: Ticker, <span class="key">source</span>: <span class="predefined-type">String</span>, <span class="key">sourceId</span>: <span class="predefined-type">String</span>, <span class="key">time</span>: DateTime, <span class="key">mentions</span>: <span class="predefined-type">Set</span>[Ticker])&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;sealed <span class="type">class</span> <span class="class">MentionRecord</span> <span class="directive">extends</span> CassandraTable[MentionRecord, Mention] with <span class="predefined-type">Serializable</span> {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;override val <span class="key">tableName</span>: <span class="predefined-type">String</span> = <span class="error">“</span>mention<span class="error">”</span>&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;object ticker    <span class="directive">extends</span> StringColumn    (<span class="local-variable">this</span>)  with PartitionKey[<span class="predefined-type">String</span>]
+  object source    <span class="directive">extends</span> StringColumn    (<span class="local-variable">this</span>)  with PrimaryKey[<span class="predefined-type">String</span>]
+  object time      <span class="directive">extends</span> DateTimeColumn  (<span class="local-variable">this</span>)  with PrimaryKey[DateTime]
+  object source_id <span class="directive">extends</span> StringColumn    (<span class="local-variable">this</span>)  with PrimaryKey[<span class="predefined-type">String</span>]
+  object mentions  <span class="directive">extends</span> SetColumn[MentionRecord, Mention, <span class="predefined-type">String</span>] (<span class="local-variable">this</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">def</span> <span class="function">fromRow</span>(<span class="key">r</span>: Row): Mention = {
+    Mention(Ticker(ticker(r)), source(r), source_id(r), time(r), mentions(r) map Ticker)
+  }
+}
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="comment">/**
+ * Count mentions for each ticker pair
+ *
+ * @param ticker        ticker of focus company
+ * @param mentionedWith mentioned with this ticker
+ * @param count         number of mentions
+ */</span>
+<span class="keyword">case</span> <span class="type">class</span> <span class="class">MentionsAggregate</span>(<span class="key">ticker</span>: Ticker, <span class="key">mentionedWith</span>: Ticker, <span class="key">count</span>: <span class="predefined-type">Long</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;sealed <span class="type">class</span> <span class="class">MentionsAggregateRecord</span> <span class="directive">extends</span> CassandraTable[MentionsAggregateRecord, MentionsAggregate] {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;override val <span class="key">tableName</span>: <span class="predefined-type">String</span> = <span class="error">“</span>mentions_aggregate<span class="error">”</span>&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;object ticker         <span class="directive">extends</span> StringColumn (<span class="local-variable">this</span>) with PartitionKey[<span class="predefined-type">String</span>]
+  object mentioned_with <span class="directive">extends</span> StringColumn (<span class="local-variable">this</span>) with PrimaryKey[<span class="predefined-type">String</span>]
+  object counter        <span class="directive">extends</span> LongColumn   (<span class="local-variable">this</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">def</span> <span class="function">fromRow</span>(<span class="key">r</span>: Row): MentionsAggregate = {
+    MentionsAggregate(Ticker(ticker(r)), Ticker(mentioned_with(r)), counter(r))
+  }
+}
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="comment">/**
+ * Recommendation built based on company mentions with other companies
+ *
+ * @param ticker         focus company ticker
+ * @position             recommendation position
+ * @param recommendation recommended company ticker
+ * @param p              number of times recommended company mentioned together
+ *                       with focus company divided by total focus company mentions
+ */</span>
+<span class="keyword">case</span> <span class="type">class</span> <span class="class">Recommendation</span>(<span class="key">ticker</span>: Ticker, <span class="key">position</span>: <span class="predefined-type">Long</span>, <span class="key">recommendation</span>: Ticker, <span class="key">p</span>: <span class="predefined-type">Double</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;sealed <span class="type">class</span> <span class="class">RecommendationRecord</span> <span class="directive">extends</span> CassandraTable[RecommendationRecord, Recommendation] {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;override val <span class="key">tableName</span>: <span class="predefined-type">String</span> = <span class="error">“</span>recommendation<span class="error">”</span>&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;object ticker         <span class="directive">extends</span> StringColumn (<span class="local-variable">this</span>) with PartitionKey[<span class="predefined-type">String</span>]
+  object position       <span class="directive">extends</span> LongColumn   (<span class="local-variable">this</span>) with PrimaryKey[<span class="predefined-type">Long</span>]
+  object recommendation <span class="directive">extends</span> StringColumn (<span class="local-variable">this</span>)
+  object p              <span class="directive">extends</span> DoubleColumn (<span class="local-variable">this</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">def</span> <span class="function">fromRow</span>(<span class="key">r</span>: Row): Recommendation = {
+    Recommendation(Ticker(ticker(r)), position(r), Ticker(recommendation(r)), p(r))
+  }
+}
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<h3 id="ingest-real-time-twitter-stream">Ingest Real-Time Twitter Stream</h3>
+
+<p>We use <a href="https://spark.apache.org/streaming/">Spark Streaming</a> Twitter integration to subscribe for
+real-time twitter updates, then we extract company mentions and put them to Cassandra. Unfortunately Phantom
+doesn’t support Spark yet, so we used <a href="https://github.com/datastax/spark-cassandra-connector">Datastax Spark Cassandra Connector</a>
+with custom type mappers to map from Phantom-record types into Cassandra tables.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="type">class</span> <span class="class">MentionStreamFunctions</span>(<span class="annotation">@transient</span> <span class="key">stream</span>: DStream[Mention]) <span class="directive">extends</span> <span class="predefined-type">Serializable</span> {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">import</span> <span class="include">TickerTypeConverter._</span>&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;TypeConverter.registerConverter(StringToTickerTypeConverter)
+  TypeConverter.registerConverter(TickerToStringTypeConverter)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;implicit object MentionMapper <span class="directive">extends</span> DefaultColumnMapper&lt;a href=<span class="string"><span class="delimiter">&quot;</span><span class="content">Map(</span><span class="delimiter">&quot;</span></span> title=<span class="string"><span class="delimiter">&quot;</span><span class="content">ticker&amp;quot;        -&amp;gt; &amp;quot;ticker&amp;quot;,</span></span><span class="error">
+</span>    &amp;quot;source&amp;quot;        -&amp;gt; &amp;quot;source&amp;quot;,
+    &amp;quot;sourceId&amp;quot;      -&amp;gt; &amp;quot;source_id&amp;quot;,
+    &amp;quot;time&amp;quot;          -&amp;gt; &amp;quot;time&amp;quot;,
+    &amp;quot;mentions&amp;quot;      -&amp;gt; &amp;quot;mentions<span class="string"><span class="delimiter">&quot;</span><span class="content">&gt;Mention&lt;/a&gt;)&lt;/p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">def</span> <span class="function">saveMentionsToCassandra</span>(<span class="key">keyspace</span>: <span class="predefined-type">String</span>) = {
+    stream.saveToCassandra(keyspace, MentionRecord.tableName)
+  }
+}
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+  <span class="directive">private</span> val filters = Companies.load().map(c =&amp;gt; s<span class="error">”</span><span class="error">$</span><span class="error">$</span><span class="error">$</span>{c.ticker.value}<span class="error">”</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;val sc = <span class="keyword">new</span> SparkContext(sparkConf)
+  val ssc = <span class="keyword">new</span> StreamingContext(sc, Seconds(<span class="integer">2</span>))&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;val stream = TwitterUtils.createStream(ssc, None, filters = filters)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="comment">// Save Twitter Stream to cassandra</span>
+  stream.foreachRDD(updates =&amp;gt; log.info(s<span class="error">”</span>Received Twitter stream updates. Count: <span class="error">$</span>{updates.count()}<span class="error">”</span>))
+  stream.extractMentions.saveMentionsToCassandra(keySpace)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="comment">// Start Streaming Application</span>
+  ssc.start()
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<h3 id="spark-for-aggregation-and-recommendation">Spark For Aggregation and Recommendation</h3>
+
+<p>To come up with comparable company recommendation we use 2-step process.</p>
+
+<h5 id="count-mentions-for-each-pair-of-tickers">1. Count mentions for each pair of tickers</h5>
+
+<p>After <code>Mentions</code> table loaded in Spark as <code>RDD[Mention]</code> we extract pairs of tickers,
+and it enables bunch of aggregate and reduce functions from Spark <code>PairRDDFunctions</code>.
+With <code>aggregateByKey</code> and given combine functions we efficiently build counter map <code>Map[Ticker, Long]</code> for each
+ticker distributed in cluster. From single <code>Map[Ticker, Long]</code> we emit multiple aggregates for each ticket pair.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="type">class</span> <span class="class">AggregateMentions</span>(<span class="annotation">@transient</span> <span class="key">sc</span>: SparkContext, <span class="key">keyspace</span>: <span class="predefined-type">String</span>)
+  <span class="directive">extends</span> CassandraMappers with <span class="predefined-type">Serializable</span> {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="directive">private</span> type Counter = <span class="predefined-type">Map</span>[Ticker, <span class="predefined-type">Long</span>]&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="directive">private</span> implicit lazy val summ = Semigroup.instance&lt;a href=<span class="string"><span class="delimiter">&quot;</span><span class="content">_ + _</span><span class="delimiter">&quot;</span></span>&gt;<span class="predefined-type">Long</span>&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">a&gt;&lt;</span><span class="delimiter">/</span></span>p&gt;
+
+&lt;p&gt;<span class="directive">private</span> lazy val <span class="key">seqOp</span>: (Counter, Ticker) =&amp;gt; Counter = {
+    <span class="keyword">case</span> (counter, ticker) <span class="keyword">if</span> counter.isDefinedAt(ticker) =&amp;gt; counter.updated(ticker, counter(ticker) + <span class="integer">1</span>)
+    <span class="keyword">case</span> (counter, ticker) =&amp;gt; counter + (ticker -&amp;gt; <span class="integer">1</span>)
+  }&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="directive">private</span> lazy val <span class="key">combOp</span>: (Counter, Counter) =&amp;gt; Counter = {
+    <span class="keyword">case</span> (l, r) =&amp;gt; implicitly[Monoid[Counter]].append(l, r)
+  }&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">def</span> <span class="function">aggregate</span>(): Unit = {
+    <span class="comment">// Emit pairs of (Focus Company Ticker, Mentioned With)</span>
+    val pairs = sc.cassandraTable&lt;a href=<span class="string"><span class="delimiter">&quot;</span><span class="content">keyspace, MentionRecord.tableName</span><span class="delimiter">&quot;</span></span>&gt;Mention&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">a&gt;.</span></span><span class="error">
+</span>      flatMap(mention =&amp;gt; mention.mentions.map((mention.ticker, _)))&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;pre&gt;&lt;code&gt;<span class="comment">// Calculate mentions for each ticker</span>
+val aggregated = pairs.aggregateByKey(<span class="predefined-type">Map</span>.empty[Ticker, <span class="predefined-type">Long</span>])(seqOp, combOp)
+
+<span class="comment">// Build MentionsAggregate from counters</span>
+val mentionsAggregate = aggregated flatMap {
+  <span class="keyword">case</span> (ticker, counter) =&amp;gt; counter map {
+    <span class="keyword">case</span> (mentionedWith, count) =&amp;gt; MentionsAggregate(ticker, mentionedWith, count)
+  }
+}
+
+mentionsAggregate.saveToCassandra(keyspace, MentionsAggregateRecord.tableName)   } } </pre></div>
+</div>
+ </figure></notextile></div>
+</code></pre>
+
+<h5 id="sort-aggregates-and-build-recommendations">2. Sort aggregates and build recommendations</h5>
+
+<p>After aggregates computed, we sort them globally and then group them by key (Ticker). After
+all aggregates grouped we produce <code>Recommendation</code> in single traverse distributed for each key.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="type">class</span> <span class="class">Recommend</span>(<span class="annotation">@transient</span> <span class="key">sc</span>: SparkContext, <span class="key">keyspace</span>: <span class="predefined-type">String</span>)
+  <span class="directive">extends</span> CassandraMappers with <span class="predefined-type">Serializable</span> {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="directive">private</span> <span class="keyword">def</span> <span class="key">toRecommendation</span>: (MentionsAggregate, Int) =&amp;gt; Recommendation = {
+    var <span class="key">totalMentions</span>: <span class="predefined-type">Option</span>[<span class="predefined-type">Long</span>] = None&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;pre&gt;&lt;code&gt;{
+  <span class="keyword">case</span> (aggregate, idx) <span class="keyword">if</span> totalMentions.isEmpty =&amp;gt;
+    totalMentions = Some(aggregate.count)
+    Recommendation(aggregate.ticker, idx, aggregate.mentionedWith, <span class="integer">1</span>)
+
+  <span class="keyword">case</span> (aggregate, idx) =&amp;gt;
+    Recommendation(aggregate.ticker, idx,
+                   aggregate.mentionedWith,
+                   aggregate.count.toDouble / totalMentions.get)
+}   }
+&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">code&gt;&lt;</span><span class="delimiter">/</span></span>pre&gt;
+
+&lt;p&gt;<span class="keyword">def</span> <span class="function">recommend</span>(): Unit = {
+    val aggregates = sc.
+               cassandraTable&lt;a href=<span class="string"><span class="delimiter">&quot;</span><span class="content">keyspace, MentionsAggregateRecord.tableName</span><span class="delimiter">&quot;</span></span>&gt;MentionsAggregate&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">a&gt;.</span></span><span class="error">
+</span>               sortBy(_.count, ascending = <span class="predefined-constant">false</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;pre&gt;&lt;code&gt;val recommendations = aggregates.
+  groupBy(_.ticker).
+  mapValues(_.zipWithIndex).
+  flatMapValues(_ map toRecommendation.tupled).values
+
+recommendations.saveToCassandra(keyspace, RecommendationRecord.tableName)   } } </pre></div>
+</div>
+ </figure></notextile></div>
+</code></pre>
+
+<h3 id="results">Results</h3>
+
+<p>You can check comparable company recommendations build from Twitter stream using <a href="http://pellucidanalytics.github.io/tweet-driven-comparable-companies/comparables/comps.html">this link</a>.</p>
+
+<p>Cassandra and Spark works perfectly together and allows you to build scalable data-driven applications, that are super easy to scale out and handle gigabytes and terabytes of data. In this particular case, it’s probably an overkill. Twitter doesn’t have enough finance-related activity to produce serious load. However it’s easy to extend this application and add other streams: Bloomberg News Feed, Thompson Reuters, etc.</p>
+
+<blockquote>
+  <p>The code for this application app can be found on <a href="https://github.com/ezhulenev/tweet-driven-comparable-companies">Github</a></p>
+</blockquote>
+]]></content>
+  </entry>
+  
+</feed>
