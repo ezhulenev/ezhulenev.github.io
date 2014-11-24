@@ -321,6 +321,10 @@ ORCL: Training Error = 0.28603262160039455
 
 As you can see this pretty simple model was able to successfully classify ~70% of the data.
 
+**Remark:** I don't check if it's 95% success predicting stationary and 95% error rate predicting any price movement with average 70% success rate.
+For sure it's huge room for improvement and result validation. Unfortunately it's hard do get enough data, 2 trading days is to small data set to draw conclusions on how profitable
+can be trading strategy based on this idea.
+
 ### Results
 
 I was able to relatively easy reproduce fairly complicated research project at much lager scale than in original paper.
