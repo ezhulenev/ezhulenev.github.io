@@ -329,6 +329,7 @@ transaction costs. And many other details that matters for building real trading
 
 For sure it's huge room for improvement and result validation. Unfortunately it's hard do get enough data,
 2 trading days is to small data set to draw conclusions and start building system to earn all the money in the world.
+However I think it' a good starting point.
 
 ### Results
 
