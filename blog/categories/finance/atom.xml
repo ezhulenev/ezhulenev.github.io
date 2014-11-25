@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Finance | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/finance/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2014-11-24T19:07:17-05:00</updated>
+  <updated>2014-11-24T19:14:12-05:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -672,7 +672,8 @@ average 70% success rate. It doesn’t measure “strength” of price movement,
 transaction costs. And many other details that matters for building real trading system.</p>
 
 <p>For sure it’s huge room for improvement and result validation. Unfortunately it’s hard do get enough data,
-2 trading days is to small data set to draw conclusions and start building system to earn all the money in the world.</p>
+2 trading days is to small data set to draw conclusions and start building system to earn all the money in the world.
+However I think it’ a good starting point.</p>
 
 <h3 id="results">Results</h3>
 
