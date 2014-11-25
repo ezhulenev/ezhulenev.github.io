@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Finance | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/finance/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2014-11-24T14:15:19-05:00</updated>
+  <updated>2014-11-24T19:07:17-05:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -665,9 +665,14 @@ ORCL: Training Error = 0.28603262160039455
 
 <p>As you can see this pretty simple model was able to successfully classify ~70% of the data.</p>
 
-<p><strong>Remark:</strong> I don’t check if it’s 95% success predicting stationary and 95% error rate predicting any price movement with average 70% success rate.
-For sure it’s huge room for improvement and result validation. Unfortunately it’s hard do get enough data, 2 trading days is to small data set to draw conclusions on how profitable
-can be trading strategy based on this idea.</p>
+<p><strong>Remark:</strong> Despite the fact, that this model shows very good success rate, it doesn’t mean that it
+can be successfully used to build profitable automated trading strategy. First of all I don’t check
+if it’s 95% success predicting stationary and 95% error rate predicting any price movement with
+average 70% success rate. It doesn’t measure “strength” of price movement, it has to be sufficient to cover
+transaction costs. And many other details that matters for building real trading system.</p>
+
+<p>For sure it’s huge room for improvement and result validation. Unfortunately it’s hard do get enough data,
+2 trading days is to small data set to draw conclusions and start building system to earn all the money in the world.</p>
 
 <h3 id="results">Results</h3>
 
