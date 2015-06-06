@@ -11,6 +11,8 @@ Let's assume that we have some input process, and want to run some 'heavy comput
 Obviously we want utilize all available cores and use thread pool. However scalaz-stream by default is deterministic
 and in following example all computation steps will run consecutively.
 
+<!-- more -->
+
 {% codeblock lang:scala %}
   val timeFormat = DateTimeFormat.forPattern("HH:mm:ss:SSS")
 
@@ -64,8 +66,6 @@ Output = Vector(1, 4, 9, 16, 25, 36, 49, 64, 81, 100), in 10196 ms
 ### Concurrent Process
 
 To run effectful functions concurrently, with controlled number of queued tasks we can use `scalaz.stream.merge.mergeN` which is for now available only in `snapshot-0.4`.
-
-<!-- more -->
 
 {% codeblock lang:scala %}
   val P = scalaz.stream.Process

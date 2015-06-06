@@ -26,8 +26,9 @@ like real name and age, interests on Facebook etc. It really matter how creative
 and how fast you can iterate and test new idea.
 
 In 2014 Collective data science team published [Machine Learning at Scale](http://arxiv.org/abs/1402.6076) paper that
-describes our approach and trade-offs for audience modeling, I want to show the tool that I built specifically 
-to handle feature engineering/selection problem at terabyte scale using Spark.
+describes our approach and trade-offs for audience optimization. In 2015 we solve the same problems, but
+using new technologies (Spark and Spark MLLib) at even bigger scale. I want to show the tool that I built specifically 
+to handle feature engineering/selection problem, and which is open sources now.
 
 ## Model Matrix
 
@@ -72,7 +73,7 @@ variable into bins of the same size.
  mary        |      | 1.0     |     | 1.0        |                      | 1.0                  | ... 
 {% endcoderay %}
 
-Transformation definitions in scala code:
+Transformation definitions in scala:
 
 {% coderay lang:groovy %}
 sealed trait Transform
@@ -122,11 +123,12 @@ case class Bins(nbins: Int, minPoints: Int = 0, minPercents: Double = 0.0) exten
 
 #### Categorial Transformation
 
-A column calculated by applying top or index transform function, each unique columns value calculated
-by transform function associated with unique column id
+A column calculated by applying top or index transform function, each columns id corresponds 
+to one unique value from input data set. SourceValue is encoded as ByteVector unique value from 
+input column and used later for featurization. 
 
 {% coderay lang:groovy %}
-abstract class CategorialTransformer(
+class CategorialTransformer(
   features: DataFrame @@ Transformer.Features
 ) extends Transformer(features) {
 
@@ -134,7 +136,6 @@ abstract class CategorialTransformer(
   
 }
 {% endcoderay %}
-
 
 {% coderay lang:groovy %}
 sealed trait CategorialColumn {
@@ -164,3 +165,90 @@ object CategorialColumn {
 
 #### Bin Column
   
+A column calculated by applying binning transform function.
+
+{% coderay lang:groovy %}
+class BinsTransformer(
+  input: DataFrame @@ Transformer.Features
+) extends Transformer(input) with Binner {
+
+  def transform(feature: TypedModelFeature): Seq[BinColumn] = {
+  
+}
+{% endcoderay %}
+
+{% coderay lang:groovy %}
+case class BinValue(
+    columnId: Int,
+    low: Double,
+    high: Double,
+    count: Long,
+    sampleSize: Long
+  ) 
+{% endcoderay %}
+
+
+### Building Model Matrix Instance
+
+Model Matrix instance contains information about shape of the training data, what transformations (categorial and binning)
+are required to apply to input data in order to obtain feature vector that will got into machine learning
+algorithm.
+
+Building model matrix instance described well in [command line interface documentation](http://collectivemedia.github.io/modelmatrix/doc/cli.html).
+
+### Featurizing your data
+
+When you have model matrix instance, you can apply it to multiple input data sets. For example in Collective
+we build model matrix instance once a week or even month, and use it for building models from daily/hourly data.
+It gives us nice property: all models have the same columns, and it's easy to compare them.
+ 
+{% coderay lang:groovy %}
+
+// Similar to Spark LabeledPoint
+case class IdentifiedPoint(id: Any, features: Vector)
+
+class Featurization(features: Seq[ModelInstanceFeature]) extends Serializable {
+
+  // Check that all input features belong to the same model instance
+  private val instances = features.map(_.modelInstanceId).toSet
+  require(instances.size == 1, 
+    s"Features belong to different model instances: $instances")
+
+  // Maximum columns id in instance features
+  private val totalNumberOfColumns = features.flatMap {
+    case ModelInstanceIdentityFeature(_, _, _, _, columnId) => Seq(columnId)
+    case ModelInstanceTopFeature(_, _, _, _, cols) => cols.map(_.columnId)
+    case ModelInstanceIndexFeature(_, _, _, _, cols) => cols.map(_.columnId)
+    case ModelInstanceBinsFeature(_, _, _, _, cols) => cols.map(_.columnId)
+  }.max
+
+
+  /**
+   * Featurize input dataset
+   *
+   * @return id data type and featurized rows
+   */
+  def featurize(
+    input: DataFrame @@ FeaturesWithId, 
+    idColumn: String
+  ): (DataType, RDD[IdentifiedPoint]) = {
+  
+    log.info(s"Extract features from input DataFrame with id column: $idColumn. " + 
+             s"Total number of columns: $totalNumberOfColumns")
+    
+    ...
+    
+  }
+}
+{% endcoderay %}
+ 
+ 
+### Results
+ 
+Model Matrix is open sourced, and available on [Github](https://github.com/collectivemedia/modelmatrix), lot's of 
+documentation on [Website](http://collectivemedia.github.io/modelmatrix/).
+
+We use it at [Collective](http://collective.com) to define our models and it works for us really well.
+
+You can continue your reading with [Machine Learning at Scale](http://arxiv.org/abs/1402.6076) paper, 
+to get more data science focused details about our modeling approach.
