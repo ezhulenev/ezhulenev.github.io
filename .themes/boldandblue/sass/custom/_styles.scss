@@ -6,7 +6,7 @@ html {
 body {
   line-height: 1.8em;
   font-size:1.1em;
-  max-width:1320px;
+  max-width:1120px;
   > div {
     background: #fff !important;
     border-bottom:2px solid #f2f2f2;
@@ -101,7 +101,7 @@ body {
 }
 @media only screen and (min-width:992px) {
   body { 
-    font-size: 1.3em; 
+    font-size: 1.0em;
   }
   .collapse-sidebar aside.sidebar {
     background: #fff;
