@@ -555,97 +555,6 @@ However it can be difficult if data model is already defined, and services acces
 Obviously we want utilize all available cores and use thread pool. However scalaz-stream by default is deterministic
 and in following example all computation steps will run consecutively.</p>
 
-<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
-<span class="line-number">2</span>
-<span class="line-number">3</span>
-<span class="line-number">4</span>
-<span class="line-number">5</span>
-<span class="line-number">6</span>
-<span class="line-number">7</span>
-<span class="line-number">8</span>
-<span class="line-number">9</span>
-<span class="line-number">10</span>
-<span class="line-number">11</span>
-<span class="line-number">12</span>
-<span class="line-number">13</span>
-<span class="line-number">14</span>
-<span class="line-number">15</span>
-<span class="line-number">16</span>
-<span class="line-number">17</span>
-<span class="line-number">18</span>
-<span class="line-number">19</span>
-<span class="line-number">20</span>
-<span class="line-number">21</span>
-<span class="line-number">22</span>
-<span class="line-number">23</span>
-<span class="line-number">24</span>
-<span class="line-number">25</span>
-<span class="line-number">26</span>
-<span class="line-number">27</span>
-<span class="line-number">28</span>
-<span class="line-number">29</span>
-<span class="line-number">30</span>
-</pre></td><td class="code"><pre><code class="scala"><span class="line">  <span class="k">val</span> <span class="n">timeFormat</span> <span class="k">=</span> <span class="nc">DateTimeFormat</span><span class="o">.</span><span class="n">forPattern</span><span class="o">(</span><span class="s">&quot;HH:mm:ss:SSS&quot;</span><span class="o">)</span>
-</span><span class="line">
-</span><span class="line">  <span class="k">val</span> <span class="n">counter</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">AtomicInteger</span><span class="o">(</span><span class="mi">0</span><span class="o">)</span>
-</span><span class="line">
-</span><span class="line">  <span class="c1">// ThreadPool for running effectful functions</span>
-</span><span class="line">  <span class="k">val</span> <span class="n">executor</span> <span class="k">=</span> <span class="nc">Executors</span><span class="o">.</span><span class="n">newFixedThreadPool</span><span class="o">(</span><span class="mi">3</span><span class="o">)</span>
-</span><span class="line">
-</span><span class="line">  <span class="c1">// channel of effectful functions</span>
-</span><span class="line">  <span class="k">val</span> <span class="n">effectfulChannel</span> <span class="k">=</span> <span class="n">channel</span><span class="o">[</span><span class="kt">Int</span>, <span class="kt">Int</span><span class="o">]</span> <span class="o">{</span>
-</span><span class="line">    <span class="n">in</span> <span class="k">=&gt;</span> <span class="nc">Task</span> <span class="o">{</span>
-</span><span class="line">      <span class="k">val</span> <span class="n">taskN</span> <span class="k">=</span> <span class="n">counter</span><span class="o">.</span><span class="n">incrementAndGet</span><span class="o">()</span>
-</span><span class="line">
-</span><span class="line">      <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;${Thread.currentThread().getName}: &quot;</span> <span class="o">+</span>
-</span><span class="line">        <span class="n">s</span><span class="s">&quot;Run for $in, &quot;</span> <span class="o">+</span>
-</span><span class="line">        <span class="n">s</span><span class="s">&quot;TaskN = $taskN &quot;</span> <span class="o">+</span>
-</span><span class="line">        <span class="n">s</span><span class="s">&quot;(time = ${timeFormat.print(System.currentTimeMillis())})&quot;</span><span class="o">)</span>
-</span><span class="line">
-</span><span class="line">      <span class="c1">// Long running computation</span>
-</span><span class="line">      <span class="k">val</span> <span class="n">computed</span> <span class="k">=</span> <span class="o">{</span>
-</span><span class="line">        <span class="nc">Thread</span><span class="o">.</span><span class="n">sleep</span><span class="o">(</span><span class="mi">1000</span><span class="o">)</span>
-</span><span class="line">        <span class="n">in</span> <span class="o">*</span> <span class="n">in</span>
-</span><span class="line">      <span class="o">}</span>
-</span><span class="line">      <span class="n">computed</span>
-</span><span class="line">    <span class="o">}(</span><span class="n">executor</span><span class="o">)</span>
-</span><span class="line">  <span class="o">}</span>
-</span><span class="line">
-</span><span class="line">  <span class="k">val</span> <span class="n">start</span> <span class="k">=</span> <span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">()</span>
-</span><span class="line">  <span class="k">val</span> <span class="n">output</span> <span class="k">=</span> <span class="nc">Process</span><span class="o">.</span><span class="n">range</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">11</span><span class="o">).</span><span class="n">through</span><span class="o">(</span><span class="n">effectfulChannel</span><span class="o">).</span><span class="n">runLog</span><span class="o">.</span><span class="n">run</span>
-</span><span class="line">  <span class="k">val</span> <span class="n">end</span> <span class="k">=</span> <span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">()</span>
-</span><span class="line">  <span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;Output = $output, in ${end-start} ms&quot;</span><span class="o">)</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
-
-<h3 id="deterministic-output">Deterministic Output</h3>
-
-<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
-<span class="line-number">2</span>
-<span class="line-number">3</span>
-<span class="line-number">4</span>
-<span class="line-number">5</span>
-<span class="line-number">6</span>
-<span class="line-number">7</span>
-<span class="line-number">8</span>
-<span class="line-number">9</span>
-<span class="line-number">10</span>
-<span class="line-number">11</span>
-</pre></td><td class="code"><pre><code class=""><span class="line">pool-1-thread-1: Run for 1, TaskN = 1   (time = 22:59:14:720)
-</span><span class="line">pool-1-thread-2: Run for 2, TaskN = 2   (time = 22:59:15:811)
-</span><span class="line">pool-1-thread-3: Run for 3, TaskN = 3   (time = 22:59:16:813)
-</span><span class="line">pool-1-thread-3: Run for 4, TaskN = 4   (time = 22:59:17:815)
-</span><span class="line">pool-1-thread-3: Run for 5, TaskN = 5   (time = 22:59:18:817)
-</span><span class="line">pool-1-thread-3: Run for 6, TaskN = 6   (time = 22:59:19:818)
-</span><span class="line">pool-1-thread-3: Run for 7, TaskN = 7   (time = 22:59:20:819)
-</span><span class="line">pool-1-thread-3: Run for 8, TaskN = 8   (time = 22:59:21:821)
-</span><span class="line">pool-1-thread-3: Run for 9, TaskN = 9   (time = 22:59:22:822)
-</span><span class="line">pool-1-thread-3: Run for 10, TaskN = 10 (time = 22:59:23:823)
-</span><span class="line">Output = Vector(1, 4, 9, 16, 25, 36, 49, 64, 81, 100), in 10196 ms</span></code></pre></td></tr></table></div></figure></notextile></div>
-
-<h3 id="concurrent-process">Concurrent Process</h3>
-
-<p>To run effectful functions concurrently, with controlled number of queued tasks we can use <code>scalaz.stream.merge.mergeN</code> which is for now available only in <code>snapshot-0.4</code>.</p>
-
 </div>
   
   
@@ -671,6 +580,16 @@ and in following example all computation steps will run consecutively.</p>
     <input class="search" type="text" name="q" results="0" placeholder="Search"/>
   </fieldset>
 </form>
+  <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+  <!-- eugenezhulenev.com sidebar -->
+  <ins class="adsbygoogle"
+       style="display:block"
+       data-ad-client="ca-pub-5772815838679190"
+       data-ad-slot="9910385063"
+       data-ad-format="auto"></ins>
+  <script>
+  (adsbygoogle = window.adsbygoogle || []).push({});
+  </script>
   
   
     <section>

@@ -4,7 +4,7 @@
   <title><![CDATA[Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2015-06-04T16:34:59-04:00</updated>
+  <updated>2015-06-08T00:08:11-04:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -2684,6 +2684,8 @@ However for this example application I will use small in-memory mock implementat
 Obviously we want utilize all available cores and use thread pool. However scalaz-stream by default is deterministic
 and in following example all computation steps will run consecutively.</p>
 
+<!-- more -->
+
 <div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
 <span class="line-number">2</span>
 <span class="line-number">3</span>
@@ -2774,8 +2776,6 @@ and in following example all computation steps will run consecutively.</p>
 <h3 id="concurrent-process">Concurrent Process</h3>
 
 <p>To run effectful functions concurrently, with controlled number of queued tasks we can use <code>scalaz.stream.merge.mergeN</code> which is for now available only in <code>snapshot-0.4</code>.</p>
-
-<!-- more -->
 
 <div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
 <span class="line-number">2</span>
