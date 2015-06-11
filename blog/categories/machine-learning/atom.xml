@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Machine Learning | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/machine-learning/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2015-06-08T00:08:11-04:00</updated>
+  <updated>2015-06-10T20:00:46-04:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -12,6 +12,287 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Feature Engineering at Scale With Spark]]></title>
+    <link href="http://eugenezhulenev.com/blog/2015/06/10/feature-engineering-at-scale/"/>
+    <updated>2015-06-10T23:02:45-04:00</updated>
+    <id>http://eugenezhulenev.com/blog/2015/06/10/feature-engineering-at-scale</id>
+    <content type="html"><![CDATA[<blockquote>
+  <p>Check Model Matrix <a href="http://collectivemedia.github.io/modelmatrix/">Website</a> and <a href="https://github.com/collectivemedia/modelmatrix">Github project</a>.</p>
+</blockquote>
+
+<p>At <a href="http://collective.com">Collective</a> we are in programmatic advertisement business, it means that all our
+advertisement decisions (what ad to show, to whom and at what time) are driven by models. We do a lot of 
+machine learning, build thousands predictive models and use them to make millions decision per second.</p>
+
+<h4 id="how-do-we-get-the-most-out-of-our-data-for-predictive-modeling">How do we get the most out of our data for predictive modeling?</h4>
+
+<p>Success of all Machine Learning algorithms depends on data that you put into it, the better the features you choose, the
+better the results you will achieve.</p>
+
+<blockquote>
+  <p>Feature Engineering is the process of using domain knowledge of the data to create features that make machine learning algorithms work better.</p>
+</blockquote>
+
+<p>In Ad-Tech it’s finite pieces of information about users that we can put into our models, and it’s 
+almost the same across all companies in industry, we don’t have access to any anonymous data
+like real name and age, interests on Facebook etc. It really matter how creative you are to get maximum from the data you have,
+and how fast you can iterate and test new idea.</p>
+
+<p>In 2014 Collective data science team published <a href="http://arxiv.org/abs/1402.6076">Machine Learning at Scale</a> paper that
+describes our approach and trade-offs for audience optimization. In 2015 we solve the same problems, but
+using new technologies (Spark and Spark MLLib) at even bigger scale. I want to show the tool that I built specifically 
+to handle feature engineering/selection problem, and which is open sources now.</p>
+
+<h2 id="model-matrix">Model Matrix</h2>
+
+<!-- more -->
+
+<h3 id="feature-transformation">Feature Transformation</h3>
+
+<p>Imagine impression log that is used to train predictive model</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+visitor_id  | ad_campaign     | ad_id | ad_ctr     | pub_site            | state | city         | price | timestamp   &lt;br /&gt;
+———– | ————— | —– | ———- | ——————- | —– | ———— | —– | ————- 
+bob         | Nike_Sport      | 1     | 0.01       | http://bbc.com      | NY    | New York     | 0.17  | 1431032702135&lt;br /&gt;
+bill        | Burgers_Co      | 2     | 0.005      | http://cnn.com      | CA    | Los Angeles  | 0.42  | 1431032705167 
+mary        | Macys           | 3     | 0.015      | http://fashion.com  | CA    | Los Angeles  | 0.19  | 1431032708384 
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p>Producing a feature vector for every visitor (cookie) row and every piece of information about a 
+visitor as an p-size vector, where p is the number of predictor variables multiplied by cardinality 
+of each variable (number of states in US, number of unique websites, etc …). It is impractical 
+both from the data processing standpoint and because the resulting vector would only have 
+about 1 in 100,000 non-zero elements.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+ visitor_id  | Nike_Sport | Burgers_Co | Macys | NY  | CA  | … 
+ ———– | ———- | ———- | —– | — | — | — 
+ bob         | 1.0        |            |       | 1.0 |     | … 
+ bill        |            | 1.0        |       |     | 1.0 | … 
+ mary        |            |            | 1.0   |     | 1.0 | … 
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p>Model Matrix uses feature transformations (top, index, binning) to reduce dimensionality to arrive 
+at between one and two thousand predictor variables, with data sparsity of about 1 in 10. It removes 
+irrelevant and low frequency predictor values from the model, and transforms continuous 
+variable into bins of the same size.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre> &lt;br /&gt;
+ visitor_id  | Nike | OtherAd | NY  | OtherState | price ∈ [0.01, 0.20) | price ∈ [0.20, 0.90) | … 
+ ———– | —- | ——- | — | ———- | ——————– | ——————– | — 
+ bob         | 1.0  |         | 1.0 |            | 1.0                  |                      | … 
+ bill        |      | 1.0     |     | 1.0        |                      | 1.0                  | … 
+ mary        |      | 1.0     |     | 1.0        |                      | 1.0                  | … 
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p>Transformation definitions in scala:</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+sealed trait Transform&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="comment">/**
+ * Absence of transformation
+ */</span>
+<span class="keyword">case</span> object <span class="predefined-type">Identity</span> <span class="directive">extends</span> Transform&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="comment">/**
+ * For distinct values of the column, find top values
+ * by a quantity that cumulatively cover a given percentage
+ * of this quantity. For example, find the top DMAs that
+ * represent 99% of cookies, or find top sites that
+ * are responsible for 90% of impressions.
+ *
+ * @param cover      cumulative cover percentage
+ * @param allOther   include feature for all other values
+ */</span>
+<span class="keyword">case</span> <span class="type">class</span> <span class="class">Top</span>(<span class="key">cover</span>: <span class="predefined-type">Double</span>, <span class="key">allOther</span>: <span class="predefined-type">Boolean</span>) <span class="directive">extends</span> Transform&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="comment">/**
+ * For distinct values of the column, find the values
+ * with at least the minimum support in the data set.
+ * Support for a value is defined as the percentage of a
+ * total quantity that have that value. For example,
+ * find segments that appear for at least 1% of the cookies.
+ *
+ * @param support    support percentage
+ * @param allOther   include feature for all other values
+ */</span>
+<span class="keyword">case</span> <span class="type">class</span> <span class="class">Index</span>(<span class="key">support</span>: <span class="predefined-type">Double</span>, <span class="key">allOther</span>: <span class="predefined-type">Boolean</span>) <span class="directive">extends</span> Transform&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="comment">/**
+ * Break the values in the column into bins with roughly the same number of points.
+ *
+ * @param nbins target number of bins
+ * @param minPoints minimum number of points in single bin
+ * @param minPercents minimum percent of points in a bin (0-100).
+ *                    The larger of absolute number and percent points is used.
+ */</span>
+<span class="keyword">case</span> <span class="type">class</span> <span class="class">Bins</span>(<span class="key">nbins</span>: Int, <span class="key">minPoints</span>: Int = <span class="integer">0</span>, <span class="key">minPercents</span>: <span class="predefined-type">Double</span> = <span class="float">0.0</span>) <span class="directive">extends</span> Transform
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<h3 id="transformed-columns">Transformed Columns</h3>
+
+<h4 id="categorial-transformation">Categorial Transformation</h4>
+
+<p>A column calculated by applying top or index transform function, each columns id corresponds 
+to one unique value from input data set. SourceValue is encoded as ByteVector unique value from 
+input column and used later for featurization. </p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="type">class</span> <span class="class">CategorialTransformer</span>(
+  <span class="key">features</span>: DataFrame <span class="error">@</span><span class="error">@</span> <span class="predefined-type">Transformer</span>.Features
+) <span class="directive">extends</span> <span class="predefined-type">Transformer</span>(features) {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">def</span> <span class="function">transform</span>(<span class="key">feature</span>: TypedModelFeature): Seq[CategorialColumn]&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;}
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+sealed trait CategorialColumn {
+  <span class="keyword">def</span> <span class="key">columnId</span>: Int
+  <span class="keyword">def</span> <span class="key">count</span>: <span class="predefined-type">Long</span>
+  <span class="keyword">def</span> <span class="key">cumulativeCount</span>: <span class="predefined-type">Long</span>
+}&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;object CategorialColumn {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">case</span> <span class="type">class</span> <span class="class">CategorialValue</span>(
+    <span class="key">columnId</span>: Int,
+    <span class="key">sourceName</span>: <span class="predefined-type">String</span>,
+    <span class="key">sourceValue</span>: ByteVector,
+    <span class="key">count</span>: <span class="predefined-type">Long</span>,
+    <span class="key">cumulativeCount</span>: <span class="predefined-type">Long</span>
+  ) <span class="directive">extends</span> CategorialColumn &lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">case</span> <span class="type">class</span> <span class="class">AllOther</span>(
+    <span class="key">columnId</span>: Int,
+    <span class="key">count</span>: <span class="predefined-type">Long</span>,
+    <span class="key">cumulativeCount</span>: <span class="predefined-type">Long</span>
+  ) <span class="directive">extends</span> CategorialColumn &lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;}
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<h4 id="bin-column">Bin Column</h4>
+
+<p>A column calculated by applying binning transform function.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="type">class</span> <span class="class">BinsTransformer</span>(
+  <span class="key">input</span>: DataFrame <span class="error">@</span><span class="error">@</span> <span class="predefined-type">Transformer</span>.Features
+) <span class="directive">extends</span> <span class="predefined-type">Transformer</span>(input) with Binner {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">def</span> <span class="function">transform</span>(<span class="key">feature</span>: TypedModelFeature): Seq[BinColumn] = {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;}
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="keyword">case</span> <span class="type">class</span> <span class="class">BinValue</span>(
+    <span class="key">columnId</span>: Int,
+    <span class="key">low</span>: <span class="predefined-type">Double</span>,
+    <span class="key">high</span>: <span class="predefined-type">Double</span>,
+    <span class="key">count</span>: <span class="predefined-type">Long</span>,
+    <span class="key">sampleSize</span>: <span class="predefined-type">Long</span>
+  ) 
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<h3 id="building-model-matrix-instance">Building Model Matrix Instance</h3>
+
+<p>Model Matrix instance contains information about shape of the training data, what transformations (categorial and binning)
+are required to apply to input data in order to obtain feature vector that will got into machine learning
+algorithm.</p>
+
+<p>Building model matrix instance described well in <a href="http://collectivemedia.github.io/modelmatrix/doc/cli.html">command line interface documentation</a>.</p>
+
+<h3 id="featurizing-your-data">Featurizing your data</h3>
+
+<p>When you have model matrix instance, you can apply it to multiple input data sets. For example in Collective
+we build model matrix instance once a week or even month, and use it for building models from daily/hourly data.
+It gives us nice property: all models have the same columns, and it’s easy to compare them.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="comment">// Similar to Spark LabeledPoint</span>
+<span class="keyword">case</span> <span class="type">class</span> <span class="class">IdentifiedPoint</span>(<span class="key">id</span>: Any, <span class="key">features</span>: <span class="predefined-type">Vector</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="type">class</span> <span class="class">Featurization</span>(<span class="key">features</span>: Seq[ModelInstanceFeature]) <span class="directive">extends</span> <span class="predefined-type">Serializable</span> {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="comment">// Check that all input features belong to the same model instance</span>
+  <span class="directive">private</span> val instances = features.map(_.modelInstanceId).toSet
+  require(instances.size == <span class="integer">1</span>, 
+    s<span class="error">”</span>Features belong to different model <span class="key">instances</span>: <span class="error">$</span>instances<span class="error">”</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="comment">// Maximum columns id in instance features</span>
+  <span class="directive">private</span> val totalNumberOfColumns = features.flatMap {
+    <span class="keyword">case</span> ModelInstanceIdentityFeature(&lt;em&gt;, _, _, _, columnId) =&amp;gt; Seq(columnId)
+    <span class="keyword">case</span> ModelInstanceTopFeature(&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">em&gt;, &lt;em&gt;, _, _, cols) =&amp;gt; cols.map(&lt;</span><span class="delimiter">/</span></span>em&gt;.columnId)
+    <span class="keyword">case</span> ModelInstanceIndexFeature(&lt;em&gt;, _, _, _, cols) =&amp;gt; cols.map(&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">em&gt;.columnId)</span></span><span class="error">
+</span>    <span class="keyword">case</span> ModelInstanceBinsFeature(&lt;em&gt;, _, _, _, cols) =&amp;gt; cols.map(&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">em&gt;.columnId)</span></span><span class="error">
+</span>  }.max&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="comment">/**
+   * Featurize input dataset
+   *
+   * @return id data type and featurized rows
+   */</span>
+  <span class="keyword">def</span> <span class="function">featurize</span>(
+    <span class="key">input</span>: DataFrame <span class="error">@</span><span class="error">@</span> FeaturesWithId, 
+    <span class="key">idColumn</span>: <span class="predefined-type">String</span>
+  ): (DataType, RDD[IdentifiedPoint]) = {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;pre&gt;&lt;code&gt;log.info(s<span class="string"><span class="delimiter">&quot;</span><span class="content">Extract features from input DataFrame with id column: </span><span class="inline"><span class="inline-delimiter">$</span>idColumn</span><span class="content">. </span><span class="delimiter">&quot;</span></span> + 
+         s<span class="string"><span class="delimiter">&quot;</span><span class="content">Total number of columns: </span><span class="inline"><span class="inline-delimiter">$</span>totalNumberOfColumns</span><span class="delimiter">&quot;</span></span>)
+
+...
+&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">code&gt;&lt;</span><span class="delimiter">/</span></span>pre&gt;
+
+&lt;p&gt;}
+}
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<h3 id="results">Results</h3>
+
+<p>Model Matrix is open sourced, and available on <a href="https://github.com/collectivemedia/modelmatrix">Github</a>, lot’s of 
+documentation on <a href="http://collectivemedia.github.io/modelmatrix/">Website</a>.</p>
+
+<p>We use it at <a href="http://collective.com">Collective</a> to define our models and it works for us really well.</p>
+
+<p>You can continue your reading with <a href="http://arxiv.org/abs/1402.6076">Machine Learning at Scale</a> paper, 
+to get more data science focused details about our modeling approach.</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Stock Price Prediction With Big Data and Machine Learning]]></title>

@@ -9,8 +9,8 @@
   <meta name="author" content="Eugene Zhulenev">
 
   
-  <meta name="description" content="This is repost of my article from Pellucid Tech Blog Background At Pellucid Analytics we we are building a platform that
-automates and simplifies &hellip;">
+  <meta name="description" content="Check Model Matrix Website and Github project. At Collective we are in programmatic advertisement business, it means that all our
+advertisement &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -94,6 +94,77 @@ automates and simplifies &hellip;">
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2015/06/10/feature-engineering-at-scale/">Feature Engineering at Scale With Spark</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-06-10T23:02:45-04:00" pubdate data-updated="true">Jun 10<span>th</span>, 2015</time>
+        
+           | <a href="/blog/2015/06/10/feature-engineering-at-scale/#disqus_thread"
+             data-disqus-identifier="http://eugenezhulenev.com/blog/2015/06/10/feature-engineering-at-scale/">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><blockquote>
+  <p>Check Model Matrix <a href="http://collectivemedia.github.io/modelmatrix/">Website</a> and <a href="https://github.com/collectivemedia/modelmatrix">Github project</a>.</p>
+</blockquote>
+
+<p>At <a href="http://collective.com">Collective</a> we are in programmatic advertisement business, it means that all our
+advertisement decisions (what ad to show, to whom and at what time) are driven by models. We do a lot of 
+machine learning, build thousands predictive models and use them to make millions decision per second.</p>
+
+<h4 id="how-do-we-get-the-most-out-of-our-data-for-predictive-modeling">How do we get the most out of our data for predictive modeling?</h4>
+
+<p>Success of all Machine Learning algorithms depends on data that you put into it, the better the features you choose, the
+better the results you will achieve.</p>
+
+<blockquote>
+  <p>Feature Engineering is the process of using domain knowledge of the data to create features that make machine learning algorithms work better.</p>
+</blockquote>
+
+<p>In Ad-Tech it’s finite pieces of information about users that we can put into our models, and it’s 
+almost the same across all companies in industry, we don’t have access to any anonymous data
+like real name and age, interests on Facebook etc. It really matter how creative you are to get maximum from the data you have,
+and how fast you can iterate and test new idea.</p>
+
+<p>In 2014 Collective data science team published <a href="http://arxiv.org/abs/1402.6076">Machine Learning at Scale</a> paper that
+describes our approach and trade-offs for audience optimization. In 2015 we solve the same problems, but
+using new technologies (Spark and Spark MLLib) at even bigger scale. I want to show the tool that I built specifically 
+to handle feature engineering/selection problem, and which is open sources now.</p>
+
+<h2 id="model-matrix">Model Matrix</h2>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2015/06/10/feature-engineering-at-scale/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
   
   
     <article>
@@ -580,21 +651,15 @@ and in following example all computation steps will run consecutively.</p>
     <input class="search" type="text" name="q" results="0" placeholder="Search"/>
   </fieldset>
 </form>
-  <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
-  <!-- eugenezhulenev.com sidebar -->
-  <ins class="adsbygoogle"
-       style="display:block"
-       data-ad-client="ca-pub-5772815838679190"
-       data-ad-slot="9910385063"
-       data-ad-format="auto"></ins>
-  <script>
-  (adsbygoogle = window.adsbygoogle || []).push({});
-  </script>
   
   
     <section>
   <h1>Recent Posts</h1>
   <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2015/06/10/feature-engineering-at-scale/">Feature Engineering at Scale With Spark</a>
+      </li>
     
       <li class="post">
         <a href="/blog/2014/11/20/twitter-analytics-with-spark/">Building Twitter Live Stream Analytics With Spark and Cassandra</a>
@@ -610,10 +675,6 @@ and in following example all computation steps will run consecutively.</p>
     
       <li class="post">
         <a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2/">Akka Cluster for Value at Risk Calculation (Part 2/2)</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1/">Akka Cluster for Value at Risk Calculation (Part 1/2)</a>
       </li>
     
   </ul>
