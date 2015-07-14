@@ -121,44 +121,44 @@ case class Bins(nbins: Int, minPoints: Int = 0, minPercents: Double = 0.0) exten
 
 ### Transformed Columns
 
-#### Categorial Transformation
+#### Categorical Transformation
 
 A column calculated by applying top or index transform function, each columns id corresponds 
 to one unique value from input data set. SourceValue is encoded as ByteVector unique value from 
 input column and used later for featurization. 
 
 {% coderay lang:groovy %}
-class CategorialTransformer(
+class CategoricalTransformer(
   features: DataFrame @@ Transformer.Features
 ) extends Transformer(features) {
 
-  def transform(feature: TypedModelFeature): Seq[CategorialColumn]
+  def transform(feature: TypedModelFeature): Seq[CategoricalColumn]
   
 }
 {% endcoderay %}
 
 {% coderay lang:groovy %}
-sealed trait CategorialColumn {
+sealed trait CategoricalColumn {
   def columnId: Int
   def count: Long
   def cumulativeCount: Long
 }
 
-object CategorialColumn {
+object CategoricalColumn {
 
-  case class CategorialValue(
+  case class CategoricalValue(
     columnId: Int,
     sourceName: String,
     sourceValue: ByteVector,
     count: Long,
     cumulativeCount: Long
-  ) extends CategorialColumn 
+  ) extends CategoricalColumn 
 
   case class AllOther(
     columnId: Int,
     count: Long,
     cumulativeCount: Long
-  ) extends CategorialColumn 
+  ) extends CategoricalColumn 
   
 }
 {% endcoderay %}
@@ -190,7 +190,7 @@ case class BinValue(
 
 ### Building Model Matrix Instance
 
-Model Matrix instance contains information about shape of the training data, what transformations (categorial and binning)
+Model Matrix instance contains information about shape of the training data, what transformations (categorical and binning)
 are required to apply to input data in order to obtain feature vector that will got into machine learning
 algorithm.
 
