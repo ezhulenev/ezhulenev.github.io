@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Scala | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/scala/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2015-07-14T19:28:26-04:00</updated>
+  <updated>2015-07-14T19:31:31-04:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -15,9 +15,9 @@
   
   <entry>
     <title type="html"><![CDATA[Feature Engineering at Scale With Spark]]></title>
-    <link href="http://eugenezhulenev.com/blog/2015/06/15/feature-engineering-at-scale/"/>
-    <updated>2015-06-15T23:02:45-04:00</updated>
-    <id>http://eugenezhulenev.com/blog/2015/06/15/feature-engineering-at-scale</id>
+    <link href="http://eugenezhulenev.com/blog/2015/06/10/feature-engineering-at-scale/"/>
+    <updated>2015-06-10T23:02:45-04:00</updated>
+    <id>http://eugenezhulenev.com/blog/2015/06/10/feature-engineering-at-scale</id>
     <content type="html"><![CDATA[<blockquote>
   <p>Check Model Matrix <a href="http://collectivemedia.github.io/modelmatrix/">Website</a> and <a href="https://github.com/collectivemedia/modelmatrix">Github project</a>.</p>
 </blockquote>
