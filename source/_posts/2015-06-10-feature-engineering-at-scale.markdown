@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Feature Engineering at Scale with Spark"
-date: 2015-06-15 22:02:45 -0500
+date: 2015-06-10 22:02:45 -0500
 comments: true
 categories: [spark, scala, machine learning]
 keywords: spark, scala, machine learning
