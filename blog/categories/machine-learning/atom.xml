@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Machine Learning | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/machine-learning/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2015-06-10T20:00:46-04:00</updated>
+  <updated>2015-07-14T09:05:11-04:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -15,9 +15,9 @@
   
   <entry>
     <title type="html"><![CDATA[Feature Engineering at Scale With Spark]]></title>
-    <link href="http://eugenezhulenev.com/blog/2015/06/10/feature-engineering-at-scale/"/>
-    <updated>2015-06-10T23:02:45-04:00</updated>
-    <id>http://eugenezhulenev.com/blog/2015/06/10/feature-engineering-at-scale</id>
+    <link href="http://eugenezhulenev.com/blog/2015/06/15/feature-engineering-at-scale/"/>
+    <updated>2015-06-15T23:02:45-04:00</updated>
+    <id>http://eugenezhulenev.com/blog/2015/06/15/feature-engineering-at-scale</id>
     <content type="html"><![CDATA[<blockquote>
   <p>Check Model Matrix <a href="http://collectivemedia.github.io/modelmatrix/">Website</a> and <a href="https://github.com/collectivemedia/modelmatrix">Github project</a>.</p>
 </blockquote>
@@ -147,7 +147,7 @@ sealed trait Transform&lt;<span class="regexp"><span class="delimiter">/</span><
 
 <h3 id="transformed-columns">Transformed Columns</h3>
 
-<h4 id="categorial-transformation">Categorial Transformation</h4>
+<h4 id="categorical-transformation">Categorical Transformation</h4>
 
 <p>A column calculated by applying top or index transform function, each columns id corresponds 
 to one unique value from input data set. SourceValue is encoded as ByteVector unique value from 
@@ -155,11 +155,11 @@ input column and used later for featurization. </p>
 
 <p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
   <div class="code"><pre>
-<span class="type">class</span> <span class="class">CategorialTransformer</span>(
+<span class="type">class</span> <span class="class">CategoricalTransformer</span>(
   <span class="key">features</span>: DataFrame <span class="error">@</span><span class="error">@</span> <span class="predefined-type">Transformer</span>.Features
 ) <span class="directive">extends</span> <span class="predefined-type">Transformer</span>(features) {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
 </span>
-&lt;p&gt;<span class="keyword">def</span> <span class="function">transform</span>(<span class="key">feature</span>: TypedModelFeature): Seq[CategorialColumn]&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+&lt;p&gt;<span class="keyword">def</span> <span class="function">transform</span>(<span class="key">feature</span>: TypedModelFeature): Seq[CategoricalColumn]&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
 </span>
 &lt;p&gt;}
 </pre></div>
@@ -168,27 +168,27 @@ input column and used later for featurization. </p>
 
 <p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
   <div class="code"><pre>
-sealed trait CategorialColumn {
+sealed trait CategoricalColumn {
   <span class="keyword">def</span> <span class="key">columnId</span>: Int
   <span class="keyword">def</span> <span class="key">count</span>: <span class="predefined-type">Long</span>
   <span class="keyword">def</span> <span class="key">cumulativeCount</span>: <span class="predefined-type">Long</span>
 }&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
 </span>
-&lt;p&gt;object CategorialColumn {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+&lt;p&gt;object CategoricalColumn {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
 </span>
-&lt;p&gt;<span class="keyword">case</span> <span class="type">class</span> <span class="class">CategorialValue</span>(
+&lt;p&gt;<span class="keyword">case</span> <span class="type">class</span> <span class="class">CategoricalValue</span>(
     <span class="key">columnId</span>: Int,
     <span class="key">sourceName</span>: <span class="predefined-type">String</span>,
     <span class="key">sourceValue</span>: ByteVector,
     <span class="key">count</span>: <span class="predefined-type">Long</span>,
     <span class="key">cumulativeCount</span>: <span class="predefined-type">Long</span>
-  ) <span class="directive">extends</span> CategorialColumn &lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+  ) <span class="directive">extends</span> CategoricalColumn &lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
 </span>
 &lt;p&gt;<span class="keyword">case</span> <span class="type">class</span> <span class="class">AllOther</span>(
     <span class="key">columnId</span>: Int,
     <span class="key">count</span>: <span class="predefined-type">Long</span>,
     <span class="key">cumulativeCount</span>: <span class="predefined-type">Long</span>
-  ) <span class="directive">extends</span> CategorialColumn &lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+  ) <span class="directive">extends</span> CategoricalColumn &lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
 </span>
 &lt;p&gt;}
 </pre></div>
@@ -227,7 +227,7 @@ sealed trait CategorialColumn {
 
 <h3 id="building-model-matrix-instance">Building Model Matrix Instance</h3>
 
-<p>Model Matrix instance contains information about shape of the training data, what transformations (categorial and binning)
+<p>Model Matrix instance contains information about shape of the training data, what transformations (categorical and binning)
 are required to apply to input data in order to obtain feature vector that will got into machine learning
 algorithm.</p>
 
