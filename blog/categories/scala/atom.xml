@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Scala | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/scala/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2015-07-14T20:06:47-04:00</updated>
+  <updated>2015-07-16T13:41:02-04:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -12,6 +12,435 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Interactive Audience Analytics With Spark and HyperLogLog]]></title>
+    <link href="http://eugenezhulenev.com/blog/2015/07/15/interactive-audience-analytics-with-spark-and-hyperloglog/"/>
+    <updated>2015-07-15T22:07:44-04:00</updated>
+    <id>http://eugenezhulenev.com/blog/2015/07/15/interactive-audience-analytics-with-spark-and-hyperloglog</id>
+    <content type="html"><![CDATA[<p>At <a href="http://collective.com">Collective</a> we are working not only on cool things like 
+<a href="/blog/2015/06/10/2015-06-10-feature-engineering-at-scale">Machine Learning and Predictive Modeling</a>, 
+but also on reporting that can be tedious and boring. However at our scale even simple reporting 
+application can become challenging engineering problem. This post is based on talk that 
+I gave at <a href="http://www.meetup.com/ny-scala/events/223751768/">NY-Scala Meetup</a>. Slides are available <a href="/talks/interactive-audience-analytics/">here</a>.</p>
+
+<!-- more -->
+
+<h2 id="impression-log">Impression Log</h2>
+
+<p>We are building reporting application that is based on impression log. It’s not exactly the way how we get data from out partners,
+it’s pre-aggregated by Ad, Site, Cookie. And even in this pre-aggregated format it takes hundreds of gigabytes per day on HDFS.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+Ad            | Site          | Cookie          | Impressions | Clicks | Segments                     &lt;br /&gt;
+————- |————– | ————— | ———– | —— | ——————————-
+bmw_X5        | forbes.com    | 13e835610ff0d95 | 10          | 1      | [a.m, b.rk, c.rh, d.sn, …] &lt;br /&gt;
+mercedes_2015 | forbes.com    | 13e8360c8e1233d | 5           | 0      | [a.f, b.rk, c.hs, d.mr, …] &lt;br /&gt;
+nokia         | gizmodo.com   | 13e3c97d526839c | 8           | 0      | [a.m, b.tk, c.hs, d.sn, …] &lt;br /&gt;
+apple_music   | reddit.com    | 1357a253f00c0ac | 3           | 1      | [a.m, b.rk, d.sn, e.gh, …] &lt;br /&gt;
+nokia         | cnn.com       | 13b23555294aced | 2           | 1      | [a.f, b.tk, c.rh, d.sn, …] &lt;br /&gt;
+apple_music   | facebook.com  | 13e8333d16d723d | 9           | 1      | [a.m, d.sn, g.gh, s.hr, …] &lt;br /&gt;
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p>Each cookie id has assigned segments which are just 4-6 letters code, that represents some information about cookie, that we
+get from 3rd party data providers such as <a href="http://www.bluekai.com">Blukai</a>.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+- a.m  : Male
+- a.f  : Female
+- b.tk : $75k-$100k annual income
+- b.rk : $100k-$150k annual income
+- c.hs : High School
+- c.rh : College
+- d.sn : Single
+- d.mr : Married
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p>For example if cookie has assigned <code>a.m</code> segment, it means that we think (actually data provider thinks) that this cookie belongs to male.
+The same thing for annual income level. </p>
+
+<p>We don’t have precise information, to whom exactly particular cookie belongs, and what is real
+annual income level, this segments are essentially probabilistic, but we can get very interesting insights from this data.</p>
+
+<h3 id="what-we-can-do-with-this-data">What we can do with this data</h3>
+
+<p>Using this impression log we can answer some interesting questions</p>
+
+<ul>
+  <li>We can calculate a given group’s prevalence in a campaign’s audience, eg. what role do <strong>males</strong> play in the optimized audience for a <strong>Goodyear Tires</strong> campaign?</li>
+  <li>What is <strong>male/female</strong> ratio for people who have seen <strong>bmw_X5</strong> ad on <strong>forbes.com</strong></li>
+  <li>Income distribution for people who have seen Apple Music ad</li>
+  <li>Nokia click distribution across different education levels  </li>
+</ul>
+
+<p>Using this basic questions we can create so called “Audience Profile”, that describes what type of audience is prevailing in optimized campaign or partner web site.</p>
+
+<p><img class="center" src="/talks/interactive-audience-analytics/affinity.png"></p>
+
+<p>Blue bar means that this particular segment tend to view ad/visit web site more than on average, and red bar mean less. For example for <strong>Goodyear Tires</strong> we expect to see
+more <strong>male</strong> audience than <strong>female</strong>.</p>
+
+<h2 id="solving-problem-with-sql">Solving problem with SQL</h2>
+
+<p>SQL looks like an easy choice for this problem, however as I already mentioned we have hundreds of gigabytes of data every day, and we
+need to get numbers based on 1 year history in seconds. Hive/Impala simply can’t solve this problem.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="class">select</span> <span class="predefined">count</span>(<span class="keyword">distinct</span> cookie_id) <span class="keyword">from</span> impressions
+    <span class="keyword">where</span> site = <span class="error">‘</span>forbes.com<span class="error">’</span>
+    <span class="keyword">and</span> ad = <span class="error">‘</span>bmw_X5<span class="error">’</span>
+    <span class="keyword">and</span> segment contains <span class="error">‘</span>a.m<span class="error">’</span>
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p>Unfortunately we have almost infinite combinations of filters that users can define, so it’s not feasible to pre-generate all possible reports.
+Users can use any arbitrary ad, site, campaign, order filter combinations, and may want to know audience intersection with any segment.</p>
+
+<h2 id="audience-cardinality-approximation-with-hyperloglog">Audience cardinality approximation with HyperLogLog</h2>
+
+<p>We came up with different solution, instead of providing precise results for every query, we are providing approximated number, but with
+very high precision. Usually error is around 2% which for this particular application is really good. We don’t need to know exact number of male/female
+cookies in audience. To be able to say what audience is prevailing, approximated numbers are more than enough.</p>
+
+<p>We use <a href="https://en.wikipedia.org/wiki/HyperLogLog">HyperLogLog</a>, which is algorithm for the count-distinct problem, 
+approximating the number of distinct elements (cardinality). It uses finite space and has configurable precision. 
+It able to estimate cardinalities of &gt;10^9 with a typical accuracy of 2%, using 1.5kB of memory.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+trait HyperLogLog {
+    <span class="keyword">def</span> <span class="function">add</span>(<span class="key">cookieId</span>: <span class="predefined-type">String</span>): Unit
+    <span class="comment">//   |A|</span>
+    <span class="keyword">def</span> <span class="function">cardinality</span>(): <span class="predefined-type">Long</span>
+    <span class="comment">//   |A ∪ B|</span>
+    <span class="keyword">def</span> <span class="function">merge</span>(<span class="key">other</span>: HyperLogLog): HyperLogLog
+    <span class="comment">//   |A ∩ B| = |A| + |B| - |A ∪ B|,</span>
+    <span class="keyword">def</span> <span class="function">intersect</span>(<span class="key">other</span>: HyperLogLog): <span class="predefined-type">Long</span>
+}
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p>Here is roughly API that is provided by <code>HyperLogLog</code>. You can add new cookieId to it, get cardinality estimation of unique cookies that were 
+already added to it, merge it with another <code>HyperLogLog</code>, and finally get intersection. It’s important to notice that
+after <code>intersect</code> operation <code>HyperLogLog</code> object is lost, and you have only approximated intersection cardinality. 
+So usually <code>HyperLogLog</code> intersection is the last step in computation.</p>
+
+<p>I suggest you to watch awesome talk by <a href="https://twitter.com/avibryant">Avi Bryant</a> where he discusses not only HyperLogLog but lot’s of other
+approximation data structures that can be useful for big-data analytics: <a href="http://www.infoq.com/presentations/abstract-algebra-analytics">http://www.infoq.com/presentations/abstract-algebra-analytics</a>.</p>
+
+<h2 id="from-cookies-to-hyperloglog">From cookies to HyperLogLog</h2>
+
+<p>We split out original impression log into two tables. </p>
+
+<p>For ad impressions table we remove segment information and aggregate cookies, impressions and clicks by Ad and Site. <code>HyperLogLog</code> can 
+be used in aggregation function exactly the same was as <code>sum</code> operation. Zero is empty <code>HyperLogLog</code>, and plus operation is <code>merge</code> (btw it’s exactly
+properties required by <code>Monoid</code>)</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+Ad            | Site          | Cookies HLL        | Impressions | Clicks 
+————- | ————- | —————— | ———– | —— 
+bmw_X5        | forbes.com    | HyperLogLog@23sdg4 | 5468        | 35   &lt;br /&gt;
+bmw_X5        | cnn.com       | HyperLogLog@84jdg4 | 8943        | 29   &lt;br /&gt;
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p>For segments table we remove ad and site information, and aggregate data by segment.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+Segment       | Cookies HLL        | Impressions | Clicks
+————- | —————— | ———– | ——
+Male          | HyperLogLog@85sdg4 | 235468      | 335 &lt;br /&gt;
+$100k-$150k   | HyperLogLog@35jdg4 | 569473      | 194 &lt;br /&gt;
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<h3 id="percent-of-college-and-high-school-education-in-bmw-campaign">Percent of college and high school education in BMW campaign</h3>
+
+<p>If you imaging that we can load these tables into <code>Seq</code>, then audience intersection becomes really straightforward task, that can
+be solved in couple line of functional scala operations.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="keyword">case</span> <span class="type">class</span> <span class="class">Audience</span>(<span class="key">ad</span>: <span class="predefined-type">String</span>, <span class="key">site</span>: <span class="predefined-type">String</span>, <span class="key">hll</span>: HyperLogLog, <span class="key">imp</span>: <span class="predefined-type">Long</span>, <span class="key">clk</span>: <span class="predefined-type">Long</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">case</span> <span class="type">class</span> <span class="class">Segment</span>(<span class="key">name</span>: <span class="predefined-type">String</span>, <span class="key">hll</span>: HyperLogLog, <span class="key">imp</span>: <span class="predefined-type">Long</span>, <span class="key">clk</span>: <span class="predefined-type">Long</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;val <span class="key">adImpressions</span>: Seq[Audience] = <span class="error">…</span>
+val <span class="key">segmentImpressions</span>: Seq[<span class="predefined-type">Segment</span>] = <span class="error">…</span>&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;val <span class="key">bmwCookies</span>: HyperLogLog = adImpressions
+    .filter(&lt;em&gt;.ad = <span class="error">“</span>bmw_X5<span class="error">”</span>)
+    .map(&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">em&gt;.hll).reduce(_ merge _)&lt;</span><span class="delimiter">/</span></span>p&gt;
+
+&lt;p&gt;val <span class="key">educatedCookies</span>: HyperLogLog = segmentImpressions
+    .filter(&lt;em&gt;.segment <span class="keyword">in</span> Seq(<span class="error">“</span>College<span class="error">”</span>, <span class="error">“</span>High School<span class="error">”</span>))
+    .map(&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">em&gt;.hll).reduce( _ merge _)&lt;</span><span class="delimiter">/</span></span>p&gt;
+
+&lt;p&gt;val p = (bmwCookies intersect educatedCookies) / bmwCookies.count()
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<h2 id="spark-dataframes-with-hyperloglog">Spark DataFrames with HyperLogLog</h2>
+
+<p>Obviously we can’t load all the data into scala <code>Seq</code> on single machine, because it’s huge, even after removing cookie level data
+and transforming it into <code>HyperLogLog</code> objects, it’s around 1-2 gigabytes of data for single day.</p>
+
+<p>So we have to use some distributed data processing framework to solve this problem, and we chose Spark.</p>
+
+<h3 id="what-is-spark-dataframe">What is Spark DataFrame</h3>
+
+<ul>
+  <li>Inspired by R data.frame and Python/Pandas DataFrame</li>
+  <li>Distributed collection of rows organized into named columns</li>
+  <li>Used to be SchemaRDD in Spark &lt; 1.3.0</li>
+</ul>
+
+<h3 id="high-level-dataframe-operations">High-Level DataFrame Operations</h3>
+
+<ul>
+  <li>Selecting required columns</li>
+  <li>Filtering</li>
+  <li>Joining different data sets</li>
+  <li>Aggregation (count, sum, average, etc)</li>
+</ul>
+
+<p>You can start from <a href="https://spark.apache.org/docs/1.3.0/sql-programming-guide.html">Spark DataFrame guide</a> or <a href="https://databricks.com/blog/2015/02/17/introducing-dataframes-in-spark-for-large-scale-data-science.html">DataBricks blog post</a>.</p>
+
+<h3 id="ad-impressions-and-segments-in-dataframes">Ad impressions and segments in DataFrames</h3>
+
+<p>We store all out data on HDFS using Parquet data format, and that’s how it looks after it’s loaded into Spark DataFrame.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+val <span class="key">adImpressions</span>: DataFrame = sqlContext.parquetFile(<span class="error">“</span><span class="regexp"><span class="delimiter">/</span><span class="content">aa</span><span class="delimiter">/</span></span>audience<span class="error">”</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;adImpressions.printSchema()
+<span class="comment">// root</span>
+<span class="comment">//   | – ad: string (nullable = true)</span>
+<span class="comment">//   | – site: string (nullable = true)</span>
+<span class="comment">//   | – hll: binary (nullable = true)</span>
+<span class="comment">//   | – impressions: long (nullable = true)</span>
+<span class="comment">//   | – clicks: long (nullable = true)&lt;/p&gt;</span>
+
+&lt;p&gt;val <span class="key">segmentImpressions</span>: DataFrame = sqlContext.parquetFile(<span class="error">“</span><span class="regexp"><span class="delimiter">/</span><span class="content">aa</span><span class="delimiter">/</span></span>segments<span class="error">”</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;segmentImpressions.printSchema()
+<span class="comment">// root</span>
+<span class="comment">//   | – segment: string (nullable = true)</span>
+<span class="comment">//   | – hll: binary (nullable = true)</span>
+<span class="comment">//   | – impressions: long (nullable = true)</span>
+<span class="comment">//   | – clicks: long (nullable = true)</span>
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p><code>HyperLogLog</code> is essentially huge <code>Array[Byte]</code> with some clever hashing and math, so it’s straightforward to store it on HDFS in serialized form.</p>
+
+<h2 id="working-with-spark-dataframe">Working with Spark DataFrame</h2>
+
+<p>We want to know answer for the same question: “Percent of college and high school education in BMW campaign”.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="keyword">import</span> <span class="include">org.apache.spark.sql.functions._</span>
+<span class="keyword">import</span> <span class="include">org.apache.spark.sql.HLLFunctions._</span>&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;val <span class="key">bmwCookies</span>: HyperLogLog = adImpressions
+    .filter(col(<span class="error">“</span>ad<span class="error">”</span>) === <span class="error">“</span>bmw_X5<span class="error">”</span>)
+    .select(mergeHll(col(<span class="error">“</span>hll<span class="error">”</span>)).first() <span class="comment">// – sum(clicks)&lt;/p&gt;</span>
+
+&lt;p&gt;val <span class="key">educatedCookies</span>: HyperLogLog = hllSegments
+    .filter(col(<span class="error">“</span>segment<span class="error">”</span>) <span class="keyword">in</span> Seq(<span class="error">“</span>College<span class="error">”</span>, <span class="error">“</span>High School<span class="error">”</span>))
+    .select(mergeHll(col(<span class="error">“</span>hll<span class="error">”</span>)).first()&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;val p = (bmwCookies intersect educatedCookies) / bmwCookies.count()
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p>It looks pretty familiar, not too far from example based on scala <code>Seq</code>. Only one unusual operation, that you might notice if you have some
+experience with Spark is <code>mergeHLL</code>. It’s not available in Spark by default, it’s custom <code>PartialAggregate</code> function that can compute aggregates
+for serialized <code>HyperLogLog</code> objects.</p>
+
+<h3 id="writing-your-own-spark-aggregation-function">Writing your own Spark aggregation function</h3>
+
+<p>To write you own aggregation function you need to define function that will be applied to each row in <code>RDD</code> partition, in this example
+it’s called <code>MergeHLLPartition</code>. Then you need to define function that will take results from different partitions and merge them together, for <code>HyperLogLog</code>
+it’s called <code>MergeHLLPartition</code>. And finally you need to tell Spark how you want it to split your computation across <code>RDD</code> (DataFrame is backed by <code>RDD[Row]</code>) </p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="keyword">case</span> <span class="type">class</span> <span class="class">MergeHLLPartition</span>(<span class="key">child</span>: <span class="predefined-type">Expression</span>)
+  <span class="directive">extends</span> AggregateExpression with trees.UnaryNode[<span class="predefined-type">Expression</span>] { <span class="error">…</span> }&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">case</span> <span class="type">class</span> <span class="class">MergeHLLMerge</span>(<span class="key">child</span>: <span class="predefined-type">Expression</span>)
+  <span class="directive">extends</span> AggregateExpression with trees.UnaryNode[<span class="predefined-type">Expression</span>] { <span class="error">…</span> }&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">case</span> <span class="type">class</span> <span class="class">MergeHLL</span>(<span class="key">child</span>: <span class="predefined-type">Expression</span>)
+  <span class="directive">extends</span> PartialAggregate with trees.UnaryNode[<span class="predefined-type">Expression</span>] {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;override <span class="keyword">def</span> <span class="key">asPartial</span>: SplitEvaluation = {
+    val partial = Alias(MergeHLLPartition(child), <span class="error">“</span>PartialMergeHLL<span class="error">”</span>)()&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;pre&gt;&lt;code&gt;SplitEvaluation(
+  MergeHLLMerge(partial.toAttribute),
+  partial :: Nil
+)   } }
+&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">code&gt;&lt;</span><span class="delimiter">/</span></span>pre&gt;
+
+&lt;p&gt;<span class="keyword">def</span> <span class="function">mergeHLL</span>(<span class="key">e</span>: Column): Column = MergeHLL(e.expr)
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p>After that writing aggregations becomes really easy task, and your expressions will look like “native” DataFrame code, which is really nice, and super
+easy to read and reason about. </p>
+
+<p>Also it works much faster then solving this problem with scala transformations on top of <code>RDD[Row]</code>, as Spark catalyst optimizer can executed optimized
+plan and reduce amount of data that needs to be shuffled between spark nodes.</p>
+
+<p>And finally it’s so much easier to manage mutable state. Spark encourage you to use immutable transformations, and it’s really cool until you need
+extreme performance from your code. For example if you are using something like <code>reduce</code> or <code>aggregateByKey</code> you don’t really know when and where
+your function instantiated and when it’s done with <code>RDD</code> partition and result transferred to another Spark node for merge operation. With <code>AggregateExpression</code> 
+you have explicit control over mutable state, and it’s totally safe to accumulate mutable state during execution for single partition, and at the end when
+you’ll need to send data to other node you can create immutable copy.</p>
+
+<p>In this particular case using mutable <code>HyperLogLog</code> merge implementation helped to speed up computation time almost 10x times. For each partition <code>HyperLogLog</code> state
+accumulated in single mutable <code>Array[Byte]</code> and at the end when data needs to be transferred somewhere else for merging with another partition, immutable copy is created.</p>
+
+<h3 id="some-fancy-aggregates-with-dataframe-api">Some fancy aggregates with DataFrame Api</h3>
+
+<p>You can write much more complicated aggregation functions, for example to compute aggregate based on multiple columns. Here is code sample from 
+our audience analytics project.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">case</span> <span class="type">class</span> <span class="class">SegmentEstimate</span>(<span class="key">cookieHLL</span>: HyperLogLog, <span class="key">clickHLL</span>: HyperLogLog)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;type SegmentName = <span class="predefined-type">String</span>&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;val <span class="key">dailyEstimates</span>: RDD[(SegmentName, <span class="predefined-type">Map</span>[LocalDate, SegmentEstimate])] =
+    segments.groupBy(segment_name).agg(
+      segment_name,
+      mergeDailySegmentEstimates(
+        mkDailySegmentEstimate(      <span class="comment">// – Map[LocalDate, SegmentEstimate]</span>
+          dt,
+          mkSegmentEstimate(         <span class="comment">// – SegmentEstimate(cookieHLL, clickHLL)</span>
+            cookie_hll,
+            click_hll)
+        )
+      )
+    )
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p>This codes computes daily audience aggregated by segment. Using Spark <code>PartialAggregate</code> function 
+saves a lot of network traffic and minimizes distributed shuffle size. </p>
+
+<p>This aggregation is possible because of nice properties of <code>Monoid</code></p>
+
+<ul>
+  <li><code>HyperLogLog</code> is a <code>Monoid</code> (has <code>zero</code> and <code>plus</code> operations)</li>
+  <li><code>SegmentEstimate</code> is a <code>Monoid</code> (tuple of two monoids)</li>
+  <li><code>Map[K, SegmentEstimate]</code> is a <code>Monoid</code> (map with value monoid value type is monoid itself)</li>
+</ul>
+
+<h3 id="problems-with-custom-aggregation-functions">Problems with custom aggregation functions</h3>
+
+<ul>
+  <li>Right now it’s closed API, so you need to place all your code under <code>org.apache.spark.sql</code> package.</li>
+  <li>It’s no guarantee that it will work in next Spark release.</li>
+  <li>If you want to try, I suggest you to start with <code>org.apache.spark.sql.catalyst.expressions.Sum</code> as example.</li>
+</ul>
+
+<h2 id="spark-as-in-memory-sql-database">Spark as in-memory SQL database</h2>
+
+<p>We use Spark as in-memory database that serves SQL (composed with DataFrame Api) queries. </p>
+
+<p>People tend to think about spark with very batch oriented mindset. Start Spark cluster in Yarn, do computation, kill cluster. Submit you application to 
+standalone Spark cluster (Mesos), kill it. Biggest problem with this approach that after your application is done, and JVM is killed, <code>SparkContext</code> is lost,
+and even if you are running Spark in standalone mode, all data cached by your application is lost.</p>
+
+<p>We use Spark in totally different way. We start Spark cluster in Yarn, load data to it from HDFS, cache it in memory, and <strong>do not shutdown</strong>. We
+keep JVM running, it holds a reference to <code>SparkContext</code> and keeps all the data in memory on worker nodes.</p>
+
+<p>Our backend application is essentially very simpre REST/JSON server built with Spray, that holds <code>SparkContext</code> reference, receive requests via
+URL parameters, runs queries in Spark and return response in JSON.</p>
+
+<p>Right now (July 2015) we have data starting from April, and it’s around 100g cached in 40 nodes. We need to keep 1 year history, so we don’t expect
+more than 500g. And we are very confident that we can scale horizontally without seriously affecting performance. Right now average 
+request response time is 1-2 seconds which is really good for our use case.</p>
+
+<h2 id="spark-best-practices">Spark Best practices</h2>
+
+<p>Here are configuration options that I found really useful for our specific task. You can find more details about each of them in Spark guide.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+- spark.scheduler.mode=FAIR
+- spark.yarn.executor.memoryOverhead=4000
+- spark.sql.autoBroadcastJoinThreshold=300000000 // ~300mb
+- spark.serializer=org.apache.spark.serializer.KryoSerializer
+- spark.speculation=true
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p>Also I found that it’s really important to repartition your dataset if you are going to cache it and use for queries. Optimal number of partitions is
+around 4-6 for each executor core, with 40 nodes and 6 executor cores we use 1000 partitions for best performance.</p>
+
+<p>If you have too many partitions Spark will spend too much time for coordination, and receiving results from all partitions. If too small, you might have
+problems with too big block during shuffle that can kill not only performance, but all your cluster: <a href="https://issues.apache.org/jira/browse/SPARK-1476">SPARK-1476</a></p>
+
+<h2 id="other-options">Other Options</h2>
+
+<p>Before starting this project we were evaluating some other options</p>
+
+<h3 id="hive">Hive</h3>
+
+<p>Obviously it’s too slow for interactive UI backend, but we found it really useful for batch data processing. We use it to process raw logs
+and build aggregated tables with <code>HyperLogLog</code> inside.</p>
+
+<h3 id="impala">Impala</h3>
+
+<p>To get good performance out of Impala it’s required to right C++ user defined functions, and it’s was not the task that I wanted to do. Also 
+I’m not confident that even with custom C++ function Impala can show performance that we need.</p>
+
+<h4 id="druid">Druid</h4>
+
+<p><a href="http://druid.io/">Druid</a> is really interesting project, and it’s used in another project at Collective for slightly different problem, 
+but it’s not in production yet.</p>
+
+<ul>
+  <li>Managing separate Druid cluster - it’s not the task that I want to do</li>
+  <li>We have batch oriented process - and druid data ingestion is stream based</li>
+  <li>Bad support for some of type of queries that we need - if I need to know intersection of some particular ad with all segments, in case of druid it will be 10k (number of segments) queries, and it will obviously fail to complete in 1-2 seconds </li>
+  <li>Not clear how get data back from Druid - it’s hard to get data back from Druid later, if it will turn out that it doesn’t solve out problems well</li>
+</ul>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>Spark is Awesome! I didn’t have any major issues with it, and it just works! New DataFrame API is amazing, and we are going to build lot’s of new cool projects at Collective
+with Spar MLLib and GraphX, and I’m pretty sure they all will be successful.</p>
+
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Feature Engineering at Scale With Spark]]></title>
@@ -1249,474 +1678,6 @@ in standalone Apache Spark, you need to override <code>spark.master</code> with 
 <blockquote>
   <p>The code for this application app can be found on <a href="https://github.com/ezhulenev/spark-testing">Github</a></p>
 </blockquote>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Akka Cluster for Value at Risk Calculation (Part 2/2)]]></title>
-    <link href="http://eugenezhulenev.com/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2/"/>
-    <updated>2014-05-01T22:03:45-04:00</updated>
-    <id>http://eugenezhulenev.com/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2</id>
-    <content type="html"><![CDATA[<h3 id="synopsis">Synopsis</h3>
-
-<blockquote>
-  <p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/akka-var-calculation">Github</a></p>
-</blockquote>
-
-<p>Risk Management in finance is one of the most common <a href="http://www.gridgain.com/usecases/risk-management/">case studies</a>
-for Grid Computing, and Value-at-Risk is most widely used risk measure.
-In this article I’m going to show how to <code>scale-out</code> Value-at-Risk calculation to multiple nodes with latest <a href="http://akka.io">Akka</a> middleware.
-In Part 1 I’m describing the problem and <code>single-node</code> solution, and in Part 2 I’m scaling it to multiple nodes.</p>
-
-<h2 id="part-22-scale-out-var-calculation-to-multiple-nodes">[Part 2/2] Scale-out VaR calculation to multiple nodes</h2>
-
-<p>Go to <a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1">Part 1</a> where Value at Risk calculator defined.</p>
-
-<!-- more -->
-
-<h3 id="akka-cluster">Akka Cluster</h3>
-
-<p>Akka is amazing library for Actors abstraction for Scala and Java.</p>
-
-<blockquote>
-  <p>Actors are location transparent and distributable by design. This means that you can write your application without hardcoding how it will be deployed and distributed, and then later just configure your actor system against a certain topology <a href="http://doc.akka.io/docs/akka/snapshot/general/remoting.html">…</a></p>
-</blockquote>
-
-<p>Akka Cluster provides a fault-tolerant decentralized peer-to-peer based cluster membership service with no single point of failure or single point of bottleneck. It does this using gossip protocols and an automatic failure detector.</p>
-
-<p>It means that it’s very easy to distribute portfolio simulations to multiple nodes.</p>
-
-<h3 id="messages">Messages</h3>
-
-<p>Messages that are passed around between backend &amp; calculator nodes:</p>
-
-<p><div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">object</span> <span class="nc">messages</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">case</span> <span class="k">object</span> <span class="nc">WakeUp</span><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">case</span> <span class="k">object</span> <span class="nc">RegisterBackend</span><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">case</span> <span class="k">class</span> <span class="nc">RunSimulation</span><span class="o">(</span><span class="n">positions</span><span class="k">:</span> <span class="kt">List</span><span class="o">[</span><span class="kt">Position</span><span class="o">],</span>
-</span><span class='line'>                           <span class="n">simulations</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span>
-</span><span class='line'>                           <span class="n">generator</span><span class="k">:</span> <span class="kt">MarketFactorsGenerator</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">case</span> <span class="k">class</span> <span class="nc">SimulationResponse</span><span class="o">(</span><span class="n">v</span><span class="k">:</span> <span class="kt">Vector</span><span class="o">[</span><span class="kt">Double</span><span class="o">])</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div></p>
-
-<h3 id="simulation-backend-node">Simulation Backend Node</h3>
-
-<p>First type of node in a cluster is SimulationNode that is going to run all ‘heavy’ portfolio price simulations.</p>
-
-<p>After joining the cluster it subscribes for all <code>MemberUp</code> messages, and when new node with role <code>calculator</code> joins the cluster, it register itself as available backend.</p>
-
-<p><div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-<span class='line-number'>43</span>
-<span class='line-number'>44</span>
-<span class='line-number'>45</span>
-<span class='line-number'>46</span>
-<span class='line-number'>47</span>
-<span class='line-number'>48</span>
-<span class='line-number'>49</span>
-<span class='line-number'>50</span>
-<span class='line-number'>51</span>
-<span class='line-number'>52</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">class</span> <span class="nc">PortfolioValueSimulationBackend</span> <span class="k">extends</span> <span class="nc">Actor</span> <span class="k">with</span> <span class="nc">ActorLogging</span> <span class="o">{&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">private</span> <span class="k">val</span> <span class="n">cluster</span> <span class="k">=</span> <span class="nc">Cluster</span><span class="o">(</span><span class="n">context</span><span class="o">.</span><span class="n">system</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">override</span> <span class="k">def</span> <span class="n">preStart</span><span class="o">()</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="n">cluster</span><span class="o">.</span><span class="n">subscribe</span><span class="o">(</span><span class="n">self</span><span class="o">,</span> <span class="n">classOf</span><span class="o">[</span><span class="kt">MemberUp</span><span class="o">])&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">override</span> <span class="k">def</span> <span class="n">postStop</span><span class="o">()</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span> <span class="n">cluster</span><span class="o">.</span><span class="n">unsubscribe</span><span class="o">(</span><span class="n">self</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">def</span> <span class="n">receive</span> <span class="k">=</span> <span class="o">{</span>
-</span><span class='line'>    <span class="k">case</span> <span class="nc">RunSimulation</span><span class="o">(</span><span class="n">portfolio</span><span class="o">,</span> <span class="n">simulations</span><span class="o">,</span> <span class="n">generator</span><span class="o">)</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span>
-</span><span class='line'>      <span class="n">runSimulation</span><span class="o">(</span>
-</span><span class='line'>        <span class="nc">Portfolio</span><span class="o">(</span><span class="n">nel</span><span class="o">(</span><span class="n">portfolio</span><span class="o">.</span><span class="n">head</span><span class="o">,</span> <span class="n">portfolio</span><span class="o">.</span><span class="n">tail</span><span class="o">)),</span>
-</span><span class='line'>        <span class="n">simulations</span><span class="o">,</span> <span class="n">generator</span>
-</span><span class='line'>      <span class="o">)</span> <span class="n">pipeTo</span> <span class="n">sender</span><span class="o">()&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span><span class="k">case</span> <span class="n">state</span><span class="k">:</span> <span class="kt">CurrentClusterState</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span>
-</span><span class='line'>  <span class="n">state</span><span class="o">.</span><span class="n">members</span><span class="o">.</span><span class="n">filter</span><span class="o">(</span><span class="k">_</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="nc">MemberStatus</span><span class="o">.</span><span class="nc">Up</span><span class="o">)</span> <span class="n">foreach</span> <span class="n">register</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">case</span> <span class="nc">MemberUp</span><span class="o">(</span><span class="n">member</span><span class="o">)</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span>
-</span><span class='line'>  <span class="n">register</span><span class="o">(</span><span class="n">member</span><span class="o">)</span>   <span class="o">}</span>
-</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">private</span> <span class="k">def</span> <span class="n">register</span><span class="o">(</span><span class="n">member</span><span class="k">:</span> <span class="kt">Member</span><span class="o">)</span><span class="k">:</span> <span class="kt">Unit</span> <span class="o">=</span>
-</span><span class='line'>    <span class="k">if</span> <span class="o">(</span><span class="n">member</span><span class="o">.</span><span class="n">hasRole</span><span class="o">(</span><span class="err">“</span><span class="n">calculator</span><span class="err">”</span><span class="o">))</span> <span class="o">{</span>
-</span><span class='line'>      <span class="k">val</span> <span class="n">memberRoot</span> <span class="k">=</span> <span class="nc">RootActorPath</span><span class="o">(</span><span class="n">member</span><span class="o">.</span><span class="n">address</span><span class="o">)</span>
-</span><span class='line'>      <span class="k">val</span> <span class="n">backendManager</span> <span class="k">=</span>
-</span><span class='line'>        <span class="n">context</span><span class="o">.</span><span class="n">actorSelection</span><span class="o">(</span><span class="n">memberRoot</span> <span class="o">/</span> <span class="err">“</span><span class="n">user</span><span class="err">”</span> <span class="o">/</span> <span class="err">“</span><span class="n">backendManager</span><span class="err">”</span><span class="o">)</span>
-</span><span class='line'>      <span class="n">backendManager</span> <span class="o">!</span> <span class="nc">RegisterBackend</span>
-</span><span class='line'>    <span class="o">}&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">private</span> <span class="k">def</span> <span class="n">runSimulation</span><span class="o">(</span><span class="n">portfolio</span><span class="k">:</span> <span class="kt">Portfolio</span><span class="o">,</span>
-</span><span class='line'>        <span class="n">simulations</span><span class="k">:</span> <span class="kt">Int</span><span class="o">,</span>
-</span><span class='line'>        <span class="n">generator</span><span class="k">:</span> <span class="kt">MarketFactorsGenerator</span><span class="o">)</span><span class="k">:</span> <span class="kt">Future</span><span class="o">[</span><span class="kt">SimulationResponse</span><span class="o">]</span> <span class="k">=</span> <span class="o">{&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span><span class="k">val</span> <span class="n">process</span> <span class="k">=</span> <span class="n">generator</span><span class="o">.</span><span class="n">factors</span><span class="o">.</span><span class="n">take</span><span class="o">(</span><span class="n">simulations</span><span class="o">).</span><span class="n">map</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">implicit</span> <span class="n">factors</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span>
-</span><span class='line'>    <span class="nc">PortfolioPricer</span><span class="o">.</span><span class="n">price</span><span class="o">(</span><span class="n">portfolio</span><span class="o">).</span>
-</span><span class='line'>        <span class="n">fold</span><span class="o">(</span><span class="n">err</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span> <span class="n">sys</span><span class="o">.</span><span class="n">error</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;Failure: $err&quot;</span><span class="o">),</span> <span class="n">identity</span><span class="o">)</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">task</span> <span class="k">=</span> <span class="nc">Task</span><span class="o">.</span><span class="n">fork</span> <span class="o">{</span>
-</span><span class='line'>  <span class="n">process</span><span class="o">.</span><span class="n">runLog</span><span class="o">.</span><span class="n">map</span><span class="o">(</span><span class="n">portfolioValues</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span> <span class="n">portfolioValues</span><span class="o">.</span><span class="n">toVector</span><span class="o">)</span>
-</span><span class='line'><span class="o">}(</span><span class="n">executor</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">val</span> <span class="n">p</span> <span class="k">=</span> <span class="nc">Promise</span><span class="o">[</span><span class="kt">SimulationResponse</span><span class="o">]()</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">task</span><span class="o">.</span><span class="n">runAsync</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">case</span> <span class="o">-\/(</span><span class="n">err</span><span class="o">)</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span> <span class="n">p</span><span class="o">.</span><span class="n">failure</span><span class="o">(</span><span class="n">err</span><span class="o">)</span>
-</span><span class='line'>  <span class="k">case</span> <span class="o">\/-(</span><span class="n">result</span><span class="o">)</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span> <span class="n">p</span><span class="o">.</span><span class="n">success</span><span class="o">(</span><span class="nc">SimulationResponse</span><span class="o">(</span><span class="n">result</span><span class="o">))</span>
-</span><span class='line'><span class="o">}</span>
-</span><span class='line'>
-</span><span class='line'><span class="n">p</span><span class="o">.</span><span class="n">future</span>   <span class="o">}</span> <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
-</code></pre>
-
-<h3 id="calculator-node">Calculator Node</h3>
-
-<p>Calculator node joins the cluster, and receive <code>RegisterBackend</code> messages from simulation nodes. It keeps track of all available simulation backend nodes, and when gets a request to calculate market risk,
-it splits this request into multiple simulation tasks and send them to all available simulation backends.</p>
-
-<h5 id="backend-nodes-manager">Backend Nodes Manager</h5>
-
-<p><div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">class</span> <span class="nc">BackendNodesManager</span> <span class="k">extends</span> <span class="nc">Actor</span> <span class="k">with</span> <span class="nc">ActorLogging</span> <span class="o">{&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">private</span><span class="o">[</span><span class="kt">this</span><span class="o">]</span> <span class="k">val</span> <span class="n">backendNodes</span> <span class="k">=</span> <span class="nc">ListBuffer</span><span class="o">.</span><span class="n">empty</span><span class="o">[</span><span class="kt">ActorRef</span><span class="o">]</span>
-</span><span class='line'>  <span class="k">private</span><span class="o">[</span><span class="kt">this</span><span class="o">]</span> <span class="k">var</span> <span class="n">jobCounter</span> <span class="k">=</span> <span class="mi">0</span><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">private</span><span class="o">[</span><span class="kt">this</span><span class="o">]</span> <span class="k">implicit</span> <span class="k">val</span> <span class="n">timeout</span> <span class="k">=</span> <span class="nc">Timeout</span><span class="o">(</span><span class="mf">10.</span><span class="n">seconds</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">override</span> <span class="k">def</span> <span class="n">receive</span><span class="k">:</span> <span class="kt">Receive</span> <span class="o">=</span> <span class="o">{</span>
-</span><span class='line'>    <span class="k">case</span> <span class="nc">WakeUp</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span> <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="o">(</span><span class="err">“</span><span class="nc">Wake</span> <span class="n">up</span> <span class="n">backend</span> <span class="n">nodes</span> <span class="n">manager</span><span class="err">”</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span><span class="k">case</span> <span class="n">run</span><span class="k">:</span> <span class="kt">RunSimulation</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span>
-</span><span class='line'>  <span class="n">jobCounter</span> <span class="o">+=</span> <span class="mi">1</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">backendN</span> <span class="k">=</span> <span class="n">jobCounter</span> <span class="o">%</span> <span class="n">backendNodes</span><span class="o">.</span><span class="n">size</span>
-</span><span class='line'>  <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;Pass simulation request to backend: $backendN&quot;</span><span class="o">)</span>
-</span><span class='line'>  <span class="n">backendNodes</span><span class="o">(</span><span class="n">backendN</span><span class="o">)</span> <span class="o">?</span> <span class="n">run</span> <span class="n">pipeTo</span> <span class="n">sender</span><span class="o">()</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">case</span> <span class="nc">RegisterBackend</span> <span class="k">if</span> <span class="o">!</span><span class="n">backendNodes</span><span class="o">.</span><span class="n">contains</span><span class="o">(</span><span class="n">sender</span><span class="o">())</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span>
-</span><span class='line'>  <span class="n">context</span> <span class="n">watch</span> <span class="n">sender</span><span class="o">()</span>
-</span><span class='line'>  <span class="n">backendNodes</span> <span class="o">+=</span> <span class="n">sender</span><span class="o">()</span>
-</span><span class='line'>  <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;Added new backend. &quot;</span><span class="o">+</span>
-</span><span class='line'>            <span class="n">s</span><span class="s">&quot;Total: ${backendNodes.size}. Node: [${sender()}}]&quot;</span><span class="o">)</span>
-</span><span class='line'>
-</span><span class='line'><span class="k">case</span> <span class="nc">Terminated</span><span class="o">(</span><span class="n">backEnd</span><span class="o">)</span> <span class="k">if</span> <span class="n">backendNodes</span><span class="o">.</span><span class="n">contains</span><span class="o">(</span><span class="n">backEnd</span><span class="o">)</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span>
-</span><span class='line'>  <span class="n">backendNodes</span> <span class="o">-=</span> <span class="n">sender</span><span class="o">()</span>
-</span><span class='line'>  <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="o">(</span><span class="n">s</span><span class="s">&quot;Removed terminated backend. &quot;</span><span class="o">+</span>
-</span><span class='line'>            <span class="n">s</span><span class="s">&quot;Total: ${backendNodes.size}. &quot;</span><span class="o">+</span>
-</span><span class='line'>            <span class="n">s</span><span class="s">&quot;Terminated node: [${sender()}}]&quot;</span><span class="o">)</span>   <span class="o">}</span> <span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div>
-</code></pre>
-
-<h5 id="cluster-portfolio-value-simulation">Cluster Portfolio Value Simulation</h5>
-
-<p>Simulation channel constructed by <code>asking</code> backend simulation actors to run simulation and converting <code>scala.concurrent.Future</code> to <code>scalaz.concurrent.Task</code>. Concurrency management and split factor is defined
-in abstract monte carlo risk calculator described in <a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1">Part 1</a></p>
-
-<p><div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">trait</span> <span class="nc">ClusterPortfolioValueSimulation</span> <span class="k">extends</span> <span class="nc">PortfolioValueSimulation</span> <span class="o">{</span>
-</span><span class='line'>  <span class="n">self</span><span class="k">:</span> <span class="kt">MarketFactorsModule</span> <span class="kt">with</span> <span class="kt">MonteCarloMarketRiskCalculator</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">def</span> <span class="n">systemName</span><span class="k">:</span> <span class="kt">String&lt;/p&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">def</span> <span class="n">systemConfig</span><span class="k">:</span> <span class="kt">Config&lt;/p&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">private</span><span class="o">[</span><span class="kt">this</span><span class="o">]</span> <span class="k">lazy</span> <span class="k">val</span> <span class="n">system</span> <span class="k">=</span> <span class="nc">ActorSystem</span><span class="o">(</span><span class="n">systemName</span><span class="o">,</span> <span class="n">systemConfig</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">private</span><span class="o">[</span><span class="kt">this</span><span class="o">]</span> <span class="k">lazy</span> <span class="k">val</span> <span class="n">backendManager</span> <span class="k">=</span>
-</span><span class='line'>    <span class="n">system</span><span class="o">.</span><span class="n">actorOf</span><span class="o">(</span><span class="nc">Props</span><span class="o">[</span><span class="kt">BackendNodesManager</span><span class="o">],</span> <span class="err">“</span><span class="n">backendManager</span><span class="err">”</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">def</span> <span class="n">simulation</span><span class="o">(</span><span class="n">portfolio</span><span class="k">:</span> <span class="kt">Portfolio</span><span class="o">,</span> <span class="n">simulations</span><span class="k">:</span> <span class="kt">Int</span><span class="o">)</span> <span class="k">=</span>
-</span><span class='line'>    <span class="n">channel</span><span class="o">[</span><span class="kt">MarketFactorsGenerator</span>, <span class="kt">Simulations</span><span class="o">]</span> <span class="o">{</span> <span class="n">generator</span> <span class="o">=&amp;</span><span class="n">gt</span><span class="o">;</span>
-</span><span class='line'>      <span class="nc">Task</span><span class="o">.</span><span class="n">async</span><span class="o">&lt;</span><span class="n">a</span> <span class="n">href</span><span class="o">=</span><span class="s">&quot;cb =&amp;gt; {</span>
-</span><span class='line'><span class="s">        (backendManager ? RunSimulation(...)).onComplete {</span>
-</span><span class='line'><span class="s">          case Failure(err)                   =&amp;gt; cb(-\/(err))</span>
-</span><span class='line'><span class="s">          case Success(SimulationResponse(s)) =&amp;gt; cb(\/-(Simulations(s)))</span>
-</span><span class='line'><span class="s">          case Success(u)                     =&amp;gt;</span>
-</span><span class='line'><span class="s">            cb(-\/(new IllegalStateException(s&amp;quot;Unknown response: $u&amp;quot;)))</span>
-</span><span class='line'><span class="s">        }</span>
-</span><span class='line'><span class="s">      }&quot;</span><span class="o">&gt;</span><span class="nc">Simulations</span><span class="o">&lt;/</span><span class="n">a</span><span class="o">&gt;</span>
-</span><span class='line'>  <span class="o">}</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div></p>
-
-<h3 id="run-calculation-in-cluster">Run Calculation in Cluster</h3>
-
-<p>In this example I’m going to run all nodes in a single JVM for simplicity. Distributed deployment is only Akka configuration issue, and it doesn’t affect the code at all.</p>
-
-<p>I’m starting three <code>simulation backend</code> nodes in a cluster, and later join them with <code>calculator</code> node, and submit risk calculation task.</p>
-
-<p><div class='bogus-wrapper'><notextile><figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-<span class='line-number'>20</span>
-<span class='line-number'>21</span>
-<span class='line-number'>22</span>
-<span class='line-number'>23</span>
-<span class='line-number'>24</span>
-<span class='line-number'>25</span>
-<span class='line-number'>26</span>
-<span class='line-number'>27</span>
-<span class='line-number'>28</span>
-<span class='line-number'>29</span>
-<span class='line-number'>30</span>
-<span class='line-number'>31</span>
-<span class='line-number'>32</span>
-<span class='line-number'>33</span>
-<span class='line-number'>34</span>
-<span class='line-number'>35</span>
-<span class='line-number'>36</span>
-<span class='line-number'>37</span>
-<span class='line-number'>38</span>
-<span class='line-number'>39</span>
-<span class='line-number'>40</span>
-<span class='line-number'>41</span>
-<span class='line-number'>42</span>
-<span class='line-number'>43</span>
-<span class='line-number'>44</span>
-<span class='line-number'>45</span>
-<span class='line-number'>46</span>
-<span class='line-number'>47</span>
-<span class='line-number'>48</span>
-<span class='line-number'>49</span>
-<span class='line-number'>50</span>
-<span class='line-number'>51</span>
-<span class='line-number'>52</span>
-<span class='line-number'>53</span>
-<span class='line-number'>54</span>
-<span class='line-number'>55</span>
-<span class='line-number'>56</span>
-<span class='line-number'>57</span>
-<span class='line-number'>58</span>
-<span class='line-number'>59</span>
-<span class='line-number'>60</span>
-<span class='line-number'>61</span>
-<span class='line-number'>62</span>
-<span class='line-number'>63</span>
-<span class='line-number'>64</span>
-<span class='line-number'>65</span>
-<span class='line-number'>66</span>
-<span class='line-number'>67</span>
-<span class='line-number'>68</span>
-<span class='line-number'>69</span>
-<span class='line-number'>70</span>
-<span class='line-number'>71</span>
-<span class='line-number'>72</span>
-</pre></td><td class='code'><pre><code class='scala'><span class='line'><span class="k">object</span> <span class="nc">ClusterMarketRiskCalculation</span> <span class="k">extends</span> <span class="nc">App</span> <span class="o">{</span>
-</span><span class='line'>  <span class="k">val</span> <span class="nc">SystemName</span> <span class="k">=</span> <span class="err">“</span><span class="nc">ClusterMarketRiskCalculation</span><span class="err">”</span><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">val</span> <span class="n">simulationConfig</span> <span class="k">=</span> <span class="nc">ConfigFactory</span><span class="o">.</span><span class="n">parseResources</span><span class="o">(</span><span class="err">“</span><span class="n">simulation</span><span class="o">-</span><span class="n">node</span><span class="o">.</span><span class="n">conf</span><span class="err">”</span><span class="o">)</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">calculatorConfig</span> <span class="k">=</span> <span class="nc">ConfigFactory</span><span class="o">.</span><span class="n">parseResources</span><span class="o">(</span><span class="err">“</span><span class="n">calculator</span><span class="o">-</span><span class="n">node</span><span class="o">.</span><span class="n">conf</span><span class="err">”</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;//</span> <span class="nc">Start</span> <span class="mi">3</span> <span class="n">simulation</span> <span class="n">nodes</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">system1</span>  <span class="k">=</span> <span class="nc">ActorSystem</span><span class="o">(</span><span class="nc">SystemName</span><span class="o">,</span> <span class="n">simulationConfig</span><span class="o">)</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">joinAddress</span> <span class="k">=</span> <span class="nc">Cluster</span><span class="o">(</span><span class="n">system1</span><span class="o">).</span><span class="n">selfAddress</span>
-</span><span class='line'>  <span class="nc">Cluster</span><span class="o">(</span><span class="n">system1</span><span class="o">).</span><span class="n">join</span><span class="o">(</span><span class="n">joinAddress</span><span class="o">)</span>
-</span><span class='line'>  <span class="n">system1</span><span class="o">.</span><span class="n">actorOf</span><span class="o">(</span><span class="nc">Props</span><span class="o">[</span><span class="kt">PortfolioValueSimulationBackend</span><span class="o">],</span> <span class="err">“</span><span class="n">simulationBackend</span><span class="err">”</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">val</span> <span class="n">system2</span>  <span class="k">=</span> <span class="nc">ActorSystem</span><span class="o">(</span><span class="nc">SystemName</span><span class="o">,</span> <span class="n">simulationConfig</span><span class="o">)</span>
-</span><span class='line'>  <span class="nc">Cluster</span><span class="o">(</span><span class="n">system2</span><span class="o">).</span><span class="n">join</span><span class="o">(</span><span class="n">joinAddress</span><span class="o">)</span>
-</span><span class='line'>  <span class="n">system2</span><span class="o">.</span><span class="n">actorOf</span><span class="o">(</span><span class="nc">Props</span><span class="o">[</span><span class="kt">PortfolioValueSimulationBackend</span><span class="o">],</span> <span class="err">“</span><span class="n">simulationBackend</span><span class="err">”</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">val</span> <span class="n">system3</span>  <span class="k">=</span> <span class="nc">ActorSystem</span><span class="o">(</span><span class="nc">SystemName</span><span class="o">,</span> <span class="n">simulationConfig</span><span class="o">)</span>
-</span><span class='line'>  <span class="nc">Cluster</span><span class="o">(</span><span class="n">system3</span><span class="o">).</span><span class="n">join</span><span class="o">(</span><span class="n">joinAddress</span><span class="o">)</span>
-</span><span class='line'>  <span class="n">system3</span><span class="o">.</span><span class="n">actorOf</span><span class="o">(</span><span class="nc">Props</span><span class="o">[</span><span class="kt">PortfolioValueSimulationBackend</span><span class="o">],</span> <span class="err">“</span><span class="n">simulationBackend</span><span class="err">”</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;//</span> <span class="nc">Start</span> <span class="nc">Cluster</span> <span class="nc">Risk</span> <span class="nc">Calculator</span> <span class="n">node</span>
-</span><span class='line'>  <span class="k">object</span> <span class="nc">RiskCalculator</span>
-</span><span class='line'>    <span class="k">extends</span> <span class="nc">MonteCarloMarketRiskCalculator</span><span class="o">(</span><span class="mi">10000</span><span class="o">,</span> <span class="mi">10</span><span class="o">)</span>
-</span><span class='line'>    <span class="k">with</span> <span class="nc">ClusterPortfolioValueSimulation</span>
-</span><span class='line'>    <span class="k">with</span> <span class="nc">HistoricalMarketFactors</span> <span class="k">with</span> <span class="nc">HistoricalMarketData</span> <span class="o">{&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">pre</span><span class="o">&gt;&lt;</span><span class="n">code</span><span class="o">&gt;</span><span class="k">val</span> <span class="n">systemName</span> <span class="k">=</span> <span class="nc">SystemName</span>
-</span><span class='line'><span class="k">val</span> <span class="n">systemConfig</span> <span class="k">=</span> <span class="n">calculatorConfig</span>   <span class="o">}</span>
-</span><span class='line'><span class="o">&lt;/</span><span class="n">code</span><span class="o">&gt;&lt;/</span><span class="n">pre</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="nc">RiskCalculator</span><span class="o">.</span><span class="n">join</span><span class="o">(</span><span class="n">joinAddress</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;//</span> <span class="nc">Let</span><span class="err">’</span><span class="n">s</span> <span class="n">cluster</span> <span class="n">state</span> <span class="n">some</span> <span class="n">time</span> <span class="n">to</span> <span class="n">converge</span>
-</span><span class='line'>  <span class="nc">Thread</span><span class="o">.</span><span class="n">sleep</span><span class="o">(</span><span class="mi">2000</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;//</span> <span class="nc">Run</span> <span class="nc">VaR</span> <span class="n">calculation</span><span class="o">&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">val</span> <span class="nc">AMZN</span> <span class="k">=</span> <span class="nc">Equity</span><span class="o">(</span><span class="err">“</span><span class="nc">AMZN</span><span class="err">”</span><span class="o">)</span>
-</span><span class='line'>  <span class="k">val</span> <span class="nc">AAPL</span> <span class="k">=</span> <span class="nc">Equity</span><span class="o">(</span><span class="err">“</span><span class="nc">AAPL</span><span class="err">”</span><span class="o">)</span>
-</span><span class='line'>  <span class="k">val</span> <span class="nc">IBM</span> <span class="k">=</span> <span class="nc">Equity</span><span class="o">(</span><span class="err">“</span><span class="nc">IBM</span><span class="err">”</span><span class="o">)</span>
-</span><span class='line'>  <span class="k">val</span> <span class="nc">GS</span> <span class="k">=</span> <span class="nc">Equity</span><span class="o">(</span><span class="err">“</span><span class="nc">GS</span><span class="err">”</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;//</span> <span class="nc">Portfolio</span> <span class="n">evaluation</span> <span class="n">date</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">date</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">LocalDate</span><span class="o">(</span><span class="mi">2014</span><span class="o">,</span> <span class="mi">1</span><span class="o">,</span> <span class="mi">3</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;//</span> <span class="nc">Options</span> <span class="n">maturity</span> <span class="n">date</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">maturityDate</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">LocalDate</span><span class="o">(</span><span class="mi">2014</span><span class="o">,</span> <span class="mi">3</span><span class="o">,</span> <span class="mi">31</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">val</span> <span class="n">portfolio</span> <span class="k">=</span> <span class="nc">Portfolio</span><span class="o">(</span><span class="n">nels</span><span class="o">(</span>
-</span><span class='line'>    <span class="nc">Position</span><span class="o">(</span><span class="nc">AMZN</span><span class="o">,</span> <span class="mi">10</span><span class="o">),</span>
-</span><span class='line'>    <span class="nc">Position</span><span class="o">(</span><span class="nc">AAPL</span><span class="o">,</span> <span class="mi">20</span><span class="o">),</span>
-</span><span class='line'>    <span class="nc">Position</span><span class="o">(</span><span class="nc">IBM</span><span class="o">,</span> <span class="mi">30</span><span class="o">),</span>
-</span><span class='line'>    <span class="nc">Position</span><span class="o">(</span><span class="nc">CallOption</span><span class="o">(</span><span class="nc">GS</span><span class="o">,</span> <span class="mi">180</span><span class="o">,</span> <span class="n">maturityDate</span><span class="o">),</span> <span class="mi">10</span><span class="o">)</span>
-</span><span class='line'>  <span class="o">))&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="k">val</span> <span class="n">start</span> <span class="k">=</span> <span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">()</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">marketRisk</span> <span class="k">=</span> <span class="nc">RiskCalculator</span><span class="o">.</span><span class="n">marketRisk</span><span class="o">(</span><span class="n">portfolio</span><span class="o">,</span> <span class="n">date</span><span class="o">)</span>
-</span><span class='line'>  <span class="k">val</span> <span class="n">end</span> <span class="k">=</span> <span class="nc">System</span><span class="o">.</span><span class="n">currentTimeMillis</span><span class="o">()&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;</span><span class="n">println</span><span class="o">(</span><span class="n">s</span><span class="err">”</span><span class="nc">Calculated</span> <span class="n">marker</span> <span class="n">risk</span> <span class="n">in</span> <span class="n">$</span><span class="o">{</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="o">}</span> <span class="n">milliseconds</span><span class="o">;</span> <span class="err">“</span> <span class="o">+</span>
-</span><span class='line'>    <span class="n">s</span><span class="err">”</span><span class="nc">VaR</span><span class="o">(</span><span class="n">p</span> <span class="k">=</span> <span class="mf">0.95</span><span class="o">)</span> <span class="k">=</span> <span class="n">$</span><span class="o">{</span><span class="n">marketRisk</span><span class="o">.</span><span class="nc">VaR</span><span class="o">(</span><span class="mf">0.95</span><span class="o">)},</span> <span class="err">“</span> <span class="o">+</span>
-</span><span class='line'>    <span class="n">s</span><span class="err">”</span><span class="nc">CVaR</span><span class="o">(</span><span class="n">p</span> <span class="k">=</span> <span class="mf">0.95</span><span class="o">)</span> <span class="k">=</span> <span class="n">$</span><span class="o">{</span><span class="n">marketRisk</span><span class="o">.</span><span class="n">conditionalVaR</span><span class="o">(</span><span class="mf">0.95</span><span class="o">)}</span><span class="err">”</span><span class="o">)&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;//</span> <span class="nc">Shutdown</span> <span class="n">actor</span> <span class="n">systems</span>
-</span><span class='line'>  <span class="n">system1</span><span class="o">.</span><span class="n">shutdown</span><span class="o">()</span>
-</span><span class='line'>  <span class="n">system2</span><span class="o">.</span><span class="n">shutdown</span><span class="o">()</span>
-</span><span class='line'>  <span class="n">system3</span><span class="o">.</span><span class="n">shutdown</span><span class="o">()</span>
-</span><span class='line'>  <span class="nc">RiskCalculator</span><span class="o">.</span><span class="n">shutdown</span><span class="o">()&lt;/</span><span class="n">p</span><span class="o">&gt;</span>
-</span><span class='line'>
-</span><span class='line'><span class="o">&lt;</span><span class="n">p</span><span class="o">&gt;//</span> <span class="n">and</span> <span class="n">application</span>
-</span><span class='line'>  <span class="nc">System</span><span class="o">.</span><span class="n">exit</span><span class="o">(</span><span class="mi">0</span><span class="o">)</span>
-</span><span class='line'><span class="o">}</span>
-</span></code></pre></td></tr></table></div></figure></notextile></div></p>
-
-<h3 id="conclusion">Conclusion</h3>
-
-<p>As I showed in this post moving calculations to a cluster can be easy and fun task with Akka Cluster.</p>
-
-<p>I use scalaz-stream for abstracting over <code>effectful functions</code> with <code>scalaz.stream.Channel</code>, I guess it maybe be overengineering in this particular case,
-but it allows to completely hide implementation details and take control concurrency in very abstract way.
-And scalaz-stream is very nice and super powerful library, I strongly encourage you to take a look on it.</p>
-
-<h5 id="links">Links</h5>
-
-<ol>
-  <li>Akka http://akka.io/ and http://doc.akka.io/docs/akka/2.3.2/scala/index-network.html</li>
-  <li>Scalaz-stream https://github.com/scalaz/scalaz-stream</li>
-  <li>Value at Risk http://en.wikipedia.org/wiki/Value_at_risk</li>
-</ol>
-
-<h4 id="check-source-code-on-githubhttpsgithubcomezhulenevakka-var-calculation">Check source code on <a href="https://github.com/ezhulenev/akka-var-calculation">GitHub</a></h4>
-
-<h2 id="go-to-part-1blog20140501akka-cluster-for-value-at-risk-calculation-1"><a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1">«&lt; Go to Part 1</a></h2>
 ]]></content>
   </entry>
   
