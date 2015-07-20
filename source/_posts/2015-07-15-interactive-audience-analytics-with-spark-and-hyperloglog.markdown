@@ -367,7 +367,7 @@ and build aggregated tables with `HyperLogLog` inside.
 
 ### Impala
 
-To get good performance out of Impala it's required to right C++ user defined functions, and it's was not the task that I wanted to do. Also 
+To get good performance out of Impala it's required to write C++ user defined functions, and it's was not the task that I wanted to do. Also 
 I'm not confident that even with custom C++ function Impala can show performance that we need.
 
 #### Druid
