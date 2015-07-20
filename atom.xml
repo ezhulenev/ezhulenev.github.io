@@ -4,7 +4,7 @@
   <title><![CDATA[Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2015-07-16T13:41:02-04:00</updated>
+  <updated>2015-07-20T12:07:11-04:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -420,7 +420,7 @@ and build aggregated tables with <code>HyperLogLog</code> inside.</p>
 
 <h3 id="impala">Impala</h3>
 
-<p>To get good performance out of Impala it’s required to right C++ user defined functions, and it’s was not the task that I wanted to do. Also 
+<p>To get good performance out of Impala it’s required to write C++ user defined functions, and it’s was not the task that I wanted to do. Also 
 I’m not confident that even with custom C++ function Impala can show performance that we need.</p>
 
 <h4 id="druid">Druid</h4>
