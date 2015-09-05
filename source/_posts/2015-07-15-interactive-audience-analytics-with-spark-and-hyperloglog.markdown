@@ -13,6 +13,8 @@ but also on reporting that can be tedious and boring. However at our scale even 
 application can become challenging engineering problem. This post is based on talk that 
 I gave at [NY-Scala Meetup](http://www.meetup.com/ny-scala/events/223751768/). Slides are available [here](/talks/interactive-audience-analytics/).
 
+> Example application is available on github: [https://github.com/collectivemedia/spark-hyperloglog](https://github.com/collectivemedia/spark-hyperloglog)
+
 <!-- more -->
 
 ## Impression Log
