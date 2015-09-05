@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Spark | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/spark/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2015-07-20T12:07:11-04:00</updated>
+  <updated>2015-09-05T14:41:49-04:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -23,6 +23,10 @@
 but also on reporting that can be tedious and boring. However at our scale even simple reporting 
 application can become challenging engineering problem. This post is based on talk that 
 I gave at <a href="http://www.meetup.com/ny-scala/events/223751768/">NY-Scala Meetup</a>. Slides are available <a href="/talks/interactive-audience-analytics/">here</a>.</p>
+
+<blockquote>
+  <p>Example application is available on github: <a href="https://github.com/collectivemedia/spark-hyperloglog">https://github.com/collectivemedia/spark-hyperloglog</a></p>
+</blockquote>
 
 <!-- more -->
 
