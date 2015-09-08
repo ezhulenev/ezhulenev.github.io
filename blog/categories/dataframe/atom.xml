@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Dataframe | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/dataframe/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2015-09-05T14:41:49-04:00</updated>
+  <updated>2015-09-08T13:34:09-04:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -284,7 +284,7 @@ for serialized <code>HyperLogLog</code> objects.</p>
 
 <p>To write you own aggregation function you need to define function that will be applied to each row in <code>RDD</code> partition, in this example
 it’s called <code>MergeHLLPartition</code>. Then you need to define function that will take results from different partitions and merge them together, for <code>HyperLogLog</code>
-it’s called <code>MergeHLLPartition</code>. And finally you need to tell Spark how you want it to split your computation across <code>RDD</code> (DataFrame is backed by <code>RDD[Row]</code>) </p>
+it’s called <code>MergeHLLMerge</code>. And finally you need to tell Spark how you want it to split your computation across <code>RDD</code> (DataFrame is backed by <code>RDD[Row]</code>) </p>
 
 <p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
   <div class="code"><pre>
