@@ -240,7 +240,7 @@ for serialized `HyperLogLog` objects.
 
 To write you own aggregation function you need to define function that will be applied to each row in `RDD` partition, in this example
 it's called `MergeHLLPartition`. Then you need to define function that will take results from different partitions and merge them together, for `HyperLogLog`
-it's called `MergeHLLPartition`. And finally you need to tell Spark how you want it to split your computation across `RDD` (DataFrame is backed by `RDD[Row]`) 
+it's called `MergeHLLMerge`. And finally you need to tell Spark how you want it to split your computation across `RDD` (DataFrame is backed by `RDD[Row]`) 
 
 {% coderay lang:groovy %}
 case class MergeHLLPartition(child: Expression)
