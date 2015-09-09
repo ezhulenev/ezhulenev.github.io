@@ -9,7 +9,7 @@
   <meta name="author" content="Eugene Zhulenev">
 
   
-  <meta name="description" content="Interactive Audience Analytics with Spark and HyperLogLog Jul 15th, 2015 dataframe hyperloglog scala spark Comments At Collective we are working not &hellip;">
+  <meta name="description" content="Audience modeling with Spark ML Pipelines Sep 9th, 2015 audience modeling dataframe machine learning scala spark Comments At Collective we are &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -69,7 +69,7 @@
   <header role="banner"><hgroup>
   <h1><a href="/">Eugene Zhulenev</a></h1>
   
-    <h2>Engineering Machine Learning and Audience Targeting at <a href="http://collective.com">Collective</a></h2>
+    <h2>Engineering Machine Learning and Audience Modeling at <a href="http://collective.com">Collective</a></h2>
   
 </hgroup>
 
@@ -94,6 +94,94 @@
       
 
   
+  
+  <article class="listing">
+    <header>
+  
+  <h1 class="beta">
+    <a href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines/">Audience modeling with Spark ML Pipelines</a>
+  </h1>
+  
+
+  
+  <div class="meta clearfix">
+    
+
+
+
+
+
+
+
+
+  
+
+
+<time class="pull-left" datetime="2015-09-09T09:04:25-04:00" pubdate data-updated="true"><i class="icon-calendar"></i> Sep 9<span>th</span>, 2015</time>
+    
+
+  <div class="pull-left">
+    <i class="icon-tags"></i>
+    <ul class="tags unstyled">
+    
+      
+        <li><a class='category' href='/blog/categories/audience-modeling/'>audience modeling</a></li>
+      
+        <li><a class='category' href='/blog/categories/dataframe/'>dataframe</a></li>
+      
+        <li><a class='category' href='/blog/categories/machine-learning/'>machine learning</a></li>
+      
+        <li><a class='category' href='/blog/categories/scala/'>scala</a></li>
+      
+        <li><a class='category' href='/blog/categories/spark/'>spark</a></li>
+      
+    
+    </ul>
+  </div>
+
+    
+      <a class="pull-right" href="http://eugenezhulenev.com/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines/#disqus_thread">
+        Comments <i class="icon-comment"></i>
+      </a>
+    
+  </div>
+  
+</header>
+
+
+
+
+<div class="entry-content clearfix">
+  <p>At <a href="http://collective.com">Collective</a> we are heavily relying on machine learning and predictive modeling to 
+run digital advertising business. All decisions about what ad to show at this particular time to this particular user
+are made by machine learning models (some of them are real time, and some of them are offline).</p>
+
+<p>We have a lot of projects that uses machine learning, common name for all of them can be <strong>Audience Modeling</strong>, as they
+all are trying to predict audience conversion (<em>CTR, Viewability Rate, etc…</em>) based on browsing history, behavioral segments and other type of 
+predictors.</p>
+
+<p>For most of new development we use <a href="https://spark.apache.org">Spark</a> and <a href="https://spark.apache.org/mllib/">Spark MLLib</a>. It is a awesome project,
+however we found that some nice tools/libraries that are widely used for example in R are missing in Spark. In order to add missing
+features that we would really like to have in Spark, we created <a href="https://github.com/collectivemedia/spark-ext">Spark Ext</a> - Spark Extensions
+Library. </p>
+
+<blockquote>
+  <p>Spark Ext on Github: <a href="https://github.com/collectivemedia/spark-ext">https://github.com/collectivemedia/spark-ext</a></p>
+</blockquote>
+
+<p>I’m going to show simple example of combining <a href="https://github.com/collectivemedia/spark-ext">Spark Ext</a> with Spark ML pipelines for predicting user conversions based geo and browsing history data.</p>
+
+<blockquote>
+  <p>Spark ML pipeline example: <a href="https://github.com/collectivemedia/spark-ext/blob/master/sparkext-example/src/main/scala/com/collective/sparkext/example/SparkMlExtExample.scala">SparkMlExtExample.scala</a></p>
+</blockquote>
+
+
+  <a class="btn pull-right" href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines/">Read on &rarr;</a>
+</div>
+
+  </article>
+  <hr>
+
   
   <article class="listing">
     <header>
@@ -845,73 +933,10 @@ However it can be difficult if data model is already defined, and services acces
   </article>
   <hr>
 
-  
-  <article class="listing">
-    <header>
-  
-  <h1 class="beta">
-    <a href="/blog/2014/04/01/scalaz-stream-concurrent-process/">Scalaz-Stream: Feed `Process` through the given effectful `Channel` concurrently</a>
-  </h1>
-  
-
-  
-  <div class="meta clearfix">
-    
-
-
-
-
-
-
-
-
-  
-
-
-<time class="pull-left" datetime="2014-04-01T22:03:03-04:00" pubdate data-updated="true"><i class="icon-calendar"></i> Apr 1<span>st</span>, 2014</time>
-    
-
-  <div class="pull-left">
-    <i class="icon-tags"></i>
-    <ul class="tags unstyled">
-    
-      
-        <li><a class='category' href='/blog/categories/scala/'>scala</a></li>
-      
-        <li><a class='category' href='/blog/categories/scalaz/'>scalaz</a></li>
-      
-        <li><a class='category' href='/blog/categories/scalaz-stream/'>scalaz-stream</a></li>
-      
-    
-    </ul>
-  </div>
-
-    
-      <a class="pull-right" href="http://eugenezhulenev.com/blog/2014/04/01/scalaz-stream-concurrent-process/#disqus_thread">
-        Comments <i class="icon-comment"></i>
-      </a>
-    
-  </div>
-  
-</header>
-
-
-
-
-<div class="entry-content clearfix">
-  <p>Let’s assume that we have some input process, and want to run some ‘heavy computation’ on each element.
-Obviously we want utilize all available cores and use thread pool. However scalaz-stream by default is deterministic
-and in following example all computation steps will run consecutively.</p>
-
-
-  <a class="btn pull-right" href="/blog/2014/04/01/scalaz-stream-concurrent-process/">Read on &rarr;</a>
-</div>
-
-  </article>
-  <hr>
-
 
   <div class="pagination">
+    
+      <a class="btn pull-left" href="/blog/page/2/">&larr; Older</a>
     
 
     

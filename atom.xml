@@ -4,7 +4,7 @@
   <title><![CDATA[Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2015-09-08T13:34:09-04:00</updated>
+  <updated>2015-09-09T08:35:42-04:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -12,6 +12,310 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Audience Modeling With Spark ML Pipelines]]></title>
+    <link href="http://eugenezhulenev.com/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines/"/>
+    <updated>2015-09-09T09:04:25-04:00</updated>
+    <id>http://eugenezhulenev.com/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines</id>
+    <content type="html"><![CDATA[<p>At <a href="http://collective.com">Collective</a> we are heavily relying on machine learning and predictive modeling to 
+run digital advertising business. All decisions about what ad to show at this particular time to this particular user
+are made by machine learning models (some of them are real time, and some of them are offline).</p>
+
+<p>We have a lot of projects that uses machine learning, common name for all of them can be <strong>Audience Modeling</strong>, as they
+all are trying to predict audience conversion (<em>CTR, Viewability Rate, etc…</em>) based on browsing history, behavioral segments and other type of 
+predictors.</p>
+
+<p>For most of new development we use <a href="https://spark.apache.org">Spark</a> and <a href="https://spark.apache.org/mllib/">Spark MLLib</a>. It is a awesome project,
+however we found that some nice tools/libraries that are widely used for example in R are missing in Spark. In order to add missing
+features that we would really like to have in Spark, we created <a href="https://github.com/collectivemedia/spark-ext">Spark Ext</a> - Spark Extensions
+Library. </p>
+
+<blockquote>
+  <p>Spark Ext on Github: <a href="https://github.com/collectivemedia/spark-ext">https://github.com/collectivemedia/spark-ext</a></p>
+</blockquote>
+
+<p>I’m going to show simple example of combining <a href="https://github.com/collectivemedia/spark-ext">Spark Ext</a> with Spark ML pipelines for predicting user conversions based geo and browsing history data.</p>
+
+<blockquote>
+  <p>Spark ML pipeline example: <a href="https://github.com/collectivemedia/spark-ext/blob/master/sparkext-example/src/main/scala/com/collective/sparkext/example/SparkMlExtExample.scala">SparkMlExtExample.scala</a></p>
+</blockquote>
+
+<!-- more -->
+
+<h2 id="predictors-data">Predictors Data</h2>
+
+<p>I’m using dataset with 2 classes, that will be used for solving classification problem (user converted or not). It’s created with 
+<a href="https://github.com/collectivemedia/spark-ext/blob/master/sparkext-example/src/main/scala/com/collective/sparkext/example/DataGenerator.scala">dummy data generator</a>, 
+so that these 2 classes can be easily separated. It’s pretty similar to real data that usually available in digital advertising.</p>
+
+<h3 id="browsing-history-log">Browsing History Log</h3>
+
+<p>History of web sites that were visited by user.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+Cookie          | Site          | Impressions  
+--------------- |-------------- | -------------
+wKgQaV0lHZanDrp | live.com      | 24
+wKgQaV0lHZanDrp | pinterest.com | 21
+rfTZLbQDwbu5mXV | wikipedia.org | 14
+rfTZLbQDwbu5mXV | live.com      | 1
+rfTZLbQDwbu5mXV | amazon.com    | 1
+r1CSY234HTYdvE3 | youtube.com   | 10
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<h3 id="geo-location-log">Geo Location Log</h3>
+
+<p>Latitude/Longitude impression history.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+Cookie          | Lat     | Lng       | Impressions
+--------------- |---------| --------- | ------------
+wKgQaV0lHZanDrp | 34.8454 | 77.009742 | 13
+wKgQaV0lHZanDrp | 31.8657 | 114.66142 | 1
+rfTZLbQDwbu5mXV | 41.1428 | 74.039600 | 20
+rfTZLbQDwbu5mXV | 36.6151 | 119.22396 | 4
+r1CSY234HTYdvE3 | 42.6732 | 73.454185 | 4
+r1CSY234HTYdvE3 | 35.6317 | 120.55839 | 5
+20ep6ddsVckCmFy | 42.3448 | 70.730607 | 21
+20ep6ddsVckCmFy | 29.8979 | 117.51683 | 1
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<h2 id="transforming-predictors-data">Transforming Predictors Data</h2>
+
+<p>As you can see predictors data (sites and geo) is in <em>long</em> format, each <code>cookie</code> has multiple rows associated with it,
+and it’s in general is not a good fit for machine learning.
+We’d like <code>cookie</code> to be a primary key, and all other data should form <code>feature vector</code>.</p>
+
+<h3 id="gather-transformer">Gather Transformer</h3>
+
+<p>Inspired by R <code>tidyr</code> and <code>reshape2</code> packages. Convert <em>long</em> <code>DataFrame</code> with values
+for each key into <em>wide</em> <code>DataFrame</code>, applying aggregation function if single
+key has multiple values.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+val gather = <span class="keyword">new</span> Gather()
+      .setPrimaryKeyCols(<span class="string"><span class="delimiter">&quot;</span><span class="content">cookie</span><span class="delimiter">&quot;</span></span>)
+      .setKeyCol(<span class="string"><span class="delimiter">&quot;</span><span class="content">site</span><span class="delimiter">&quot;</span></span>)
+      .setValueCol(<span class="string"><span class="delimiter">&quot;</span><span class="content">impressions</span><span class="delimiter">&quot;</span></span>)
+      .setValueAgg(<span class="string"><span class="delimiter">&quot;</span><span class="content">sum</span><span class="delimiter">&quot;</span></span>)         <span class="comment">// sum impression by key</span>
+      .setOutputCol(<span class="string"><span class="delimiter">&quot;</span><span class="content">sites</span><span class="delimiter">&quot;</span></span>)
+val gatheredSites = gather.transform(siteLog)      
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+Cookie           | Sites
+-----------------|----------------------------------------------
+wKgQaV0lHZanDrp  | [
+                 |  { site: live.com, impressions: 24.0 }, 
+                 |  { site: pinterest.com, impressions: 21.0 }
+                 | ]
+rfTZLbQDwbu5mXV  | [
+                 |  { site: wikipedia.org, impressions: 14.0 }, 
+                 |  { site: live.com, impressions: 1.0 },
+                 |  { site: amazon.com, impressions: 1.0 }
+                 | ]
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<h3 id="google-s2-geometry-cell-id-transformer">Google S2 Geometry Cell Id Transformer</h3>
+
+<p>The S2 Geometry Library is a spherical geometry library, very useful for manipulating regions on the sphere (commonly on Earth) 
+and indexing geographic data. Basically it assigns unique cell id for each region on the earth. </p>
+
+<blockquote>
+  <p>Good article about S2 library: <a href="http://blog.christianperone.com/2015/08/googles-s2-geometry-on-the-sphere-cells-and-hilbert-curve/">Google’s S2, geometry on the sphere, cells and Hilbert curve</a></p>
+</blockquote>
+
+<p>For example you can combine S2 transformer with Gather to get from <code>lat</code>/<code>lon</code> to <code>K-V</code> pairs, where key will be <code>S2</code> cell id.
+Depending on a level you can assign all people in Greater New York area (level = 4) into one cell, or you can index them block by block (level = 12).</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="comment">// Transform lat/lon into S2 Cell Id</span>
+val s2Transformer = <span class="keyword">new</span> S2CellTransformer()
+  .setLevel(<span class="integer">5</span>)
+  .setCellCol(<span class="string"><span class="delimiter">&quot;</span><span class="content">s2_cell</span><span class="delimiter">&quot;</span></span>)
+
+<span class="comment">// Gather S2 CellId log</span>
+val gatherS2Cells = <span class="keyword">new</span> Gather()
+  .setPrimaryKeyCols(<span class="string"><span class="delimiter">&quot;</span><span class="content">cookie</span><span class="delimiter">&quot;</span></span>)
+  .setKeyCol(<span class="string"><span class="delimiter">&quot;</span><span class="content">s2_cell</span><span class="delimiter">&quot;</span></span>)
+  .setValueCol(<span class="string"><span class="delimiter">&quot;</span><span class="content">impressions</span><span class="delimiter">&quot;</span></span>)
+  .setOutputCol(<span class="string"><span class="delimiter">&quot;</span><span class="content">s2_cells</span><span class="delimiter">&quot;</span></span>)
+  
+val gatheredCells = gatherS2Cells.transform(s2Transformer.transform(geoDf))
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+Cookie           | S2 Cells
+-----------------|----------------------------------------------
+wKgQaV0lHZanDrp  | [
+                 |  { s2_cell: d5dgds, impressions: 5.0 }, 
+                 |  { s2_cell: b8dsgd, impressions: 1.0 }
+                 | ]
+rfTZLbQDwbu5mXV  | [
+                 |  { s2_cell: d5dgds, impressions: 12.0 }, 
+                 |  { s2_cell: b8dsgd, impressions: 3.0 },
+                 |  { s2_cell: g7aeg3, impressions: 5.0 }
+                 | ]
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<h2 id="assembling-feature-vector">Assembling Feature Vector</h2>
+
+<p><code>K-V</code> pairs from result of <code>Gather</code> are cool, and groups all the information about cookie into single row, however they can’t be used
+as input for machine learning. To be able to train a model, predictors data needs to be represented as a vector of doubles. If all features are continuous and
+numeric it’s easy, but if some of them are categorical or in <code>gathered</code> shape, it’s not trivial.</p>
+
+<h3 id="gather-encoder">Gather Encoder</h3>
+
+<p>Encodes categorical key-value pairs using dummy variables. </p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="comment">// Encode S2 Cell data</span>
+val encodeS2Cells = <span class="keyword">new</span> GatherEncoder()
+  .setInputCol(<span class="string"><span class="delimiter">&quot;</span><span class="content">s2_cells</span><span class="delimiter">&quot;</span></span>)
+  .setOutputCol(<span class="string"><span class="delimiter">&quot;</span><span class="content">s2_cells_f</span><span class="delimiter">&quot;</span></span>)
+  .setKeyCol(<span class="string"><span class="delimiter">&quot;</span><span class="content">s2_cell</span><span class="delimiter">&quot;</span></span>)
+  .setValueCol(<span class="string"><span class="delimiter">&quot;</span><span class="content">impressions</span><span class="delimiter">&quot;</span></span>)
+  .setCover(<span class="float">0.95</span>) <span class="comment">// dimensionality reduction</span>
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+Cookie           | S2 Cells
+-----------------|----------------------------------------------
+wKgQaV0lHZanDrp  | [
+                 |  { s2_cell: d5dgds, impressions: 5.0 }, 
+                 |  { s2_cell: b8dsgd, impressions: 1.0 }
+                 | ]
+rfTZLbQDwbu5mXV  | [
+                 |  { s2_cell: d5dgds, impressions: 12.0 }, 
+                 |  { s2_cell: g7aeg3, impressions: 5.0 }
+                 | ]
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<p>Transformed into</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+Cookie           | S2 Cells Features
+-----------------|------------------------
+wKgQaV0lHZanDrp  | [ 5.0  ,  1.0 , 0   ]
+rfTZLbQDwbu5mXV  | [ 12.0 ,  0   , 5.0 ]
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<p>Note that it’s 3 unique cell id values, that gives 3 columns in final feature vector.</p>
+
+<p>Optionally apply dimensionality reduction using <code>top</code> transformation:</p>
+
+<ul>
+  <li>Top coverage, is selecting categorical values by computing the count of distinct users for each value,
+sorting the values in descending order by the count of users, and choosing the top values from the resulting
+list such that the sum of the distinct user counts over these values covers c percent of all users,
+for example, selecting top sites covering 99% of users.</li>
+</ul>
+
+<h2 id="spark-ml-pipelines">Spark ML Pipelines</h2>
+
+<p>Spark ML Pipeline - is new high level API for Spark MLLib. </p>
+
+<blockquote>
+  <p>A practical ML pipeline often involves a sequence of data pre-processing, feature extraction, model fitting, and validation stages. For example, classifying text documents might involve text segmentation and cleaning, extracting features, and training a classification model with cross-validation. <a href="https://databricks.com/blog/2015/01/07/ml-pipelines-a-new-high-level-api-for-mllib.html">Read More.</a> </p>
+</blockquote>
+
+<p>In Spark ML it’s possible to split ML pipeline in multiple independent stages, group them together in single pipeline and run it
+with Cross Validation and Parameter Grid to find best set of parameters.</p>
+
+<h3 id="put-it-all-together-with-spark-ml-pipelines">Put It All together with Spark ML Pipelines</h3>
+
+<p>Gather encoder is a natural fit into Spark ML Pipeline API.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="comment">// Encode site data</span>
+val encodeSites = <span class="keyword">new</span> GatherEncoder()
+  .setInputCol(<span class="string"><span class="delimiter">&quot;</span><span class="content">sites</span><span class="delimiter">&quot;</span></span>)
+  .setOutputCol(<span class="string"><span class="delimiter">&quot;</span><span class="content">sites_f</span><span class="delimiter">&quot;</span></span>)
+  .setKeyCol(<span class="string"><span class="delimiter">&quot;</span><span class="content">site</span><span class="delimiter">&quot;</span></span>)
+  .setValueCol(<span class="string"><span class="delimiter">&quot;</span><span class="content">impressions</span><span class="delimiter">&quot;</span></span>)
+
+<span class="comment">// Encode S2 Cell data</span>
+val encodeS2Cells = <span class="keyword">new</span> GatherEncoder()
+  .setInputCol(<span class="string"><span class="delimiter">&quot;</span><span class="content">s2_cells</span><span class="delimiter">&quot;</span></span>)
+  .setOutputCol(<span class="string"><span class="delimiter">&quot;</span><span class="content">s2_cells_f</span><span class="delimiter">&quot;</span></span>)
+  .setKeyCol(<span class="string"><span class="delimiter">&quot;</span><span class="content">s2_cell</span><span class="delimiter">&quot;</span></span>)
+  .setValueCol(<span class="string"><span class="delimiter">&quot;</span><span class="content">impressions</span><span class="delimiter">&quot;</span></span>)
+  .setCover(<span class="float">0.95</span>)
+
+<span class="comment">// Assemble feature vectors together</span>
+val assemble = <span class="keyword">new</span> VectorAssembler()
+  .setInputCols(<span class="predefined-type">Array</span>(<span class="string"><span class="delimiter">&quot;</span><span class="content">sites_f</span><span class="delimiter">&quot;</span></span>, <span class="string"><span class="delimiter">&quot;</span><span class="content">s2_cells_f</span><span class="delimiter">&quot;</span></span>))
+  .setOutputCol(<span class="string"><span class="delimiter">&quot;</span><span class="content">features</span><span class="delimiter">&quot;</span></span>)
+
+<span class="comment">// Build logistic regression</span>
+val lr = <span class="keyword">new</span> LogisticRegression()
+  .setFeaturesCol(<span class="string"><span class="delimiter">&quot;</span><span class="content">features</span><span class="delimiter">&quot;</span></span>)
+  .setLabelCol(<span class="string"><span class="delimiter">&quot;</span><span class="content">response</span><span class="delimiter">&quot;</span></span>)
+  .setProbabilityCol(<span class="string"><span class="delimiter">&quot;</span><span class="content">probability</span><span class="delimiter">&quot;</span></span>)
+
+<span class="comment">// Define pipeline with 4 stages</span>
+val pipeline = <span class="keyword">new</span> Pipeline()
+  .setStages(<span class="predefined-type">Array</span>(encodeSites, encodeS2Cells, assemble, lr))
+
+val evaluator = <span class="keyword">new</span> BinaryClassificationEvaluator()
+  .setLabelCol(Response.response)
+
+val crossValidator = <span class="keyword">new</span> CrossValidator()
+  .setEstimator(pipeline)
+  .setEvaluator(evaluator)
+
+val paramGrid = <span class="keyword">new</span> ParamGridBuilder()
+  .addGrid(lr.elasticNetParam, <span class="predefined-type">Array</span>(<span class="float">0.1</span>, <span class="float">0.5</span>))
+  .build()
+
+crossValidator.setEstimatorParamMaps(paramGrid)
+crossValidator.setNumFolds(<span class="integer">2</span>)
+
+println(s<span class="string"><span class="delimiter">&quot;</span><span class="content">Train model on train set</span><span class="delimiter">&quot;</span></span>)
+val cvModel = crossValidator.fit(trainSet)
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>New Spark ML API makes machine learning much more easier. <a href="https://github.com/collectivemedia/spark-ext">Spark Ext</a> is good example of how is it possible to 
+create custom transformers/estimators that later can be used as a part of bigger pipeline, and can be easily shared/reused by multiple projects.</p>
+
+<blockquote>
+  <p>Full code for example application is available on <a href="https://github.com/collectivemedia/spark-ext/blob/master/sparkext-example/src/main/scala/com/collective/sparkext/example/SparkMlExtExample.scala">Github</a>.</p>
+</blockquote>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Interactive Audience Analytics With Spark and HyperLogLog]]></title>

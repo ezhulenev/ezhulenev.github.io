@@ -9,7 +9,7 @@
   <meta name="author" content="Eugene Zhulenev">
 
   
-  <meta name="description" content="At Collective we are working not only on cool things like Machine Learning and Predictive Modeling, but also on reporting that can be tedious and &hellip;">
+  <meta name="description" content="At Collective we are heavily relying on machine learning and predictive modeling to run digital advertising business. All decisions about what ad to &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -69,7 +69,7 @@
   <header role="banner"><hgroup>
   <h1><a href="/">Eugene Zhulenev</a></h1>
   
-    <h2>Engineering Machine Learning and Audience Targeting at <a href="http://collective.com">Collective</a></h2>
+    <h2>Engineering Machine Learning and Audience Modeling at <a href="http://collective.com">Collective</a></h2>
   
 </hgroup>
 
@@ -93,6 +93,71 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines/">Audience Modeling With Spark ML Pipelines</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-09-09T09:04:25-04:00" pubdate data-updated="true">Sep 9<span>th</span>, 2015</time>
+        
+           | <a href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines/#disqus_thread"
+             data-disqus-identifier="http://eugenezhulenev.com/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines/">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>At <a href="http://collective.com">Collective</a> we are heavily relying on machine learning and predictive modeling to 
+run digital advertising business. All decisions about what ad to show at this particular time to this particular user
+are made by machine learning models (some of them are real time, and some of them are offline).</p>
+
+<p>We have a lot of projects that uses machine learning, common name for all of them can be <strong>Audience Modeling</strong>, as they
+all are trying to predict audience conversion (<em>CTR, Viewability Rate, etc…</em>) based on browsing history, behavioral segments and other type of 
+predictors.</p>
+
+<p>For most of new development we use <a href="https://spark.apache.org">Spark</a> and <a href="https://spark.apache.org/mllib/">Spark MLLib</a>. It is a awesome project,
+however we found that some nice tools/libraries that are widely used for example in R are missing in Spark. In order to add missing
+features that we would really like to have in Spark, we created <a href="https://github.com/collectivemedia/spark-ext">Spark Ext</a> - Spark Extensions
+Library. </p>
+
+<blockquote>
+  <p>Spark Ext on Github: <a href="https://github.com/collectivemedia/spark-ext">https://github.com/collectivemedia/spark-ext</a></p>
+</blockquote>
+
+<p>I’m going to show simple example of combining <a href="https://github.com/collectivemedia/spark-ext">Spark Ext</a> with Spark ML pipelines for predicting user conversions based geo and browsing history data.</p>
+
+<blockquote>
+  <p>Spark ML pipeline example: <a href="https://github.com/collectivemedia/spark-ext/blob/master/sparkext-example/src/main/scala/com/collective/sparkext/example/SparkMlExtExample.scala">SparkMlExtExample.scala</a></p>
+</blockquote>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
   
   
     <article>
@@ -642,53 +707,9 @@ However it can be difficult if data model is already defined, and services acces
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/04/01/scalaz-stream-concurrent-process/">Scalaz-Stream: Feed `Process` Through the Given Effectful `Channel` Concurrently</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-04-01T22:03:03-04:00" pubdate data-updated="true">Apr 1<span>st</span>, 2014</time>
-        
-           | <a href="/blog/2014/04/01/scalaz-stream-concurrent-process/#disqus_thread"
-             data-disqus-identifier="http://eugenezhulenev.com/blog/2014/04/01/scalaz-stream-concurrent-process/">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>Let’s assume that we have some input process, and want to run some ‘heavy computation’ on each element.
-Obviously we want utilize all available cores and use thread pool. However scalaz-stream by default is deterministic
-and in following example all computation steps will run consecutively.</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/04/01/scalaz-stream-concurrent-process/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
   <div class="pagination">
+    
+      <a class="prev" href="/blog/page/2/">&larr; Older</a>
     
     <a href="/blog/archives">Blog Archives</a>
     
@@ -709,6 +730,10 @@ and in following example all computation steps will run consecutively.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines/">Audience Modeling With Spark ML Pipelines</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/07/15/interactive-audience-analytics-with-spark-and-hyperloglog/">Interactive Audience Analytics With Spark and HyperLogLog</a>
       </li>
     
@@ -722,10 +747,6 @@ and in following example all computation steps will run consecutively.</p>
     
       <li class="post">
         <a href="/blog/2014/11/14/stock-price-prediction-with-big-data-and-machine-learning/">Stock Price Prediction With Big Data and Machine Learning</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/10/18/run-tests-in-standalone-spark-cluster/">Running Spark Tests in Standalone Cluster</a>
       </li>
     
   </ul>
