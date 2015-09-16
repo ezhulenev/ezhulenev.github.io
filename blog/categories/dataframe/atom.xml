@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Dataframe | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/dataframe/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2015-09-09T08:35:42-04:00</updated>
+  <updated>2015-09-16T08:30:26-04:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -12,6 +12,120 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Spark ML for Big and Small Data]]></title>
+    <link href="http://eugenezhulenev.com/blog/2015/09/16/spark-ml-for-big-and-small-data/"/>
+    <updated>2015-09-16T10:04:25-04:00</updated>
+    <id>http://eugenezhulenev.com/blog/2015/09/16/spark-ml-for-big-and-small-data</id>
+    <content type="html"><![CDATA[<p>You’ve all probably already know how awesome is Spark for doing Machine Learning on Big Data. However I’m pretty sure
+no one told you how bad (slow) it can be on Small Data. </p>
+
+<p>As I mentioned in my <a href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines">previous post</a>, we
+extensively use Spark for doing machine learning and audience modeling. It turned out that in some cases, for example when
+we are starting optimization for new client/campaign we simply don’t have enough positive examples to construct big enough dataset, so that
+using Spark would make sense.</p>
+
+<!-- more -->
+
+<h3 id="spark-ml-from-10000-feet">Spark ML from 10000 feet</h3>
+
+<p>Essentially every machine learning algorithm is a function minimization, where function value depends on some calculation using data in <code>RDD</code>.
+For example logistic regression can calculate function value 1000 times before it will converge and find optimal parameters. It means that it will 
+compute some <code>RDD</code> 1000 times. In case of <code>LogisticRegression</code> it’s doing <code>RDD.treeAggregate</code> which is supper efficient, but still it’s distributed 
+computation.</p>
+
+<p>Now imagine that all the data you have is 50000 rows, and you have for example 1000 partitions. It means that each partition has only 50 rows. And 
+each <code>RDD.treeAggregate</code> on every iteration serializing closures, sending them to partitions and collecting result back. 
+It’s <strong>HUGE OVERHEAD</strong> and huge load on a driver.</p>
+
+<h3 id="throw-away-spark-and-use-pythonr">Throw Away Spark and use Python/R?</h3>
+
+<p>It’s definitely an option, but we don’t want to build multiple systems for data of different size. Spark ML pipelines are awesome abstraction,
+and we want to use it for all machine learning jobs. Also we want to use the same algorithm, so results would be consistent if dataset size
+just crossed the boundary between small and big data.</p>
+
+<h3 id="run-logisticregression-in-local-mode">Run LogisticRegression in ‘Local Mode’</h3>
+
+<p>What if Spark could run the same machine learning algorithm, but instead of using <code>RDD</code> for storing input data, it would use <code>Arrays</code>?
+It solves all the problems, you get consistent model, computed 10-20x faster because it doesn’t need distributed computations.</p>
+
+<p>That’s exactly approach I used in <a href="https://github.com/collectivemedia/spark-ext">Spark Ext</a>, it’s called <a href="https://github.com/collectivemedia/spark-ext/blob/master/sparkext-mllib/src/main/scala/org/apache/spark/ml/classification/LocalLogisticRegression.scala">LocalLogisticRegression</a>.
+It’s mostly copy-pasta from Spark <code>LogisticRegression</code>, but when input data frame has only single partition, it’s running
+function optimization on one of the executors using <code>mapPartition</code> function, essentially using Spark as distributed executor service.</p>
+
+<p>This approach is much better than collecting data to driver, because you are not limited by driver computational resources.</p>
+
+<p>When <code>DataFrame</code> has more than 1 partition it just falls back to default distributed logistic regression.</p>
+
+<p>Code for new <code>train</code> method looks like this:</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="keyword">def</span> <span class="function">trainLocal</span>(
+      <span class="key">instances</span>: <span class="predefined-type">Array</span>[(<span class="predefined-type">Double</span>, <span class="predefined-type">Vector</span>)]
+    ): (LogisticRegressionModel, <span class="predefined-type">Array</span>[<span class="predefined-type">Double</span>]) = <span class="error">…</span>&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">def</span> <span class="function">train</span>(<span class="key">dataset</span>: DataFrame): LogisticRegressionModel = {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">if</span> (dataset.rdd.partitions.length == <span class="integer">1</span>) {
+    log.info(s<span class="error">”</span>Build LogisticRegression <span class="keyword">in</span> local mode<span class="error">”</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;pre&gt;&lt;code&gt;val (model, objectiveHistory) = extractLabeledPoints(dataset).map {
+  <span class="keyword">case</span> LabeledPoint(<span class="key">label</span>: <span class="predefined-type">Double</span>, <span class="key">features</span>: <span class="predefined-type">Vector</span>) =&amp;gt; (label, features)
+}.mapPartitions { instances =&amp;gt;
+  Seq(trainLocal(instances.toArray)).toIterator
+}.first()
+
+val logRegSummary = <span class="keyword">new</span> BinaryLogisticRegressionTrainingSummary(
+  model.transform(dataset),
+  probabilityCol,
+  labelCol,
+  objectiveHistory)
+model.setSummary(logRegSummary)
+&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">code&gt;&lt;</span><span class="delimiter">/</span></span>pre&gt;
+
+&lt;p&gt;} <span class="keyword">else</span> {
+    log.info(s<span class="error">”</span>Fallback to distributed LogisticRegression<span class="error">”</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;pre&gt;&lt;code&gt;val that = classOf[LogisticRegression].getConstructor(classOf[<span class="predefined-type">String</span>]).newInstance(uid)
+val logisticRegression = copyValues(that)
+<span class="comment">// Scala Reflection magic to call protected train method</span>
+...
+logisticRegression.train(dataset)   } }       </pre></div>
+</div>
+ </figure></notextile></div>
+</code></pre>
+
+<p>If input dataset size is less than 100000 rows, it will be placed inside single partition, and regression model will be trained in local mode.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+val <span class="key">base</span>: DataFrame = <span class="error">…</span>
+val datasetPartitionSize = <span class="integer">100000</span>&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="comment">// Compute optimal partitions size based on base join</span>
+val baseSize = base.count()
+val numPartitions = (baseSize.toDouble / datasetPartitionSize).ceil.toInt
+log.debug(s<span class="error">”</span>Response base <span class="key">size</span>: <span class="error">$</span>baseSize<span class="error">”</span>)
+log.debug(s<span class="error">”</span>Repartition dataset using <span class="error">$</span>numPartitions partitions<span class="error">”</span>)
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<h2 id="results">Results</h2>
+
+<p>With a little ingenuity (and copy paste) Spark became perfect tool for machine learning both on Small and Big Data. Most awesome thing is that this
+new <code>LocalLogisticRegression</code> can be used as drop in replacement in Spark ML pipelines, producing exactly the same <code>LogisticRegressionModel</code> at the end.</p>
+
+<p>It might be interesting idea to use this approach in Spark itself, because in this case it would be possible to do it
+without doing so many code duplication. I’d love to see if anyone else had the same problem, and how solved it.</p>
+
+<blockquote>
+  <p>More cool Spark things in <a href="https://github.com/collectivemedia/spark-ext/">Github</a>.</p>
+</blockquote>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Audience Modeling With Spark ML Pipelines]]></title>

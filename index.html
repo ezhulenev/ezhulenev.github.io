@@ -9,7 +9,8 @@
   <meta name="author" content="Eugene Zhulenev">
 
   
-  <meta name="description" content="At Collective we are heavily relying on machine learning and predictive modeling to run digital advertising business. All decisions about what ad to &hellip;">
+  <meta name="description" content="You’ve all probably already know how awesome is Spark for doing Machine Learning on Big Data. However I’m pretty sure
+no one told you how bad (slow) &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -93,6 +94,56 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2015/09/16/spark-ml-for-big-and-small-data/">Spark ML for Big and Small Data</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-09-16T10:04:25-04:00" pubdate data-updated="true">Sep 16<span>th</span>, 2015</time>
+        
+           | <a href="/blog/2015/09/16/spark-ml-for-big-and-small-data/#disqus_thread"
+             data-disqus-identifier="http://eugenezhulenev.com/blog/2015/09/16/spark-ml-for-big-and-small-data/">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>You’ve all probably already know how awesome is Spark for doing Machine Learning on Big Data. However I’m pretty sure
+no one told you how bad (slow) it can be on Small Data. </p>
+
+<p>As I mentioned in my <a href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines">previous post</a>, we
+extensively use Spark for doing machine learning and audience modeling. It turned out that in some cases, for example when
+we are starting optimization for new client/campaign we simply don’t have enough positive examples to construct big enough dataset, so that
+using Spark would make sense.</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2015/09/16/spark-ml-for-big-and-small-data/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
   
   
     <article>
@@ -650,63 +701,6 @@ However it can be difficult if data model is already defined, and services acces
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1/">Seamless Migration From Monolithic Application to Finagle Services (Part 1/2)</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-04-09T22:03:45-04:00" pubdate data-updated="true">Apr 9<span>th</span>, 2014</time>
-        
-           | <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1/#disqus_thread"
-             data-disqus-identifier="http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1/">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><h3 id="synopsis">Synopsis</h3>
-
-<blockquote>
-  <p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/finagled-movie-db">Github</a></p>
-</blockquote>
-
-<p>Distributed micro-services architecture is hot trend right now, it’s widely adopted by <a href="https://blog.twitter.com/2011/finagle-a-protocol-agnostic-rpc-system">Twitter</a>, <a href="https://engineering.linkedin.com/architecture/restli-restful-service-architecture-scale">LinkedIn</a> and <a href="http://www.slideshare.net/LappleApple/gilt-from-monolith-ruby-app-to-micro-service-scala-service-architecture">Gilt</a>.
-However it can be difficult if data model is already defined, and services accessed via existing API throughout all your code. I’ll show how it’s possible to split monoliths app into standalone services built with Finagle and SBinary for custom communication protocol.</p>
-
-<p>I’m going to show it on example of small Fancy Movie Database application.</p>
-
-<h2 id="part-1-fancy-movie-database-application">[Part 1] Fancy Movie Database application</h2>
-
-<p>Go to <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2">Part 2</a> where fancy movie database application is divided into server and client using Finagle.</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/2/">&larr; Older</a>
@@ -730,6 +724,10 @@ However it can be difficult if data model is already defined, and services acces
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/09/16/spark-ml-for-big-and-small-data/">Spark ML for Big and Small Data</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines/">Audience Modeling With Spark ML Pipelines</a>
       </li>
     
@@ -743,10 +741,6 @@ However it can be difficult if data model is already defined, and services acces
     
       <li class="post">
         <a href="/blog/2014/11/20/twitter-analytics-with-spark/">Building Twitter Live Stream Analytics With Spark and Cassandra</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/11/14/stock-price-prediction-with-big-data-and-machine-learning/">Stock Price Prediction With Big Data and Machine Learning</a>
       </li>
     
   </ul>
