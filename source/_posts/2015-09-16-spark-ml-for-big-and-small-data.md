@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Spark ML for Small Data"
+title: "Spark ML for Big And Small Data"
 date: 2015-09-16 09:04:25 -0500
 comments: true
 categories: [spark, scala, dataframe, machine learning]
