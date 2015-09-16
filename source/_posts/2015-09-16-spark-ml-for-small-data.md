@@ -10,7 +10,7 @@ keywords: spark, scala, dataframe, machine learning
 You've all probably already know how awesome is Spark for doing Machine Learning on Big Data. However I'm pretty sure
 no one told you how bad (slow) it can be on Small Data. 
 
-As I mentioned in my [previous post](/blog/2015/09/16/audience-modeling-with-spark-ml-pipelines), we
+As I mentioned in my [previous post](/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines), we
 extensively use Spark for doing machine learning and audience modeling. It turned out that in some cases, for example when
 we are starting optimization for new client/campaign we simply don't have enough positive examples to construct big enough dataset, so that
 using Spark would make sense.
