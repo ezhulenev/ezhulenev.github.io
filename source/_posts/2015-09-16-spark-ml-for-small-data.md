@@ -100,7 +100,7 @@ log.debug(s"Repartition dataset using $numPartitions partitions")
 
 ## Results
 
-With small inventiveness (and copy paste) Spark became perfect tool for machine learning with Small Data. Most awesome thing is that this
+With a little ingenuity (and copy paste) Spark became perfect tool for machine learning both on Small and Big Data. Most awesome thing is that this
 new `LocalLogisticRegression` can be used as drop in replacement in Spark ML pipelines, producing exactly the same `LogisticRegressionModel` at the end.
 
 It might be interesting idea to use this approach in Spark itself, because in this case it would be possible to do it
