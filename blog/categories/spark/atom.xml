@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Spark | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/spark/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2015-09-16T08:30:26-04:00</updated>
+  <updated>2015-09-16T18:58:32-04:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -14,7 +14,7 @@
 
   
   <entry>
-    <title type="html"><![CDATA[Spark ML for Big and Small Data]]></title>
+    <title type="html"><![CDATA[Optimizing Spark Machine Learning for Small Data]]></title>
     <link href="http://eugenezhulenev.com/blog/2015/09/16/spark-ml-for-big-and-small-data/"/>
     <updated>2015-09-16T10:04:25-04:00</updated>
     <id>http://eugenezhulenev.com/blog/2015/09/16/spark-ml-for-big-and-small-data</id>
