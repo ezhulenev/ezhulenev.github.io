@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Sbt | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/sbt/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2015-09-16T18:58:32-04:00</updated>
+  <updated>2015-10-08T11:31:59-04:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -19,6 +19,11 @@
     <updated>2014-10-18T21:01:15-04:00</updated>
     <id>http://eugenezhulenev.com/blog/2014/10/18/run-tests-in-standalone-spark-cluster</id>
     <content type="html"><![CDATA[<p>Unit testing Spark Applications with standalone Apache Spark Cluster.</p>
+
+<blockquote>
+  <p><strong>Update 2015-10-08</strong>: Albeit approach described in this post works and totally valid, now I would suggest to take a look on packaging all tests in a fat jar
+together with <code>scalatest</code> (or any other test library of your choice) and using <code>spark-submit</code> command to run it</p>
+</blockquote>
 
 <blockquote>
   <p>The code for this application app can be found on <a href="https://github.com/ezhulenev/spark-testing">Github</a></p>

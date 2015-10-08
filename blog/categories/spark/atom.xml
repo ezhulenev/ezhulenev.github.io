@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Spark | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/spark/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2015-09-16T18:58:32-04:00</updated>
+  <updated>2015-10-08T11:31:59-04:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -18,7 +18,12 @@
     <link href="http://eugenezhulenev.com/blog/2015/09/16/spark-ml-for-big-and-small-data/"/>
     <updated>2015-09-16T10:04:25-04:00</updated>
     <id>http://eugenezhulenev.com/blog/2015/09/16/spark-ml-for-big-and-small-data</id>
-    <content type="html"><![CDATA[<p>You’ve all probably already know how awesome is Spark for doing Machine Learning on Big Data. However I’m pretty sure
+    <content type="html"><![CDATA[<blockquote>
+  <p><strong>Update 2015-10-08</strong>: Optimization “hack” described in this post still works, however we don’t use it in production anymore. 
+With careful parallelism config, overhead introduced by distributed models is negligible.</p>
+</blockquote>
+
+<p>You’ve all probably already know how awesome is Spark for doing Machine Learning on Big Data. However I’m pretty sure
 no one told you how bad (slow) it can be on Small Data. </p>
 
 <p>As I mentioned in my <a href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines">previous post</a>, we

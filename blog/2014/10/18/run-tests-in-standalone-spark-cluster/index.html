@@ -9,7 +9,7 @@
   <meta name="author" content="Eugene Zhulenev">
 
   
-  <meta name="description" content="Unit testing Spark Applications with standalone Apache Spark Cluster. The code for this application app can be found on Github Running Spark &hellip;">
+  <meta name="description" content="Unit testing Spark Applications with standalone Apache Spark Cluster. Update 2015-10-08: Albeit approach described in this post works and totally &hellip;">
   <meta name="keywords" content="Spark, Scala, sbt, Apache Spark, Apache Spark tutorial, Big Data Spark, How to make Spark Single Jar, Spark assembly, Spark fat jar, Spark sbt, Spark sbt assembly, Spark Scala, Spark uber jar">
 
   <!-- http://t.co/dKP3o1e -->
@@ -123,6 +123,11 @@
 
 
 <div class="entry-content"><p>Unit testing Spark Applications with standalone Apache Spark Cluster.</p>
+
+<blockquote>
+  <p><strong>Update 2015-10-08</strong>: Albeit approach described in this post works and totally valid, now I would suggest to take a look on packaging all tests in a fat jar
+together with <code>scalatest</code> (or any other test library of your choice) and using <code>spark-submit</code> command to run it</p>
+</blockquote>
 
 <blockquote>
   <p>The code for this application app can be found on <a href="https://github.com/ezhulenev/spark-testing">Github</a></p>
