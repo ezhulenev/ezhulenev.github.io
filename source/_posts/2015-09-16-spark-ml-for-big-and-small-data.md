@@ -7,6 +7,9 @@ categories: [spark, scala, dataframe, machine learning]
 keywords: spark, scala, dataframe, machine learning
 ---
 
+> **Update 2015-10-08**: Optimization "hack" described in this post still works, however we don't use it in production anymore. 
+> With careful parallelism config, overhead introduced by distributed models is negligible.
+
 You've all probably already know how awesome is Spark for doing Machine Learning on Big Data. However I'm pretty sure
 no one told you how bad (slow) it can be on Small Data. 
 

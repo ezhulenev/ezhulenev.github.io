@@ -9,6 +9,9 @@ keywords: Spark, Scala, sbt, Apache Spark, Apache Spark tutorial, Big Data Spark
 
 Unit testing Spark Applications with standalone Apache Spark Cluster.
 
+> **Update 2015-10-08**: Albeit approach described in this post works and totally valid, now I would suggest to take a look on packaging all tests in a fat jar
+> together with `scalatest` (or any other test library of your choice) and using `spark-submit` command to run it
+
 > The code for this application app can be found on [Github](https://github.com/ezhulenev/spark-testing)
 
 ### Running Spark Applications
