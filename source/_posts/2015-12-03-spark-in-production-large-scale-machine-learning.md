@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Spark in Production: Lessons From Running Large Scale Machine Learning"
-date: 2015-12-07 07:24:46 -0500
+date: 2015-12-03 13:24:46 -0500
 comments: true
 categories: [spark, scala, dataframe, machine learning, scalaz-stream]
 keywords: spark, scala, dataframe, machine learning, scalaz-stream
@@ -78,19 +78,46 @@ import scalaz.stream._
 
 val prepareResponse = 
   channel.lift[Task, OptimizedCampaign, ModelingError \/ ResponseDataset] {
-    case opt => ...
+    case opt =>
+       // Expensive join/filter etc...
+       val response: DataFrame = 
+         dataset1
+           .join(dataset2, ...)
+           .filter(..)
+           .select(...)
+       ResponseDataset(response)
   }
 
 val prepareTrainDataset = lift[ResponseDataset, TrainDataset] {
-  case response => ...
+  case response =>
+    // Another expensive joins that requires shuffle
+    val train: DataFrame = 
+      dataset1.join(dataset2, ...).filter(...)
+    TrainDataset(train)  
 }
 
 val featurize = lift[TrainDataset, FeaturizedDataset] {
-  case train => ...
+  case train => 
+     // Compute featurization using ML Pipeline API
+     val pipeline = new Pipeline()
+       .setStages(Array(encodeSites, encodeS2Cells, assemble, lr))
+     pipeline.fit(train.dataFrame).transform(train.dataFrame)  
 }
 
 val trainModel = lift[FeaturizedDataset, TrainedModel] {
-  case featurized => ...
+  case featurized => 
+    // Train model with featurized data 
+    val lr = new LogisticRegression().set(...)
+    val pipeline = new Pipeline().setStages(Array(encode, lr))
+    val evaluator = new BinaryClassificationEvaluator()   
+    val crossValidator = new CrossValidator()
+      .setEstimator(pipeline)
+      .setEvaluator(evaluator)    
+    val paramGrid = new ParamGridBuilder()
+      .addGrid(lr.elasticNetParam, Array(0.1, 0.5))
+      .build()    
+    val model = crossValidator.fit(featurized.dataFrame)
+    TrainedModel(model)
 }
 
 val prepareTestDataset = lift[TrainedModel, TestDataset] {
