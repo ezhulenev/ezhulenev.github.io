@@ -155,9 +155,10 @@ def optimize(
 }
 {% endcoderay %}
 
-I'm using `concurrently` method, which runs each step with controlled concurrency. Steps that are doing heavy shuffles 
+I'm using `concurrently` method, which runs each step with controlled concurrency in separate threads. Steps that are doing heavy shuffles 
 are running not more than 2 in parallel, in contrast to model training that is relatively lightweight operation and can run with much higher
 concurrency. This helper method is described in [earlier post](/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines).
+
 
 #### Push vs Pull Based Streams
 
