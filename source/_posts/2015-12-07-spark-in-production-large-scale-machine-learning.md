@@ -68,6 +68,8 @@ case class ModelingError(error: String)
 case class TrainedAndEvaluatedModel(...)
 {% endcoderay %}
 
+Input would be definition of campaign that needs to be optimized, and output would be model that was trained and evaluated or error if something went wrong.
+
 Each of modeling steps described earlier can be encoded as `scalaz.stream.Channel` transformations:
 
 {% coderay lang:groovy %}
