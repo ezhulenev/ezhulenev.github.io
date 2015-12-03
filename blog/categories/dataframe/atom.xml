@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Dataframe | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/dataframe/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2015-12-03T13:40:44-05:00</updated>
+  <updated>2015-12-03T14:41:42-05:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -97,19 +97,46 @@ with controlled concurrency and resource safety.</p>
 </span>
 &lt;p&gt;val prepareResponse = 
   channel.lift[Task, OptimizedCampaign, ModelingError <span class="error">\</span>/ ResponseDataset] {
-    <span class="keyword">case</span> opt =&amp;gt; <span class="error">…</span>
+    <span class="keyword">case</span> opt =&amp;gt;
+       <span class="comment">// Expensive join/filter etc…</span>
+       val <span class="key">response</span>: DataFrame = 
+         dataset1
+           .join(dataset2, <span class="error">…</span>)
+           .filter(..)
+           .select(<span class="error">…</span>)
+       ResponseDataset(response)
   }&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
 </span>
 &lt;p&gt;val prepareTrainDataset = lift[ResponseDataset, TrainDataset] {
-  <span class="keyword">case</span> response =&amp;gt; <span class="error">…</span>
+  <span class="keyword">case</span> response =&amp;gt;
+    <span class="comment">// Another expensive joins that requires shuffle</span>
+    val <span class="key">train</span>: DataFrame = 
+      dataset1.join(dataset2, <span class="error">…</span>).filter(<span class="error">…</span>)
+    TrainDataset(train)&lt;br /&gt;
 }&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
 </span>
 &lt;p&gt;val featurize = lift[TrainDataset, FeaturizedDataset] {
-  <span class="keyword">case</span> train =&amp;gt; <span class="error">…</span>
+  <span class="keyword">case</span> train =&amp;gt; 
+     <span class="comment">// Compute featurization using ML Pipeline API</span>
+     val pipeline = <span class="keyword">new</span> Pipeline()
+       .setStages(<span class="predefined-type">Array</span>(encodeSites, encodeS2Cells, assemble, lr))
+     pipeline.fit(train.dataFrame).transform(train.dataFrame)&lt;br /&gt;
 }&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
 </span>
 &lt;p&gt;val trainModel = lift[FeaturizedDataset, TrainedModel] {
-  <span class="keyword">case</span> featurized =&amp;gt; <span class="error">…</span>
+  <span class="keyword">case</span> featurized =&amp;gt; 
+    <span class="comment">// Train model with featurized data </span>
+    val lr = <span class="keyword">new</span> LogisticRegression().set(<span class="error">…</span>)
+    val pipeline = <span class="keyword">new</span> Pipeline().setStages(<span class="predefined-type">Array</span>(encode, lr))
+    val evaluator = <span class="keyword">new</span> BinaryClassificationEvaluator() &lt;br /&gt;
+    val crossValidator = <span class="keyword">new</span> CrossValidator()
+      .setEstimator(pipeline)
+      .setEvaluator(evaluator)  &lt;br /&gt;
+    val paramGrid = <span class="keyword">new</span> ParamGridBuilder()
+      .addGrid(lr.elasticNetParam, <span class="predefined-type">Array</span>(<span class="float">0.1</span>, <span class="float">0.5</span>))
+      .build()  &lt;br /&gt;
+    val model = crossValidator.fit(featurized.dataFrame)
+    TrainedModel(model)
 }&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
 </span>
 &lt;p&gt;val prepareTestDataset = lift[TrainedModel, TestDataset] {
