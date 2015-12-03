@@ -99,6 +99,67 @@
       
   <header>
     
+      <h1 class="entry-title"><a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/">Seamless Migration From Monolithic Application to Finagle Services (Part 2/2)</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-04-09T22:03:45-04:00" pubdate data-updated="true">Apr 9<span>th</span>, 2014</time>
+        
+           | <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/#disqus_thread"
+             data-disqus-identifier="http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><h3 id="synopsis">Synopsis</h3>
+
+<blockquote>
+  <p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/finagled-movie-db">Github</a></p>
+</blockquote>
+
+<p>Distributed micro-services architecture is hot trend right now, it’s widely adopted by <a href="https://blog.twitter.com/2011/finagle-a-protocol-agnostic-rpc-system">Twitter</a>, <a href="https://engineering.linkedin.com/architecture/restli-restful-service-architecture-scale">LinkedIn</a> and <a href="http://www.slideshare.net/LappleApple/gilt-from-monolith-ruby-app-to-micro-service-scala-service-architecture">Gilt</a>.
+However it can be difficult if data model is already defined, and services accessed via existing API throughout all your code. I’ll show how it’s possible to split monoliths app into standalone services built with Finagle and SBinary for custom communication protocol.</p>
+
+<p>I’m going to show it on example of small Fancy Movie Database application.</p>
+
+<h2 id="part-22-spit-application-to-distributed-services">[Part 2/2] Spit application to distributed services</h2>
+
+<p>Go to <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1">Part 1</a> where fancy movie database application defined.</p>
+
+<h3 id="what-is-finagle">What is Finagle</h3>
+
+<p>Finagle is a protocol-agnostic, asynchronous RPC system for the JVM that makes it easy to build robust clients and servers in Java, Scala, or any JVM-hosted language.</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
       <h1 class="entry-title"><a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1/">Seamless Migration From Monolithic Application to Finagle Services (Part 1/2)</a></h1>
     
     
@@ -220,6 +281,10 @@ and in following example all computation steps will run consecutively.</p>
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/12/03/spark-in-production-large-scale-machine-learning/">Spark in Production: Lessons From Running Large Scale Machine Learning</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/09/16/spark-ml-for-big-and-small-data/">Optimizing Spark Machine Learning for Small Data</a>
       </li>
     
@@ -233,10 +298,6 @@ and in following example all computation steps will run consecutively.</p>
     
       <li class="post">
         <a href="/blog/2015/06/10/feature-engineering-at-scale/">Feature Engineering at Scale With Spark</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/11/20/twitter-analytics-with-spark/">Building Twitter Live Stream Analytics With Spark and Cassandra</a>
       </li>
     
   </ul>

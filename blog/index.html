@@ -9,7 +9,7 @@
   <meta name="author" content="Eugene Zhulenev">
 
   
-  <meta name="description" content="Optimizing Spark Machine Learning for Small Data Sep 16th, 2015 dataframe machine learning scala spark Comments Update 2015-10-08: Optimization “ &hellip;">
+  <meta name="description" content="Spark in Production: Lessons From Running Large Scale Machine Learning Dec 3rd, 2015 dataframe machine learning scala scalaz-stream spark Comments I &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -94,6 +94,80 @@
       
 
   
+  
+  <article class="listing">
+    <header>
+  
+  <h1 class="beta">
+    <a href="/blog/2015/12/03/spark-in-production-large-scale-machine-learning/">Spark in Production: Lessons From Running Large Scale Machine Learning</a>
+  </h1>
+  
+
+  
+  <div class="meta clearfix">
+    
+
+
+
+
+
+
+
+
+  
+
+
+<time class="pull-left" datetime="2015-12-03T13:24:46-05:00" pubdate data-updated="true"><i class="icon-calendar"></i> Dec 3<span>rd</span>, 2015</time>
+    
+
+  <div class="pull-left">
+    <i class="icon-tags"></i>
+    <ul class="tags unstyled">
+    
+      
+        <li><a class='category' href='/blog/categories/dataframe/'>dataframe</a></li>
+      
+        <li><a class='category' href='/blog/categories/machine-learning/'>machine learning</a></li>
+      
+        <li><a class='category' href='/blog/categories/scala/'>scala</a></li>
+      
+        <li><a class='category' href='/blog/categories/scalaz-stream/'>scalaz-stream</a></li>
+      
+        <li><a class='category' href='/blog/categories/spark/'>spark</a></li>
+      
+    
+    </ul>
+  </div>
+
+    
+      <a class="pull-right" href="http://eugenezhulenev.com/blog/2015/12/03/spark-in-production-large-scale-machine-learning/#disqus_thread">
+        Comments <i class="icon-comment"></i>
+      </a>
+    
+  </div>
+  
+</header>
+
+
+
+
+<div class="entry-content clearfix">
+  <p>I wrote earlier about our approach for <a href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines">machine learning with Spark</a> 
+at <a href="http://collective.com">Collective</a>, it was focused on transforming raw data into features that can be used for training a model.
+At this post I want describe how to assemble multiple building blocks into production application, that efficiently uses
+Spark cluster and can train/validate hundreds of models.</p>
+
+<p>Training single model is relatively easy, and it’s well covered in Spark documentation and multiple other blog posts. Training hundreds of 
+models can become really tricky from engineering point of view. Spark has lot’s of configuration parameters 
+that can affect cluster performance and stability, and you can use some clever tricks to get higher cluster utilization.</p>
+
+
+  <a class="btn pull-right" href="/blog/2015/12/03/spark-in-production-large-scale-machine-learning/">Read on &rarr;</a>
+</div>
+
+  </article>
+  <hr>
+
   
   <article class="listing">
     <header>
@@ -847,90 +921,6 @@ In Part 1 I’m describing the problem and <code>single-node</code> solution, an
 
 
   <a class="btn pull-right" href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1/">Read on &rarr;</a>
-</div>
-
-  </article>
-  <hr>
-
-  
-  <article class="listing">
-    <header>
-  
-  <h1 class="beta">
-    <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/">Seamless migration from monolithic application to Finagle services (Part 2/2)</a>
-  </h1>
-  
-
-  
-  <div class="meta clearfix">
-    
-
-
-
-
-
-
-
-
-  
-
-
-<time class="pull-left" datetime="2014-04-09T22:03:45-04:00" pubdate data-updated="true"><i class="icon-calendar"></i> Apr 9<span>th</span>, 2014</time>
-    
-
-  <div class="pull-left">
-    <i class="icon-tags"></i>
-    <ul class="tags unstyled">
-    
-      
-        <li><a class='category' href='/blog/categories/cloud/'>cloud</a></li>
-      
-        <li><a class='category' href='/blog/categories/finagle/'>finagle</a></li>
-      
-        <li><a class='category' href='/blog/categories/micro-services/'>micro-services</a></li>
-      
-        <li><a class='category' href='/blog/categories/scala/'>scala</a></li>
-      
-        <li><a class='category' href='/blog/categories/zookeper/'>zookeper</a></li>
-      
-    
-    </ul>
-  </div>
-
-    
-      <a class="pull-right" href="http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/#disqus_thread">
-        Comments <i class="icon-comment"></i>
-      </a>
-    
-  </div>
-  
-</header>
-
-
-
-
-<div class="entry-content clearfix">
-  <h3 id="synopsis">Synopsis</h3>
-
-<blockquote>
-  <p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/finagled-movie-db">Github</a></p>
-</blockquote>
-
-<p>Distributed micro-services architecture is hot trend right now, it’s widely adopted by <a href="https://blog.twitter.com/2011/finagle-a-protocol-agnostic-rpc-system">Twitter</a>, <a href="https://engineering.linkedin.com/architecture/restli-restful-service-architecture-scale">LinkedIn</a> and <a href="http://www.slideshare.net/LappleApple/gilt-from-monolith-ruby-app-to-micro-service-scala-service-architecture">Gilt</a>.
-However it can be difficult if data model is already defined, and services accessed via existing API throughout all your code. I’ll show how it’s possible to split monoliths app into standalone services built with Finagle and SBinary for custom communication protocol.</p>
-
-<p>I’m going to show it on example of small Fancy Movie Database application.</p>
-
-<h2 id="part-22-spit-application-to-distributed-services">[Part 2/2] Spit application to distributed services</h2>
-
-<p>Go to <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1">Part 1</a> where fancy movie database application defined.</p>
-
-<h3 id="what-is-finagle">What is Finagle</h3>
-
-<p>Finagle is a protocol-agnostic, asynchronous RPC system for the JVM that makes it easy to build robust clients and servers in Java, Scala, or any JVM-hosted language.</p>
-
-
-  <a class="btn pull-right" href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/">Read on &rarr;</a>
 </div>
 
   </article>

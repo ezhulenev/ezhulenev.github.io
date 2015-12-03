@@ -1,0 +1,496 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Spark in Production: Lessons From Running Large Scale Machine Learning - Eugene Zhulenev</title>
+  <meta name="author" content="Eugene Zhulenev">
+
+  
+  <meta name="description" content="I wrote earlier about our approach for machine learning with Spark at Collective, it was focused on transforming raw data into features that can be &hellip;">
+  <meta name="keywords" content="spark, scala, dataframe, machine learning, scalaz-stream">
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://eugenezhulenev.com/blog/2015/12/03/spark-in-production-large-scale-machine-learning">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Eugene Zhulenev" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href='https://fonts.googleapis.com/css?family=Noto+Serif:400,700' rel='stylesheet' type='text/css'>
+<link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-49585535-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+  <script>
+    $(document).ready(function(){
+      $('a#github').attr('target','_blank');
+      $('a#github').on('click', function() {
+         _gaq.push(['_trackEvent', 'ContactMe', 'Click', 'Github']);
+      });
+
+      $('a#linkedin').attr('target','_blank');
+      $('a#linkedin').on('click', function() {
+         _gaq.push(['_trackEvent', 'ContactMe', 'Click', 'LinkedIn']);
+       });
+
+      $('a#twitter').attr('target','_blank');
+      $('a#twitter').on('click', function() {
+         _gaq.push(['_trackEvent', 'ContactMe', 'Click', 'Twitter']);
+      });
+     });
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Eugene Zhulenev</a></h1>
+  
+    <h2>Engineering Machine Learning and Audience Modeling at <a href="http://collective.com">Collective</a></h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  
+  
+</ul>
+
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+  <li><a href="/atom.xml">RSS</a></li>
+  <li><a id="github" href="http://github.com/ezhulenev">Github</a></li>
+  <li><a id="twitter" href="http://twitter.com/ezhulenev">Twitter</a></li>
+  <li><a id="linkedin" href="http://linkedin.com/in/eugenezhulenev">Linkedin</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Spark in Production: Lessons From Running Large Scale Machine Learning</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-12-03T13:24:46-05:00" pubdate data-updated="true">Dec 3<span>rd</span>, 2015</time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://eugenezhulenev.com">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>I wrote earlier about our approach for <a href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines">machine learning with Spark</a> 
+at <a href="http://collective.com">Collective</a>, it was focused on transforming raw data into features that can be used for training a model.
+At this post I want describe how to assemble multiple building blocks into production application, that efficiently uses
+Spark cluster and can train/validate hundreds of models.</p>
+
+<p>Training single model is relatively easy, and it’s well covered in Spark documentation and multiple other blog posts. Training hundreds of 
+models can become really tricky from engineering point of view. Spark has lot’s of configuration parameters 
+that can affect cluster performance and stability, and you can use some clever tricks to get higher cluster utilization.</p>
+
+<!-- more -->
+
+<h3 id="scale-of-the-problem">Scale Of The Problem</h3>
+
+<p>At Collective we are using Spark and machine learning for online advertising optimization, trying to decide which ads are relevant to 
+which people, at which time and at which web site. </p>
+
+<p>Log data used for training models is huge, billions of rows. Number of users that we target is hundreds of millions. 
+We have hundreds of clients with tens of different campaigns, with different optimization targets and restrictions.</p>
+
+<p>These factors gives an idea of the scale of the problem.  </p>
+
+<h3 id="production-machine-learning-pipeline">Production Machine Learning Pipeline</h3>
+
+<p>Typical machine learning pipeline for one specific ad campaign looks like this:</p>
+
+<ul>
+  <li><em>Prepare response dataset:</em> based on impression/activity logs define which users should be in positive set (did some actions that we are trying to optimize for, example could be signing up for test drive)</li>
+  <li><em>Prepare train dataset:</em> extract predictors data from logs</li>
+  <li><em>Feauturize:</em> given predictors data extract feature vectors</li>
+  <li><em>Train model:</em> feed features and response data into Spark ML</li>
+  <li><em>Prepare test dataset:</em> data that is going to be used for model performance evaluation</li>
+  <li><em>Evaluate model:</em> for binary classification it can be computing ROC and AUC</li>
+</ul>
+
+<p>Preparing datasets is usually contains of multiple join and filter conditions. Featurization and training built on top 
+of <a href="https://databricks.com/blog/2015/01/07/ml-pipelines-a-new-high-level-api-for-mllib.html">Spark ML Pipeline</a> API, and 
+compose multiple transformers and estimators together. It’s covered in <a href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines">one of previous posts</a>.</p>
+
+<p>Given different nature of each step they have different limiting factors. Preparing dataset is expensive operation and heavily 
+uses shuffle. Model training time is usually dominated by network latency introduced by iterative function optimization algorithm.</p>
+
+<p>Serial execution of these steps can’t efficiently utilize all executor cores. Running multiple models in parallel in our 
+case doesn’t really help as well, multiple models reach <em>modeling</em> stage at almost the same time.</p>
+
+<h3 id="introducing-scalaz-stream">Introducing Scalaz-Stream</h3>
+
+<p>I’ll just put first paragraph from amazing <a href="https://gist.github.com/djspiewak/d93a9c4983f63721c41c">Introduction to scalaz-stream</a> here:</p>
+
+<blockquote>
+  <p>Every application ever written can be viewed as some sort of transformation on data. Data can come from different sources, such as a network or a file or user input or the Large Hadron Collider. It can come from many sources all at once to be merged and aggregated in interesting ways, and it can be produced into many different output sinks, such as a network or files or graphical user interfaces. You might produce your output all at once, as a big data dump at the end of the world (right before your program shuts down), or you might produce it more incrementally. Every application fits into this model.</p>
+</blockquote>
+
+<p>We model machine learning pipeline as a <code>scalaz.stream.Process</code> - multistep transformation on data, and use <code>scalaz-stream</code> combinators to run it
+with controlled concurrency and resource safety.</p>
+
+<p>Simple domain model for campaign optimization can be defined like this:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="keyword">case</span> <span class="type">class</span> <span class="class">OptimizedCampaign</span>(<span class="key">id</span>: Int, <span class="key">input</span>: Input, <span class="key">target</span>: <span class="predefined-type">Target</span>)
+
+<span class="keyword">case</span> <span class="type">class</span> <span class="class">ModelingError</span>(<span class="key">error</span>: <span class="predefined-type">String</span>)
+
+<span class="keyword">case</span> <span class="type">class</span> <span class="class">TrainedAndEvaluatedModel</span>(...)
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<p>Input would be definition of campaign that needs to be optimized, and output would be model that was trained and evaluated or error if something went wrong.</p>
+
+<p>Each of modeling steps described earlier can be encoded as <code>scalaz.stream.Channel</code> transformations:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+
+<span class="keyword">import</span> <span class="include">scalaz.stream._</span>
+
+val prepareResponse = 
+  channel.lift[Task, OptimizedCampaign, ModelingError <span class="error">\</span>/ ResponseDataset] {
+    <span class="keyword">case</span> opt =&gt; ...
+  }
+
+val prepareTrainDataset = lift[ResponseDataset, TrainDataset] {
+  <span class="keyword">case</span> response =&gt; ...
+}
+
+val featurize = lift[TrainDataset, FeaturizedDataset] {
+  <span class="keyword">case</span> train =&gt; ...
+}
+
+val trainModel = lift[FeaturizedDataset, TrainedModel] {
+  <span class="keyword">case</span> featurized =&gt; ...
+}
+
+val prepareTestDataset = lift[TrainedModel, TestDataset] {
+  <span class="keyword">case</span> model =&gt; ...
+} 
+
+val evaluateModel = lift[TestDataset, TrainedAndEvaluatedModel] {
+  <span class="keyword">case</span> test =&gt; ...
+}
+
+<span class="comment">// Helper method that allows each step to </span>
+<span class="comment">// return `ModelingError \/ Result` and nicely chains it together</span>
+<span class="directive">private</span> <span class="keyword">def</span> lift[A, B](<span class="key">f</span>: A =&gt; ModelingError <span class="error">\</span>/ B) = {
+  channel.lift[Task, ModelingError <span class="error">\</span>/ A, ModelingError <span class="error">\</span>/ B] {
+      <span class="keyword">case</span> -<span class="error">\</span><span class="regexp"><span class="delimiter">/</span><span class="content">(err) =&gt; Task.now(</span><span class="char">\/</span><span class="content">.left(err))</span></span><span class="error">
+</span>      <span class="keyword">case</span> <span class="error">\</span><span class="regexp"><span class="delimiter">/</span><span class="content">-(a) =&gt; task(f(a))</span></span><span class="error">
+</span>    }
+}
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<p>Given previously defined modeling steps, optimization pipeline can be defined as <code>Process</code> transformation.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="keyword">def</span> <span class="function">optimize</span>(
+  <span class="key">campaigns</span>: <span class="predefined-type">Process</span>[Task, OptimizedCampaign]
+): <span class="predefined-type">Process</span>[Task, ModelingError <span class="error">\</span>/ TrainedAndEvaluatedModel] = {
+
+  campaigns
+    .concurrently(<span class="integer">2</span>)(prepareResponse)
+    .concurrently(<span class="integer">2</span>)(prepareTrainDataset)
+    .concurrently(<span class="integer">2</span>)(featurize)
+    .concurrently(<span class="integer">10</span>)(trainModel)
+    .concurrently(<span class="integer">2</span>)(prepareTestDataset)
+    .concurrently(<span class="integer">2</span>)(evaluateModel)
+}
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<p>I’m using <code>concurrently</code> method, which runs each step with controlled concurrency. Steps that are doing heavy shuffles 
+are running not more than 2 in parallel, in contrast to model training that is relatively lightweight operation and can run with much higher
+concurrency. This helper method is described in <a href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines">earlier post</a>.</p>
+
+<h4 id="push-vs-pull-based-streams">Push vs Pull Based Streams</h4>
+
+<p><code>scalaz-steam</code> uses pull based model, it means that not first step (prepare response) is pushing data down the transformation chain when it’s ready, but
+the bottom step (evaluate model) asks the previous step for new data when it’s done.</p>
+
+<p>This allows to keep Spark cluster always busy, for example when relatively slow running modeling step is done, it 
+asks <code>featurize</code> for new data, and it’s already there, which means that modeling can start immediately.</p>
+
+<h3 id="spark-cluster-tuning">Spark Cluster Tuning</h3>
+
+<p>For better cluster utilization I suggest to use <code>FAIR</code> scheduler mode, that can be turned on with <code>--conf spark.scheduler.mode=FAIR</code> flag.</p>
+
+<p>Another big problem for us was tuning garbage collection. I’ve spent a lot of time trying to tune <code>G1</code> collector, but <code>ConcMarkSweepGC</code> with <code>ParNewGC</code> showed the best results
+in our case. It doesn’t guarantee that it’s also the best choice for your particular case.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+--conf spark.executor.extraJavaOptions=&quot;-server -XX:+AggressiveOpts -XX:-UseBiasedLocking -XX:NewSize=4g -XX:MaxNewSize=4g -XX:+UseParNewGC -XX:MaxTenuringThreshold=2 -XX:SurvivorRatio=4 -XX:+UnlockDiagnosticVMOptions -XX:ParGCCardsPerStrideChunk=32768 -XX:+UseConcMarkSweepGC -XX:+CMSParallelRemarkEnabled -XX:+ParallelRefProcEnabled -XX:+CMSClassUnloadingEnabled -XX:CMSInitiatingOccupancyFraction=80 -XX:+UseCMSInitiatingOccupancyOnly -XX:+AlwaysPreTouch -XX:+PrintGCDetails -XX:+PrintAdaptiveSizePolicy -XX:+PrintTenuringDistribution -XX:+PrintGCDateStamps&quot;
+--driver-java-options &quot;-server -XX:+AggressiveOpts -XX:-UseBiasedLocking -XX:NewSize=4g -XX:MaxNewSize=4g -XX:+UseParNewGC -XX:MaxTenuringThreshold=2 -XX:SurvivorRatio=4 -XX:+UnlockDiagnosticVMOptions -XX:ParGCCardsPerStrideChunk=32768 -XX:+UseConcMarkSweepGC -XX:+CMSParallelRemarkEnabled -XX:+ParallelRefProcEnabled -XX:+CMSClassUnloadingEnabled -XX:CMSInitiatingOccupancyFraction=80 -XX:+UseCMSInitiatingOccupancyOnly -XX:+AlwaysPreTouch -XX:+PrintGCDetails -XX:+PrintAdaptiveSizePolicy -XX:+PrintTenuringDistribution -XX:+PrintGCDateStamps -Xloggc:gc.log&quot; 
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<h3 id="streams-everywhere">Streams Everywhere</h3>
+
+<p><code>scalaz-stream</code> is a great abstraction and as it’s described in <a href="https://gist.github.com/djspiewak/d93a9c4983f63721c41c">scalaz-stream Introduction</a> <em>every</em> application <em>can</em>, and I believe <strong>should be</strong> modeled this way.</p>
+
+<p>This approach is embraced not only in scala community, but also in clojure, take a look for example at 
+Rich Hickey presentation about <a href="http://www.infoq.com/presentations/clojure-core-async">clojure core.async channels</a>, and how your application can
+be modeled with queues.</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Eugene Zhulenev</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-12-03T13:24:46-05:00" pubdate data-updated="true">Dec 3<span>rd</span>, 2015</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/dataframe/'>dataframe</a>, <a class='category' href='/blog/categories/machine-learning/'>machine learning</a>, <a class='category' href='/blog/categories/scala/'>scala</a>, <a class='category' href='/blog/categories/scalaz-stream/'>scalaz-stream</a>, <a class='category' href='/blog/categories/spark/'>spark</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://eugenezhulenev.com/blog/2015/12/03/spark-in-production-large-scale-machine-learning/" data-via="ezhulenev" data-counturl="http://eugenezhulenev.com/blog/2015/12/03/spark-in-production-large-scale-machine-learning/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2015/09/16/spark-ml-for-big-and-small-data/" title="Previous Post: Optimizing Spark Machine Learning for Small Data">&laquo; Optimizing Spark Machine Learning for Small Data</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+  <aside class="sidebar">
+   
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:eugenezhulenev.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2015/12/03/spark-in-production-large-scale-machine-learning/">Spark in Production: Lessons From Running Large Scale Machine Learning</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/09/16/spark-ml-for-big-and-small-data/">Optimizing Spark Machine Learning for Small Data</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines/">Audience Modeling With Spark ML Pipelines</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/07/15/interactive-audience-analytics-with-spark-and-hyperloglog/">Interactive Audience Analytics With Spark and HyperLogLog</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/06/10/feature-engineering-at-scale/">Feature Engineering at Scale With Spark</a>
+      </li>
+    
+  </ul>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/ezhulenev">@ezhulenev</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'ezhulenev',
+            count: 0,
+            skip_forks: true,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2015 - Eugene Zhulenev -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'eugenezhulenev';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://eugenezhulenev.com/blog/2015/12/03/spark-in-production-large-scale-machine-learning/';
+        var disqus_url = 'http://eugenezhulenev.com/blog/2015/12/03/spark-in-production-large-scale-machine-learning/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+<script>
+  $(document).ready(function() {  
+  var stickyNavTop = $('nav').offset().top;  
+    
+  var stickyNav = function(){  
+  var scrollTop = $(window).scrollTop();  
+         
+  if (scrollTop > stickyNavTop) {   
+      $('nav').addClass('sticky');  
+  } else {  
+      $('nav').removeClass('sticky');   
+  }  
+  };  
+    
+  stickyNav();  
+    
+  $(window).scroll(function() {  
+      stickyNav();  
+  });  
+  });  
+</script>
+
+
+</body>
+</html>

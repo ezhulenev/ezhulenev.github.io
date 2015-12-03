@@ -9,7 +9,7 @@
   <meta name="author" content="Eugene Zhulenev">
 
   
-  <meta name="description" content="Update 2015-10-08: Optimization “hack” described in this post still works, however we don’t use it in production anymore. With careful parallelism &hellip;">
+  <meta name="description" content="I wrote earlier about our approach for machine learning with Spark at Collective, it was focused on transforming raw data into features that can be &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -93,6 +93,57 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2015/12/03/spark-in-production-large-scale-machine-learning/">Spark in Production: Lessons From Running Large Scale Machine Learning</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-12-03T13:24:46-05:00" pubdate data-updated="true">Dec 3<span>rd</span>, 2015</time>
+        
+           | <a href="/blog/2015/12/03/spark-in-production-large-scale-machine-learning/#disqus_thread"
+             data-disqus-identifier="http://eugenezhulenev.com/blog/2015/12/03/spark-in-production-large-scale-machine-learning/">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>I wrote earlier about our approach for <a href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines">machine learning with Spark</a> 
+at <a href="http://collective.com">Collective</a>, it was focused on transforming raw data into features that can be used for training a model.
+At this post I want describe how to assemble multiple building blocks into production application, that efficiently uses
+Spark cluster and can train/validate hundreds of models.</p>
+
+<p>Training single model is relatively easy, and it’s well covered in Spark documentation and multiple other blog posts. Training hundreds of 
+models can become really tricky from engineering point of view. Spark has lot’s of configuration parameters 
+that can affect cluster performance and stability, and you can use some clever tricks to get higher cluster utilization.</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2015/12/03/spark-in-production-large-scale-machine-learning/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
   
   
     <article>
@@ -649,67 +700,6 @@ In Part 1 I’m describing the problem and <code>single-node</code> solution, an
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/">Seamless Migration From Monolithic Application to Finagle Services (Part 2/2)</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-04-09T22:03:45-04:00" pubdate data-updated="true">Apr 9<span>th</span>, 2014</time>
-        
-           | <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/#disqus_thread"
-             data-disqus-identifier="http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><h3 id="synopsis">Synopsis</h3>
-
-<blockquote>
-  <p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/finagled-movie-db">Github</a></p>
-</blockquote>
-
-<p>Distributed micro-services architecture is hot trend right now, it’s widely adopted by <a href="https://blog.twitter.com/2011/finagle-a-protocol-agnostic-rpc-system">Twitter</a>, <a href="https://engineering.linkedin.com/architecture/restli-restful-service-architecture-scale">LinkedIn</a> and <a href="http://www.slideshare.net/LappleApple/gilt-from-monolith-ruby-app-to-micro-service-scala-service-architecture">Gilt</a>.
-However it can be difficult if data model is already defined, and services accessed via existing API throughout all your code. I’ll show how it’s possible to split monoliths app into standalone services built with Finagle and SBinary for custom communication protocol.</p>
-
-<p>I’m going to show it on example of small Fancy Movie Database application.</p>
-
-<h2 id="part-22-spit-application-to-distributed-services">[Part 2/2] Spit application to distributed services</h2>
-
-<p>Go to <a href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1">Part 1</a> where fancy movie database application defined.</p>
-
-<h3 id="what-is-finagle">What is Finagle</h3>
-
-<p>Finagle is a protocol-agnostic, asynchronous RPC system for the JVM that makes it easy to build robust clients and servers in Java, Scala, or any JVM-hosted language.</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/2/">&larr; Older</a>
@@ -733,6 +723,10 @@ However it can be difficult if data model is already defined, and services acces
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2015/12/03/spark-in-production-large-scale-machine-learning/">Spark in Production: Lessons From Running Large Scale Machine Learning</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/09/16/spark-ml-for-big-and-small-data/">Optimizing Spark Machine Learning for Small Data</a>
       </li>
     
@@ -746,10 +740,6 @@ However it can be difficult if data model is already defined, and services acces
     
       <li class="post">
         <a href="/blog/2015/06/10/feature-engineering-at-scale/">Feature Engineering at Scale With Spark</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/11/20/twitter-analytics-with-spark/">Building Twitter Live Stream Analytics With Spark and Cassandra</a>
       </li>
     
   </ul>
