@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Scala | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/scala/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2015-12-03T14:41:42-05:00</updated>
+  <updated>2015-12-15T16:11:52-05:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -179,7 +179,7 @@ with controlled concurrency and resource safety.</p>
 </div>
  </figure></notextile></div></p>
 
-<p>I’m using <code>concurrently</code> method, which runs each step with controlled concurrency. Steps that are doing heavy shuffles 
+<p>I’m using <code>concurrently</code> method, which runs each step with controlled concurrency in separate threads. Steps that are doing heavy shuffles 
 are running not more than 2 in parallel, in contrast to model training that is relatively lightweight operation and can run with much higher
 concurrency. This helper method is described in <a href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines">earlier post</a>.</p>
 
@@ -258,7 +258,7 @@ just crossed the boundary between small and big data.</p>
 <p>What if Spark could run the same machine learning algorithm, but instead of using <code>RDD</code> for storing input data, it would use <code>Arrays</code>?
 It solves all the problems, you get consistent model, computed 10-20x faster because it doesn’t need distributed computations.</p>
 
-<p>That’s exactly approach I used in <a href="https://github.com/collectivemedia/spark-ext">Spark Ext</a>, it’s called <a href="https://github.com/collectivemedia/spark-ext/blob/master/sparkext-mllib/src/main/scala/org/apache/spark/ml/classification/LocalLogisticRegression.scala">LocalLogisticRegression</a>.
+<p>That’s exactly approach I used in <a href="https://github.com/collectivemedia/spark-ext">Spark Ext</a>, it’s called <a href="https://github.com/collectivemedia/spark-ext/blob/b61d73bbf6ce38c6b9fe37764934f37b640081fb/sparkext-mllib/src/main/scala/org/apache/spark/ml/classification/LocalLogisticRegression.scala">LocalLogisticRegression</a>.
 It’s mostly copy-pasta from Spark <code>LogisticRegression</code>, but when input data frame has only single partition, it’s running
 function optimization on one of the executors using <code>mapPartition</code> function, essentially using Spark as distributed executor service.</p>
 
