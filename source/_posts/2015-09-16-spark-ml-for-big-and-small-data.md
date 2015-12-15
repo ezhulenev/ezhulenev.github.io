@@ -43,7 +43,7 @@ just crossed the boundary between small and big data.
 What if Spark could run the same machine learning algorithm, but instead of using `RDD` for storing input data, it would use `Arrays`?
 It solves all the problems, you get consistent model, computed 10-20x faster because it doesn't need distributed computations.
 
-That's exactly approach I used in [Spark Ext](https://github.com/collectivemedia/spark-ext), it's called [LocalLogisticRegression](https://github.com/collectivemedia/spark-ext/blob/master/sparkext-mllib/src/main/scala/org/apache/spark/ml/classification/LocalLogisticRegression.scala).
+That's exactly approach I used in [Spark Ext](https://github.com/collectivemedia/spark-ext), it's called [LocalLogisticRegression](https://github.com/collectivemedia/spark-ext/blob/b61d73bbf6ce38c6b9fe37764934f37b640081fb/sparkext-mllib/src/main/scala/org/apache/spark/ml/classification/LocalLogisticRegression.scala).
 It's mostly copy-pasta from Spark `LogisticRegression`, but when input data frame has only single partition, it's running
 function optimization on one of the executors using `mapPartition` function, essentially using Spark as distributed executor service.
 
