@@ -179,3 +179,10 @@ because it's much easier to build more complicated pipelines.
 ECS provides auto scaling out of the box, also it has it's own task scheduler. However task scheduler use random 
 containers to place new tasks, which can lead to unefficient resource utilization. And with custom resource allocator it's 
 possible to build more sophisticated strategies for buying cheapest computing resources on fluctuating market.
+
+### Mesos
+
+Mesos also provides great API for running tasks packaged as Docker images in the cluster.
+
+However managing Mesos deployment is not trivial task, and you might not want to do have this headache. Also it's much more difficult to provide
+truly scalable platform, you'll have to provision your cluster for peak load, which can be expensive and not cost-effective.
