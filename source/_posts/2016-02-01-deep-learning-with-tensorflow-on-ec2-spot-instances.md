@@ -21,12 +21,13 @@ deep neural networks for wide variety of machine learning problems, especially i
 > applicable in a wide variety of other domains as well.
 
 Although TensorFlow version used at Google supports distributed training, open sourced version can run only on one node. However some of machine learning
-problems are still embarrassingly parallel, and can be easily parallelized regardless of single-node nature of the core library itself
-  
+problems are still embarrassingly parallel, and can be easily parallelized regardless of single-node nature of the core library itself.
+
 1. **Hyperparameter optimization** or **model selection** is the problem of choosing a set of hyperparameters for a learning algorithm, 
 usually with the goal of optimizing a measure of the algorithm's performance on an independent data set.
 2. **Inference** - splitting input dataset and applying trained model to smaller batches in parallel
 
+<!-- more -->
 
 ## Hyperparameter Optimization
 
