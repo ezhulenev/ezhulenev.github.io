@@ -56,7 +56,8 @@ TensorFlow has awesome [Image Recognition Tutorial](https://www.tensorflow.org/v
 pre-trained ImageNet model for image recognition/classification. You provide an image, and a model gives you what it 
 can see on this image: leopard, container ship, place, etc.. Works like magic.
 
-I've prepared Docker image based on official TensorFlow image and slightly modified image classification example. It takes a range of images that needs to be classified, and S3 
+I've prepared [Docker image](https://github.com/ezhulenev/distributo/tree/master/example/docker-tensorflow) based on official TensorFlow image 
+and slightly modified image classification example. It takes a range of images that needs to be classified, and S3 
 path where to put results:
 
 {% coderay lang:bash %}
@@ -67,7 +68,7 @@ docker run -it -e 'AWS_ACCESS_KEY_ID=...' -e 'AWS_SECRET_ACCESS_KEY=...' \
         0:100 s3://distributo-example/imagenet/inferred-0-100.txt
 {% endcoderay %}
 
-Image urls are loaded from [http://image-net.org/imagenet_data/urls/imagenet_fall11_urls.tgz](http://image-net.org/imagenet_data/urls/imagenet_fall11_urls.tgz):
+This command will classify first 100 images from [http://image-net.org/imagenet_data/urls/imagenet_fall11_urls.tgz](http://image-net.org/imagenet_data/urls/imagenet_fall11_urls.tgz):
 
 {% coderay %}
 n00005787_175   http://farm3.static.flickr.com/2179/2090355369_4c8a60f899.jpg
@@ -78,7 +79,7 @@ n00005787_198   http://farm2.static.flickr.com/1437/680424989_da45c42286.jpg
 n00005787_219   http://farm1.static.flickr.com/176/441681804_fec8ae4c58.jpg
 {% endcoderay %}
 
-And inference result looks like this:
+And upload inference results to S3:
 
 {% coderay %}
 n00005787_175,http://farm3.static.flickr.com/2179/2090355369_4c8a60f899.jpg,[
@@ -112,6 +113,10 @@ significantly reduce the cost of running computation, and scale only when price 
 
 Distributo is a small library that makes it easier to automate EC2 resource allocation on spot market, 
 and provides custom ECS scheduler that takes care of efficient execution of your tasks on available computing resources.
+
+Source code is on Github: [https://github.com/ezhulenev/distributo](https://github.com/ezhulenev/distributo). 
+
+It requires [Leiningen](http://leiningen.org/) to compile and to run example application.
 
 ### Resource Allocator
 
