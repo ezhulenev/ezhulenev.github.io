@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Large Scale Deep Learning with TensorFlow on EC2 Spot Instances"
+title: "Scaling Deep Learning with TensorFlow on EC2 Spot Instances"
 date: 2016-02-01 11:14:16 -0500
 comments: true
 categories: [clojure, machine learning, deep learning, tensorflow, aws, ecs, ec2]
@@ -128,7 +128,7 @@ size ECS cluster built from spot instances. You need to define upfront how many 
 ### Scheduler
 
 Scheduler decides on what available container instance to start pending jobs. It's using bin-packing 
-with fitness calculators (concept borrowed from [Netflix/Fenzo](https://github.com/Netflix/Fenzo)) to 
+with fitness calculators (concept borrowed from [Netflix/Fenzo](https://github.com/Netflix/Fenzo/wiki/Fitness-Calculators)) to 
 choose best instance to start new task. It's the main difference from default ECS scheduler that
 places tasks on random instances.
 
