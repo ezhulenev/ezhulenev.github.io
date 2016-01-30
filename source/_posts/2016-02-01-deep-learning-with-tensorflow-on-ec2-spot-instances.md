@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Scaling Deep Learning with TensorFlow on EC2 Spot Instances"
+title: "Large Scale Deep Learning with TensorFlow on EC2 Spot Instances"
 date: 2016-02-01 11:14:16 -0500
 comments: true
 categories: [clojure, machine learning, deep learning, tensorflow, aws, ecs, ec2]
