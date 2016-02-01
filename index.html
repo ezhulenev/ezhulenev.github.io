@@ -9,7 +9,7 @@
   <meta name="author" content="Eugene Zhulenev">
 
   
-  <meta name="description" content="I wrote earlier about our approach for machine learning with Spark at Collective, it was focused on transforming raw data into features that can be &hellip;">
+  <meta name="description" content="In this post I’m demonstrating how to combine together TensorFlow, Docker, EC2 Container Service and EC2 Spot Instances to solve massive cluster &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -93,6 +93,76 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2016/02/01/deep-learning-with-tensorflow-on-ec2-spot-instances/">Large Scale Deep Learning With TensorFlow on EC2 Spot Instances</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2016-02-01T11:14:16-05:00" pubdate data-updated="true">Feb 1<span>st</span>, 2016</time>
+        
+           | <a href="/blog/2016/02/01/deep-learning-with-tensorflow-on-ec2-spot-instances/#disqus_thread"
+             data-disqus-identifier="http://eugenezhulenev.com/blog/2016/02/01/deep-learning-with-tensorflow-on-ec2-spot-instances/">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>In this post I’m demonstrating how to combine together <strong>TensorFlow</strong>, <strong>Docker</strong>, <strong>EC2 Container Service</strong> and <strong>EC2 Spot Instances</strong> 
+to solve massive cluster computing problems the most cost-effective way.</p>
+
+<blockquote>
+  <p>Source code is on on Github: <a href="https://github.com/ezhulenev/distributo">https://github.com/ezhulenev/distributo</a></p>
+</blockquote>
+
+<p>Neural Networks and Deep Learning in particular gained a lot of attention over the last year, and it’s only the beginning. Google released
+to open source their numerical computing framework <a href="https://www.tensorflow.org/">TensorFlow</a>, which can be used for training and running
+deep neural networks for wide variety of machine learning problems, especially image recognition.</p>
+
+<blockquote>
+  <p>TensorFlow was originally developed by researchers and engineers working on the Google Brain Team within Google’s Machine Intelligence research 
+organization for the purposes of conducting machine learning and deep neural networks research, but the system is general enough to be 
+applicable in a wide variety of other domains as well.</p>
+</blockquote>
+
+<p>Although TensorFlow version used at Google supports distributed training, open sourced version can run only on one node. However some of machine learning
+problems are still embarrassingly parallel, and can be easily parallelized regardless of single-node nature of the core library itself.</p>
+
+<ol>
+  <li><strong>Hyperparameter optimization</strong> or <strong>model selection</strong> is the problem of choosing a set of hyperparameters for a learning algorithm, 
+usually with the goal of optimizing a measure of the algorithm’s performance on an independent data set. Naturally parallelized by training
+models for each set ot parameters in parallel and choosing the best model (parameters) later.</li>
+  <li><strong>Inference</strong> (applying trained model to new data) can be parallelized by splitting input dataset into smaller 
+batches and running trained model on each of them in parallel</li>
+</ol>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2016/02/01/deep-learning-with-tensorflow-on-ec2-spot-instances/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
   
   
     <article>
@@ -643,63 +713,6 @@ In Part 1 I’m describing the problem and <code>single-node</code> solution, an
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1/">Akka Cluster for Value at Risk Calculation (Part 1/2)</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-05-01T22:03:45-04:00" pubdate data-updated="true">May 1<span>st</span>, 2014</time>
-        
-           | <a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1/#disqus_thread"
-             data-disqus-identifier="http://eugenezhulenev.com/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1/">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><h3 id="synopsis">Synopsis</h3>
-
-<blockquote>
-  <p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/akka-var-calculation">Github</a></p>
-</blockquote>
-
-<p>Risk Management in finance is one of the most common <a href="http://www.gridgain.com/usecases/risk-management/">case studies</a>
-for Grid Computing, and Value-at-Risk is most widely used risk measure.
-In this article I’m going to show how to <code>scale-out</code> Value-at-Risk calculation to multiple nodes with latest <a href="http://akka.io">Akka</a> middleware.
-In Part 1 I’m describing the problem and <code>single-node</code> solution, and in Part 2 I’m scaling it to multiple nodes.</p>
-
-<h2 id="part-1-introduction-to-value-at-risk-calculation">[Part 1] Introduction to Value at Risk calculation</h2>
-
-<p>Go to <a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2">Part 2</a> where VaR calculation scaled-out to multiple nodes.</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/2/">&larr; Older</a>
@@ -723,6 +736,10 @@ In Part 1 I’m describing the problem and <code>single-node</code> solution, an
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2016/02/01/deep-learning-with-tensorflow-on-ec2-spot-instances/">Large Scale Deep Learning With TensorFlow on EC2 Spot Instances</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2015/12/03/spark-in-production-large-scale-machine-learning/">Spark in Production: Lessons From Running Large Scale Machine Learning</a>
       </li>
     
@@ -736,10 +753,6 @@ In Part 1 I’m describing the problem and <code>single-node</code> solution, an
     
       <li class="post">
         <a href="/blog/2015/07/15/interactive-audience-analytics-with-spark-and-hyperloglog/">Interactive Audience Analytics With Spark and HyperLogLog</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2015/06/10/feature-engineering-at-scale/">Feature Engineering at Scale With Spark</a>
       </li>
     
   </ul>
@@ -785,7 +798,7 @@ In Part 1 I’m describing the problem and <code>single-node</code> solution, an
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2015 - Eugene Zhulenev -
+  Copyright &copy; 2016 - Eugene Zhulenev -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
 </p>
 

@@ -9,7 +9,7 @@
   <meta name="author" content="Eugene Zhulenev">
 
   
-  <meta name="description" content="Spark in Production: Lessons From Running Large Scale Machine Learning Dec 3rd, 2015 dataframe machine learning scala scalaz-stream spark Comments I &hellip;">
+  <meta name="description" content="Large Scale Deep Learning with TensorFlow on EC2 Spot Instances Feb 1st, 2016 aws clojure deep learning ec2 ecs machine learning tensorflow Comments &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -94,6 +94,103 @@
       
 
   
+  
+  <article class="listing">
+    <header>
+  
+  <h1 class="beta">
+    <a href="/blog/2016/02/01/deep-learning-with-tensorflow-on-ec2-spot-instances/">Large Scale Deep Learning with TensorFlow on EC2 Spot Instances</a>
+  </h1>
+  
+
+  
+  <div class="meta clearfix">
+    
+
+
+
+
+
+
+
+
+  
+
+
+<time class="pull-left" datetime="2016-02-01T11:14:16-05:00" pubdate data-updated="true"><i class="icon-calendar"></i> Feb 1<span>st</span>, 2016</time>
+    
+
+  <div class="pull-left">
+    <i class="icon-tags"></i>
+    <ul class="tags unstyled">
+    
+      
+        <li><a class='category' href='/blog/categories/aws/'>aws</a></li>
+      
+        <li><a class='category' href='/blog/categories/clojure/'>clojure</a></li>
+      
+        <li><a class='category' href='/blog/categories/deep-learning/'>deep learning</a></li>
+      
+        <li><a class='category' href='/blog/categories/ec2/'>ec2</a></li>
+      
+        <li><a class='category' href='/blog/categories/ecs/'>ecs</a></li>
+      
+        <li><a class='category' href='/blog/categories/machine-learning/'>machine learning</a></li>
+      
+        <li><a class='category' href='/blog/categories/tensorflow/'>tensorflow</a></li>
+      
+    
+    </ul>
+  </div>
+
+    
+      <a class="pull-right" href="http://eugenezhulenev.com/blog/2016/02/01/deep-learning-with-tensorflow-on-ec2-spot-instances/#disqus_thread">
+        Comments <i class="icon-comment"></i>
+      </a>
+    
+  </div>
+  
+</header>
+
+
+
+
+<div class="entry-content clearfix">
+  <p>In this post I’m demonstrating how to combine together <strong>TensorFlow</strong>, <strong>Docker</strong>, <strong>EC2 Container Service</strong> and <strong>EC2 Spot Instances</strong> 
+to solve massive cluster computing problems the most cost-effective way.</p>
+
+<blockquote>
+  <p>Source code is on on Github: <a href="https://github.com/ezhulenev/distributo">https://github.com/ezhulenev/distributo</a></p>
+</blockquote>
+
+<p>Neural Networks and Deep Learning in particular gained a lot of attention over the last year, and it’s only the beginning. Google released
+to open source their numerical computing framework <a href="https://www.tensorflow.org/">TensorFlow</a>, which can be used for training and running
+deep neural networks for wide variety of machine learning problems, especially image recognition.</p>
+
+<blockquote>
+  <p>TensorFlow was originally developed by researchers and engineers working on the Google Brain Team within Google’s Machine Intelligence research 
+organization for the purposes of conducting machine learning and deep neural networks research, but the system is general enough to be 
+applicable in a wide variety of other domains as well.</p>
+</blockquote>
+
+<p>Although TensorFlow version used at Google supports distributed training, open sourced version can run only on one node. However some of machine learning
+problems are still embarrassingly parallel, and can be easily parallelized regardless of single-node nature of the core library itself.</p>
+
+<ol>
+  <li><strong>Hyperparameter optimization</strong> or <strong>model selection</strong> is the problem of choosing a set of hyperparameters for a learning algorithm, 
+usually with the goal of optimizing a measure of the algorithm’s performance on an independent data set. Naturally parallelized by training
+models for each set ot parameters in parallel and choosing the best model (parameters) later.</li>
+  <li><strong>Inference</strong> (applying trained model to new data) can be parallelized by splitting input dataset into smaller 
+batches and running trained model on each of them in parallel</li>
+</ol>
+
+
+  <a class="btn pull-right" href="/blog/2016/02/01/deep-learning-with-tensorflow-on-ec2-spot-instances/">Read on &rarr;</a>
+</div>
+
+  </article>
+  <hr>
+
   
   <article class="listing">
     <header>
@@ -844,88 +941,6 @@ In Part 1 I’m describing the problem and <code>single-node</code> solution, an
   </article>
   <hr>
 
-  
-  <article class="listing">
-    <header>
-  
-  <h1 class="beta">
-    <a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1/">Akka Cluster for Value at Risk calculation (Part 1/2)</a>
-  </h1>
-  
-
-  
-  <div class="meta clearfix">
-    
-
-
-
-
-
-
-
-
-  
-
-
-<time class="pull-left" datetime="2014-05-01T22:03:45-04:00" pubdate data-updated="true"><i class="icon-calendar"></i> May 1<span>st</span>, 2014</time>
-    
-
-  <div class="pull-left">
-    <i class="icon-tags"></i>
-    <ul class="tags unstyled">
-    
-      
-        <li><a class='category' href='/blog/categories/akka/'>akka</a></li>
-      
-        <li><a class='category' href='/blog/categories/cluster/'>cluster</a></li>
-      
-        <li><a class='category' href='/blog/categories/grid/'>grid</a></li>
-      
-        <li><a class='category' href='/blog/categories/scala/'>scala</a></li>
-      
-        <li><a class='category' href='/blog/categories/scalaz-stream/'>scalaz-stream</a></li>
-      
-        <li><a class='category' href='/blog/categories/value-at-risk/'>value-at-risk</a></li>
-      
-    
-    </ul>
-  </div>
-
-    
-      <a class="pull-right" href="http://eugenezhulenev.com/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1/#disqus_thread">
-        Comments <i class="icon-comment"></i>
-      </a>
-    
-  </div>
-  
-</header>
-
-
-
-
-<div class="entry-content clearfix">
-  <h3 id="synopsis">Synopsis</h3>
-
-<blockquote>
-  <p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/akka-var-calculation">Github</a></p>
-</blockquote>
-
-<p>Risk Management in finance is one of the most common <a href="http://www.gridgain.com/usecases/risk-management/">case studies</a>
-for Grid Computing, and Value-at-Risk is most widely used risk measure.
-In this article I’m going to show how to <code>scale-out</code> Value-at-Risk calculation to multiple nodes with latest <a href="http://akka.io">Akka</a> middleware.
-In Part 1 I’m describing the problem and <code>single-node</code> solution, and in Part 2 I’m scaling it to multiple nodes.</p>
-
-<h2 id="part-1-introduction-to-value-at-risk-calculation">[Part 1] Introduction to Value at Risk calculation</h2>
-
-<p>Go to <a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2">Part 2</a> where VaR calculation scaled-out to multiple nodes.</p>
-
-
-  <a class="btn pull-right" href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1/">Read on &rarr;</a>
-</div>
-
-  </article>
-  <hr>
-
 
   <div class="pagination">
     
@@ -937,7 +952,7 @@ In Part 1 I’m describing the problem and <code>single-node</code> solution, an
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2015 - Eugene Zhulenev -
+  Copyright &copy; 2016 - Eugene Zhulenev -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
 </p>
 
