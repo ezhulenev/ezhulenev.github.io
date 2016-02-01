@@ -7,8 +7,8 @@ categories: [clojure, machine learning, deep learning, tensorflow, aws, ecs, ec2
 keywords: clojure, machine learning, deep learning, tensorflow, aws, ecs, ec2
 ---
 
-In this post I'm demonstrating how to combine together **TensorFlow**, **Docker**, **EC2 Container Service** and **EC2 Spot instances** to solve massive
-cluster computing problems the most cost-effective way.
+In this post I'm demonstrating how to combine together **TensorFlow**, **Docker**, **EC2 Container Service** and **EC2 Spot Instances** 
+to solve massive cluster computing problems the most cost-effective way.
 
 > Source code is on on Github: [https://github.com/ezhulenev/distributo](https://github.com/ezhulenev/distributo)
 
@@ -24,8 +24,10 @@ Although TensorFlow version used at Google supports distributed training, open s
 problems are still embarrassingly parallel, and can be easily parallelized regardless of single-node nature of the core library itself.
 
 1. **Hyperparameter optimization** or **model selection** is the problem of choosing a set of hyperparameters for a learning algorithm, 
-usually with the goal of optimizing a measure of the algorithm's performance on an independent data set.
-2. **Inference** - splitting input dataset and applying trained model to smaller batches in parallel
+usually with the goal of optimizing a measure of the algorithm's performance on an independent data set. Naturally parallelized by training
+models for each set ot parameters in parallel and choosing the best model (parameters) later.
+2. **Inference** (applying trained model to new data) can be parallelized by splitting input dataset into smaller 
+batches and running trained model on each of them in parallel
 
 <!-- more -->
 
@@ -36,18 +38,19 @@ neural networks research problems.
 
 Choosing a right design and parameters for your neural network is separate optimization problem:  
 
-* how many layers to use
-* how many neurons in each layer
-* what learning rate to use
+* how many layers to use?
+* how many neurons in each layer?
+* what learning rate to use?
 
-Luckily all of these choices are independent and can be easily run in parallel.
+These choices form a set of model hyperparameters, which can be used for training multiple models in parallel.
 
 {%img center /images/deep-learning/hyperparameter-optimization.png Hyperparameter Optimization %}
 
 ## Inference
 
 When you already have trained model, and you want to score/classify huge dataset, you can use similar approach: split all your input
-data into smaller batches, and run them in parallel.
+data into smaller batches, and run them in parallel. Instead of different hyperparameters, scheduler will control batch offsets 
+defining what part of the dataset should be loaded for inference.
 
 # TensorFlow for Image Recognition
 
@@ -121,9 +124,9 @@ It requires [Leiningen](http://leiningen.org/) to compile and to run example app
 
 ### Resource Allocator
 
-Resource allocator is responsible for allocating compute resources in EC2 based in outstanding 
-jobs resource requirements. Right now it's only dummy implementation that can support fixed
-size ECS cluster built from spot instances. You need to define upfront how many instances do you need.
+Resource allocator is responsible for allocating compute resources in EC2 based on outstanding 
+jobs resource requirements. Right now it's lame implementation that only supports fixed
+size ECS cluster built from same type spot instances. You need to define upfront how many instances do you need.
 
 ### Scheduler
 
