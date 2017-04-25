@@ -7,22 +7,22 @@ categories: [scala, type level programming]
 keywords: scala, type level programming
 ---
 
-> This post is Scala version of [Haskell Type-Level Instant Insanity by Conrad Parker](http://blog.kfish.org/2007/09/type-level-instant-insanity.html)
+> This post is a Scala version of [Haskell Type-Level Instant Insanity by Conrad Parker](http://blog.kfish.org/2007/09/type-level-instant-insanity.html){:target="_blank"}
 
 This post shows an implementation of Instant Insanity puzzle game at compile time, using powerful Scala type system. This post is
-based on amazing article by Conrad Parker in the [Monad Reader Issue 8](https://wiki.haskell.org/wikiupload/d/dd/TMR-Issue8.pdf).
+based on amazing article by Conrad Parker in the [Monad Reader Issue 8](https://wiki.haskell.org/wikiupload/d/dd/TMR-Issue8.pdf){:target="_blank"}.
 Original article is around 20 pages long, this post is much more concise version of it. Original article is very well written and easy to 
 understand, this post should help with jumping from Scala to Haskell code for people who are not familiar with Haskell language.
 
 # Textbook Implementation
 
-*[Instant Insanity](https://en.wikipedia.org/wiki/Instant_Insanity)* puzzle formulated as:
+*[Instant Insanity](https://en.wikipedia.org/wiki/Instant_Insanity){:target="_blank"}* puzzle formulated as:
 
 > It consists of four cubes, with faces coloured blue, green, red or white.
 > The problem is to arrange the cubes in a vertical pile such that each
 > visible column of faces contains four distinct colours.
 
-"Classic" solution in scala can be found [here](https://gist.github.com/ezhulenev/db594992e5f68f435fdc5970e97f02db), this solution
+"Classic" solution in scala can be found [here](https://gist.github.com/ezhulenev/db594992e5f68f435fdc5970e97f02db){:target="_blank"}, this solution
 stacks the cubes one at a time, trying each possible orientation of each cube.
 
 I'm going to show how to translate this solution into Scala Type System.
@@ -316,7 +316,7 @@ Unfortunately sequence comprehensions can't be directly mimiced in Scala Type Sy
 sequence comprehension using the type-level list functions.
 
 For example, building a list of the possible orientations of a cube involves appending a list of possible
-applications of *flip*, so we will need to be able to map over a list and append the original list. [Original sequence comprehension](https://gist.github.com/ezhulenev/db594992e5f68f435fdc5970e97f02db#file-instantinsanity-scala-L18) was:
+applications of *flip*, so we will need to be able to map over a list and append the original list. [Original sequence comprehension](https://gist.github.com/ezhulenev/db594992e5f68f435fdc5970e97f02db#file-instantinsanity-scala-L18){:target="_blank"} was:
 
 {% codeblock lang:scala %}
 def orientations: Cube => Seq[Cube] = { c: Cube =>
@@ -640,4 +640,4 @@ it's as powerful as Haskell Type System.
 I don't believe that solving this kind of puzzles in a type system makes sense, it took me more then 5 hours
 to get a solution, but it shows how expressive it can be.
 
-> Full code for Type-Level Instant Insanity is on [Github](https://gist.github.com/ezhulenev/d741fa7c47d532ec9d1a1bf9aa12fbbc)
+> Full code for Type-Level Instant Insanity is on [Github](https://gist.github.com/ezhulenev/d741fa7c47d532ec9d1a1bf9aa12fbbc){:target="_blank"}
