@@ -9,7 +9,7 @@
   <meta name="author" content="Eugene Zhulenev">
 
   
-  <meta name="description" content="In this post I’m demonstrating how to combine together TensorFlow, Docker, EC2 Container Service and EC2 Spot Instances to solve massive cluster &hellip;">
+  <meta name="description" content="This post is a Scala version of Haskell Type-Level Instant Insanity by Conrad Parker This post shows an implementation of Instant Insanity puzzle &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -93,6 +93,72 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2017/04/26/type-level-instant-insanity-in-scala/">Type-Level Instant Insanity in Scala</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2017-04-26T13:15:16-04:00" pubdate data-updated="true">Apr 26<span>th</span>, 2017</time>
+        
+           | <a href="/blog/2017/04/26/type-level-instant-insanity-in-scala/#disqus_thread"
+             data-disqus-identifier="http://eugenezhulenev.com/blog/2017/04/26/type-level-instant-insanity-in-scala/">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><blockquote>
+  <p>This post is a Scala version of <a href="http://blog.kfish.org/2007/09/type-level-instant-insanity.html" target="_blank">Haskell Type-Level Instant Insanity by Conrad Parker</a></p>
+</blockquote>
+
+<p>This post shows an implementation of Instant Insanity puzzle game at compile time, using powerful Scala type system. This post is
+based on amazing article by Conrad Parker in the <a href="https://wiki.haskell.org/wikiupload/d/dd/TMR-Issue8.pdf" target="_blank">Monad Reader Issue 8</a>.
+Original article is around 20 pages long, this post is much more concise version of it. Original article is very well written and easy to 
+understand, this post should help with jumping from Scala to Haskell code for people who are not familiar with Haskell language.</p>
+
+<h1 id="textbook-implementation">Textbook Implementation</h1>
+
+<p><em><a href="https://en.wikipedia.org/wiki/Instant_Insanity" target="_blank">Instant Insanity</a></em> puzzle formulated as:</p>
+
+<blockquote>
+  <p>It consists of four cubes, with faces coloured blue, green, red or white.
+The problem is to arrange the cubes in a vertical pile such that each
+visible column of faces contains four distinct colours.</p>
+</blockquote>
+
+<p>“Classic” solution in scala can be found <a href="https://gist.github.com/ezhulenev/db594992e5f68f435fdc5970e97f02db" target="_blank">here</a>, this solution
+stacks the cubes one at a time, trying each possible orientation of each cube.</p>
+
+<p>I’m going to show how to translate this solution into Scala Type System.</p>
+
+</div>
+  
+  
+    <footer>
+      <a rel="full-article" href="/blog/2017/04/26/type-level-instant-insanity-in-scala/">Read on &rarr;</a>
+    </footer>
+  
+
+
+    </article>
   
   
     <article>
@@ -656,63 +722,6 @@ in single jar file, and submit it to Spark cluster with each test.</p>
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2/">Akka Cluster for Value at Risk Calculation (Part 2/2)</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-05-01T22:03:45-04:00" pubdate data-updated="true">May 1<span>st</span>, 2014</time>
-        
-           | <a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2/#disqus_thread"
-             data-disqus-identifier="http://eugenezhulenev.com/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2/">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><h3 id="synopsis">Synopsis</h3>
-
-<blockquote>
-  <p>The code &amp; sample app can be found on <a href="https://github.com/ezhulenev/akka-var-calculation">Github</a></p>
-</blockquote>
-
-<p>Risk Management in finance is one of the most common <a href="http://www.gridgain.com/usecases/risk-management/">case studies</a>
-for Grid Computing, and Value-at-Risk is most widely used risk measure.
-In this article I’m going to show how to <code>scale-out</code> Value-at-Risk calculation to multiple nodes with latest <a href="http://akka.io">Akka</a> middleware.
-In Part 1 I’m describing the problem and <code>single-node</code> solution, and in Part 2 I’m scaling it to multiple nodes.</p>
-
-<h2 id="part-22-scale-out-var-calculation-to-multiple-nodes">[Part 2/2] Scale-out VaR calculation to multiple nodes</h2>
-
-<p>Go to <a href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1">Part 1</a> where Value at Risk calculator defined.</p>
-
-</div>
-  
-  
-    <footer>
-      <a rel="full-article" href="/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2/">Read on &rarr;</a>
-    </footer>
-  
-
-
-    </article>
-  
   <div class="pagination">
     
       <a class="prev" href="/blog/page/2/">&larr; Older</a>
@@ -736,6 +745,10 @@ In Part 1 I’m describing the problem and <code>single-node</code> solution, an
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2017/04/26/type-level-instant-insanity-in-scala/">Type-Level Instant Insanity in Scala</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2016/02/01/deep-learning-with-tensorflow-on-ec2-spot-instances/">Large Scale Deep Learning With TensorFlow on EC2 Spot Instances</a>
       </li>
     
@@ -749,10 +762,6 @@ In Part 1 I’m describing the problem and <code>single-node</code> solution, an
     
       <li class="post">
         <a href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines/">Audience Modeling With Spark ML Pipelines</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2015/07/15/interactive-audience-analytics-with-spark-and-hyperloglog/">Interactive Audience Analytics With Spark and HyperLogLog</a>
       </li>
     
   </ul>
@@ -798,7 +807,7 @@ In Part 1 I’m describing the problem and <code>single-node</code> solution, an
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2016 - Eugene Zhulenev -
+  Copyright &copy; 2017 - Eugene Zhulenev -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
 </p>
 

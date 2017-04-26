@@ -1,0 +1,1312 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Type-Level Instant Insanity in Scala - Eugene Zhulenev</title>
+  <meta name="author" content="Eugene Zhulenev">
+
+  
+  <meta name="description" content="This post is a Scala version of Haskell Type-Level Instant Insanity by Conrad Parker This post shows an implementation of Instant Insanity puzzle &hellip;">
+  <meta name="keywords" content="scala, type level programming">
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://eugenezhulenev.com/blog/2017/04/26/type-level-instant-insanity-in-scala">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Eugene Zhulenev" type="application/atom+xml">
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script>!window.jQuery && document.write(unescape('%3Cscript src="./javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href='https://fonts.googleapis.com/css?family=Noto+Serif:400,700' rel='stylesheet' type='text/css'>
+<link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-49585535-1']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+  <script>
+    $(document).ready(function(){
+      $('a#github').attr('target','_blank');
+      $('a#github').on('click', function() {
+         _gaq.push(['_trackEvent', 'ContactMe', 'Click', 'Github']);
+      });
+
+      $('a#linkedin').attr('target','_blank');
+      $('a#linkedin').on('click', function() {
+         _gaq.push(['_trackEvent', 'ContactMe', 'Click', 'LinkedIn']);
+       });
+
+      $('a#twitter').attr('target','_blank');
+      $('a#twitter').on('click', function() {
+         _gaq.push(['_trackEvent', 'ContactMe', 'Click', 'Twitter']);
+      });
+     });
+  </script>
+
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">Eugene Zhulenev</a></h1>
+  
+    <h2>Engineering Machine Learning and Audience Modeling at <a href="http://collective.com">Collective</a></h2>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  
+  
+</ul>
+
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+  <li><a href="/atom.xml">RSS</a></li>
+  <li><a id="github" href="http://github.com/ezhulenev">Github</a></li>
+  <li><a id="twitter" href="http://twitter.com/ezhulenev">Twitter</a></li>
+  <li><a id="linkedin" href="http://linkedin.com/in/eugenezhulenev">Linkedin</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Type-Level Instant Insanity in Scala</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2017-04-26T13:15:16-04:00" pubdate data-updated="true">Apr 26<span>th</span>, 2017</time>
+        
+           | <a href="#disqus_thread"
+             data-disqus-identifier="http://eugenezhulenev.com">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><blockquote>
+  <p>This post is a Scala version of <a href="http://blog.kfish.org/2007/09/type-level-instant-insanity.html" target="_blank">Haskell Type-Level Instant Insanity by Conrad Parker</a></p>
+</blockquote>
+
+<p>This post shows an implementation of Instant Insanity puzzle game at compile time, using powerful Scala type system. This post is
+based on amazing article by Conrad Parker in the <a href="https://wiki.haskell.org/wikiupload/d/dd/TMR-Issue8.pdf" target="_blank">Monad Reader Issue 8</a>.
+Original article is around 20 pages long, this post is much more concise version of it. Original article is very well written and easy to 
+understand, this post should help with jumping from Scala to Haskell code for people who are not familiar with Haskell language.</p>
+
+<h1 id="textbook-implementation">Textbook Implementation</h1>
+
+<p><em><a href="https://en.wikipedia.org/wiki/Instant_Insanity" target="_blank">Instant Insanity</a></em> puzzle formulated as:</p>
+
+<blockquote>
+  <p>It consists of four cubes, with faces coloured blue, green, red or white.
+The problem is to arrange the cubes in a vertical pile such that each
+visible column of faces contains four distinct colours.</p>
+</blockquote>
+
+<p>“Classic” solution in scala can be found <a href="https://gist.github.com/ezhulenev/db594992e5f68f435fdc5970e97f02db" target="_blank">here</a>, this solution
+stacks the cubes one at a time, trying each possible orientation of each cube.</p>
+
+<p>I’m going to show how to translate this solution into Scala Type System.</p>
+
+<!-- more -->
+
+<h1 id="type-level-implementation">Type-Level Implementation</h1>
+
+<p>When I say “Type-Level Implementation”, I mean that I’m going to find a solution to the problem without creating any “values”,
+just operating with types, and I’ll do it using Scala compiler only, without running any code.</p>
+
+<h1 id="bottom">⊥ (Bottom)</h1>
+
+<p>I’m working in the type system, so I don’t need any value for any of the variables, just the type. In scala there is one
+special type, that is subtype of every other type - <code>Nothing</code>. There exist no instances of this type, but that’s ok because I don’t need one.</p>
+
+<p>I’m introducing two functions that will make code look closer to Haskell version, and will save me some typing.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">def</span> <span class="n">undefined</span><span class="o">[</span><span class="kt">T</span><span class="o">]</span><span class="k">:</span> <span class="kt">T</span> <span class="o">=</span> <span class="o">???</span>
+</span><span class="line"><span class="k">def</span> <span class="o">⊥[</span><span class="kt">T</span><span class="o">]</span><span class="k">:</span> <span class="kt">T</span> <span class="o">=</span> <span class="n">undefined</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="n">scala</span><span class="o">&gt;</span> <span class="k">:type</span> <span class="kt">⊥</span><span class="o">[</span><span class="kt">Int</span><span class="o">]</span>
+</span><span class="line"><span class="nc">Int</span>
+</span><span class="line">
+</span><span class="line"><span class="n">scala</span><span class="o">&gt;</span> <span class="k">:type</span> <span class="kt">⊥</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]]</span>
+</span><span class="line"><span class="nc">Seq</span><span class="o">[</span><span class="kt">String</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<h2 id="simple-types">Simple Types</h2>
+
+<p>There are four possible colors. Rather then encoding them as <code>values</code> of type <code>Char</code>, I’m introducing new types.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">R</span>   <span class="c1">// Red</span>
+</span><span class="line"><span class="k">trait</span> <span class="nc">G</span>   <span class="c1">// Green</span>
+</span><span class="line"><span class="k">trait</span> <span class="nc">B</span>   <span class="c1">// Blue</span>
+</span><span class="line"><span class="k">trait</span> <span class="nc">W</span>   <span class="c1">// White</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="n">scala</span><span class="o">&gt;</span> <span class="k">:type</span> <span class="kt">⊥</span><span class="o">[</span><span class="kt">R</span><span class="o">]</span>
+</span><span class="line"><span class="n">R</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<h2 id="parametrized-types">Parametrized Types</h2>
+
+<p>A cube is a thing that can have six faces. In Scala Type System, I use the keyword <code>trait</code> to introduce such a thing:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">Cube</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>I can’t get a type of a <code>Cube</code> because there is not such thing, <code>Cube</code> exist only when it’s applied to <strong>type parameters</strong>,
+namely <em>u, f, r, b, l, d</em>. Applying concrete types to <code>Cube</code> will create concrete result type.
+One way to think about <code>Cube</code> is that it’s like a function, but at the type level.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="n">scala</span><span class="o">&gt;</span> <span class="k">:type</span> <span class="kt">⊥</span><span class="o">[</span><span class="kt">Cube</span><span class="o">]</span>
+</span><span class="line"><span class="o">&lt;</span><span class="n">console</span><span class="k">&gt;:</span><span class="mi">17</span><span class="k">:</span> <span class="kt">error:</span> <span class="kt">trait</span> <span class="kt">Cube</span> <span class="kt">takes</span> <span class="k">type</span> <span class="kt">parameters</span>
+</span><span class="line">       <span class="o">⊥[</span><span class="kt">Cube</span><span class="o">]</span>
+</span><span class="line">
+</span><span class="line"><span class="n">scala</span><span class="o">&gt;</span> <span class="k">:type</span> <span class="kt">⊥</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">R</span>, <span class="kt">R</span>, <span class="kt">R</span>, <span class="kt">R</span>, <span class="kt">R</span>, <span class="kt">R</span><span class="o">]]</span> <span class="c1">// a red cube</span>
+</span><span class="line"><span class="nc">Cube</span><span class="o">[</span><span class="kt">R</span>,<span class="kt">R</span>,<span class="kt">R</span>,<span class="kt">R</span>,<span class="kt">R</span>,<span class="kt">R</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<h2 id="type-aliases">Type Aliases</h2>
+
+<p>Now I can define the actual cubes in our puzzle as results of applying <code>Cube</code> function to concrete types.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">type</span> <span class="kt">CubeRed</span> <span class="o">=</span> <span class="nc">Cube</span><span class="o">[</span><span class="kt">R</span>, <span class="kt">R</span>, <span class="kt">R</span>, <span class="kt">R</span>, <span class="kt">R</span>, <span class="kt">R</span><span class="o">]</span>
+</span><span class="line"><span class="k">type</span> <span class="kt">CubeBlue</span> <span class="o">=</span> <span class="nc">Cube</span><span class="o">[</span><span class="kt">B</span>, <span class="kt">B</span>, <span class="kt">B</span>, <span class="kt">B</span>, <span class="kt">B</span>, <span class="kt">B</span><span class="o">]</span>
+</span><span class="line">
+</span><span class="line"><span class="k">type</span> <span class="kt">Cube1</span> <span class="o">=</span> <span class="nc">Cube</span><span class="o">[</span><span class="kt">B</span>, <span class="kt">G</span>, <span class="kt">W</span>, <span class="kt">G</span>, <span class="kt">B</span>, <span class="kt">R</span><span class="o">]</span>
+</span><span class="line"><span class="k">type</span> <span class="kt">Cube2</span> <span class="o">=</span> <span class="nc">Cube</span><span class="o">[</span><span class="kt">W</span>, <span class="kt">G</span>, <span class="kt">B</span>, <span class="kt">W</span>, <span class="kt">R</span>, <span class="kt">R</span><span class="o">]</span>
+</span><span class="line"><span class="k">type</span> <span class="kt">Cube3</span> <span class="o">=</span> <span class="nc">Cube</span><span class="o">[</span><span class="kt">G</span>, <span class="kt">W</span>, <span class="kt">R</span>, <span class="kt">B</span>, <span class="kt">R</span>, <span class="kt">R</span><span class="o">]</span>
+</span><span class="line"><span class="k">type</span> <span class="kt">Cube4</span> <span class="o">=</span> <span class="nc">Cube</span><span class="o">[</span><span class="kt">B</span>, <span class="kt">R</span>, <span class="kt">G</span>, <span class="kt">G</span>, <span class="kt">W</span>, <span class="kt">W</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<h2 id="transformation-functions">Transformation Functions</h2>
+
+<p>Now I need to encode following three functions from textbook solution at a type-level.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="c1">// Rotate a cube 90 degrees over its Z-axis, leaving up and down in place.</span>
+</span><span class="line"><span class="k">def</span> <span class="n">rot</span><span class="k">:</span> <span class="kt">Cube</span> <span class="o">=&gt;</span> <span class="nc">Cube</span> <span class="k">=</span> <span class="o">{</span> <span class="k">case</span> <span class="nc">Seq</span><span class="o">(</span><span class="n">u</span><span class="o">,</span> <span class="n">f</span><span class="o">,</span> <span class="n">r</span><span class="o">,</span> <span class="n">b</span><span class="o">,</span> <span class="n">l</span><span class="o">,</span> <span class="n">d</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="nc">Seq</span><span class="o">(</span><span class="n">u</span><span class="o">,</span> <span class="n">r</span><span class="o">,</span> <span class="n">b</span><span class="o">,</span> <span class="n">l</span><span class="o">,</span> <span class="n">f</span><span class="o">,</span> <span class="n">d</span><span class="o">)</span> <span class="o">}</span>
+</span><span class="line">
+</span><span class="line"><span class="c1">// Twist a cube around the axis running from the upper-front-right</span>
+</span><span class="line"><span class="c1">// corner to the back-left-down corner.</span>
+</span><span class="line"><span class="k">def</span> <span class="n">twist</span><span class="k">:</span> <span class="kt">Cube</span> <span class="o">=&gt;</span> <span class="nc">Cube</span> <span class="k">=</span> <span class="o">{</span> <span class="k">case</span> <span class="nc">Seq</span><span class="o">(</span><span class="n">u</span><span class="o">,</span> <span class="n">f</span><span class="o">,</span> <span class="n">r</span><span class="o">,</span> <span class="n">b</span><span class="o">,</span> <span class="n">l</span><span class="o">,</span> <span class="n">d</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="nc">Seq</span><span class="o">(</span><span class="n">f</span><span class="o">,</span> <span class="n">r</span><span class="o">,</span> <span class="n">u</span><span class="o">,</span> <span class="n">l</span><span class="o">,</span> <span class="n">d</span><span class="o">,</span> <span class="n">b</span><span class="o">)</span> <span class="o">}</span>
+</span><span class="line">
+</span><span class="line"><span class="c1">// Exchange up and down, front and left, back and right.</span>
+</span><span class="line"><span class="k">def</span> <span class="n">flip</span><span class="k">:</span> <span class="kt">Cube</span> <span class="o">=&gt;</span> <span class="nc">Cube</span> <span class="k">=</span> <span class="o">{</span> <span class="k">case</span> <span class="nc">Seq</span><span class="o">(</span><span class="n">u</span><span class="o">,</span> <span class="n">f</span><span class="o">,</span> <span class="n">r</span><span class="o">,</span> <span class="n">b</span><span class="o">,</span> <span class="n">l</span><span class="o">,</span> <span class="n">d</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="nc">Seq</span><span class="o">(</span><span class="n">d</span><span class="o">,</span> <span class="n">l</span><span class="o">,</span> <span class="n">b</span><span class="o">,</span> <span class="n">r</span><span class="o">,</span> <span class="n">f</span><span class="o">,</span> <span class="n">u</span><span class="o">)</span> <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>I’m going to group all of them into single <code>Transform</code> trait. Implicit <code>transform</code> function can generate an
+instance of <code>Transform</code> for any type <em>u, f, r, b, l, d</em>. I’m not providing any implementation for any of them,
+because I never going to <em>call</em> them.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+<span class="line-number">15</span>
+<span class="line-number">16</span>
+<span class="line-number">17</span>
+<span class="line-number">18</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">Transform</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">]</span> <span class="o">{</span>
+</span><span class="line">  <span class="k">def</span> <span class="n">rot</span><span class="k">:</span> <span class="kt">Cube</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">]</span> <span class="k">=&gt;</span> <span class="nc">Cube</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">f</span>, <span class="kt">d</span><span class="o">]</span>
+</span><span class="line">  <span class="k">def</span> <span class="n">twist</span><span class="k">:</span> <span class="kt">Cube</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">]</span> <span class="k">=&gt;</span> <span class="nc">Cube</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">u</span>, <span class="kt">l</span>, <span class="kt">d</span>, <span class="kt">b</span><span class="o">]</span>
+</span><span class="line">  <span class="k">def</span> <span class="n">flip</span><span class="k">:</span> <span class="kt">Cube</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">]</span> <span class="k">=&gt;</span> <span class="nc">Cube</span><span class="o">[</span><span class="kt">d</span>, <span class="kt">l</span>, <span class="kt">b</span>, <span class="kt">r</span>, <span class="kt">f</span>, <span class="kt">u</span><span class="o">]</span>
+</span><span class="line"><span class="o">}</span>
+</span><span class="line">
+</span><span class="line"><span class="k">implicit</span> <span class="k">def</span> <span class="n">transform</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">]</span> <span class="k">=</span> <span class="k">new</span> <span class="nc">Transform</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">]</span> <span class="o">{</span>
+</span><span class="line">  <span class="k">def</span> <span class="n">rot</span><span class="k">:</span> <span class="o">(</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">])</span> <span class="k">=&gt;</span> <span class="nc">Cube</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">f</span>, <span class="kt">d</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line">  <span class="k">def</span> <span class="n">twist</span><span class="k">:</span> <span class="o">(</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">])</span> <span class="k">=&gt;</span> <span class="nc">Cube</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">u</span>, <span class="kt">l</span>, <span class="kt">d</span>, <span class="kt">b</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line">  <span class="k">def</span> <span class="n">flip</span><span class="k">:</span> <span class="o">(</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">])</span> <span class="k">=&gt;</span> <span class="nc">Cube</span><span class="o">[</span><span class="kt">d</span>, <span class="kt">l</span>, <span class="kt">b</span>, <span class="kt">r</span>, <span class="kt">f</span>, <span class="kt">u</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line"><span class="o">}</span>
+</span><span class="line">
+</span><span class="line"><span class="k">def</span> <span class="n">rot</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">](</span><span class="n">cube</span><span class="k">:</span> <span class="kt">Cube</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">])</span>
+</span><span class="line">    <span class="o">(</span><span class="k">implicit</span> <span class="n">t</span><span class="k">:</span> <span class="kt">Transform</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">])</span> <span class="k">=</span> <span class="n">t</span><span class="o">.</span><span class="n">rot</span><span class="o">(</span><span class="n">cube</span><span class="o">)</span>
+</span><span class="line"><span class="k">def</span> <span class="n">twist</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">](</span><span class="n">cube</span><span class="k">:</span> <span class="kt">Cube</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">])</span>
+</span><span class="line">    <span class="o">(</span><span class="k">implicit</span> <span class="n">t</span><span class="k">:</span> <span class="kt">Transform</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">])</span> <span class="k">=</span> <span class="n">t</span><span class="o">.</span><span class="n">twist</span><span class="o">(</span><span class="n">cube</span><span class="o">)</span>
+</span><span class="line"><span class="k">def</span> <span class="n">flip</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">](</span><span class="n">cube</span><span class="k">:</span> <span class="kt">Cube</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">])</span>
+</span><span class="line">    <span class="o">(</span><span class="k">implicit</span> <span class="n">t</span><span class="k">:</span> <span class="kt">Transform</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">])</span> <span class="k">=</span> <span class="n">t</span><span class="o">.</span><span class="n">flip</span><span class="o">(</span><span class="n">cube</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="n">scala</span><span class="o">&gt;</span> <span class="k">:type</span> <span class="kt">rot</span><span class="o">(</span><span class="kt">⊥</span><span class="o">[</span><span class="kt">Cube1</span><span class="o">])</span>
+</span><span class="line"><span class="nc">Cube</span><span class="o">[</span><span class="kt">B</span>,<span class="kt">W</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">R</span><span class="o">]</span>
+</span><span class="line">
+</span><span class="line"><span class="n">scala</span><span class="o">&gt;</span> <span class="k">:type</span> <span class="kt">twist</span><span class="o">(</span><span class="kt">flip</span><span class="o">(</span><span class="kt">rot</span><span class="o">(</span><span class="kt">⊥</span><span class="o">[</span><span class="kt">Cube1</span><span class="o">])))</span>
+</span><span class="line"><span class="nc">Cube</span><span class="o">[</span><span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">R</span>,<span class="kt">W</span>,<span class="kt">B</span>,<span class="kt">G</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<h2 id="type-level-boolean-algebra">Type-Level Boolean Algebra</h2>
+
+<p>So far we’ve seen how to construct simple types, and perform type transformations
+of one parametrized type into a differently parametrized type.</p>
+
+<p>For solving a puzzle I’ll need some rudimentary boolean algebra at a type-level:</p>
+
+<ul>
+  <li>encode true/false in types</li>
+  <li>provide boolean <code>and</code> operator</li>
+</ul>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">True</span>
+</span><span class="line"><span class="k">trait</span> <span class="nc">False</span>
+</span><span class="line">
+</span><span class="line"><span class="k">trait</span> <span class="nc">And</span><span class="o">[</span><span class="kt">l</span>, <span class="kt">r</span>, <span class="kt">o</span><span class="o">]</span>
+</span><span class="line">
+</span><span class="line"><span class="nc">implicit</span> <span class="k">object</span> <span class="nc">ttt</span> <span class="k">extends</span> <span class="nc">And</span><span class="o">[</span><span class="kt">True</span>, <span class="kt">True</span>, <span class="kt">True</span><span class="o">]</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">object</span> <span class="nc">tff</span> <span class="k">extends</span> <span class="nc">And</span><span class="o">[</span><span class="kt">True</span>, <span class="kt">False</span>, <span class="kt">False</span><span class="o">]</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">object</span> <span class="nc">ftf</span> <span class="k">extends</span> <span class="nc">And</span><span class="o">[</span><span class="kt">False</span>, <span class="kt">True</span>, <span class="kt">False</span><span class="o">]</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">object</span> <span class="nc">fff</span> <span class="k">extends</span> <span class="nc">And</span><span class="o">[</span><span class="kt">False</span>, <span class="kt">False</span>, <span class="kt">False</span><span class="o">]</span>
+</span><span class="line">
+</span><span class="line"><span class="k">def</span> <span class="n">and</span><span class="o">[</span><span class="kt">l</span>, <span class="kt">r</span>, <span class="kt">o</span><span class="o">](</span><span class="n">l</span><span class="k">:</span> <span class="kt">l</span><span class="o">,</span> <span class="n">r</span><span class="k">:</span> <span class="kt">r</span><span class="o">)(</span><span class="k">implicit</span> <span class="n">and</span><span class="k">:</span> <span class="kt">And</span><span class="o">[</span><span class="kt">l</span>, <span class="kt">r</span>, <span class="kt">o</span><span class="o">])</span><span class="k">:</span> <span class="kt">o</span> <span class="o">=</span> <span class="o">⊥</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="n">scala</span><span class="o">&gt;</span> <span class="k">:type</span> <span class="kt">and</span><span class="o">(</span><span class="kt">⊥</span><span class="o">[</span><span class="kt">True</span><span class="o">],</span> <span class="o">⊥[</span><span class="kt">False</span><span class="o">])</span>
+</span><span class="line"><span class="nc">False</span>
+</span><span class="line">
+</span><span class="line"><span class="n">scala</span><span class="o">&gt;</span> <span class="k">:type</span> <span class="kt">and</span><span class="o">(</span><span class="kt">⊥</span><span class="o">[</span><span class="kt">True</span><span class="o">],</span> <span class="o">⊥[</span><span class="kt">True</span><span class="o">])</span>
+</span><span class="line"><span class="nc">True</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<h2 id="type-level-lists">Type-Level Lists</h2>
+
+<p>Lists at a type-level can be defined as following atoms:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">Nil</span>
+</span><span class="line"><span class="k">trait</span> <span class="nc">:::</span><span class="o">[</span><span class="kt">x</span>, <span class="kt">xs</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>To make lists useful I’ll need concatenate function, that should be also encoded at a type-level.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">ListConcat</span><span class="o">[</span><span class="kt">l1</span>, <span class="kt">l2</span>, <span class="kt">l</span><span class="o">]</span>
+</span><span class="line">
+</span><span class="line"><span class="nc">implicit</span> <span class="k">def</span> <span class="n">nilConcat</span><span class="o">[</span><span class="kt">l</span><span class="o">]</span><span class="k">:</span> <span class="kt">ListConcat</span><span class="o">[</span><span class="kt">Nil</span>, <span class="kt">l</span>, <span class="kt">l</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">def</span> <span class="n">notNilConcat</span><span class="o">[</span><span class="kt">x</span>, <span class="kt">xs</span>, <span class="kt">ys</span>, <span class="kt">zs</span><span class="o">](</span><span class="k">implicit</span>
+</span><span class="line">  <span class="n">lc</span><span class="k">:</span> <span class="kt">ListConcat</span><span class="o">[</span><span class="kt">xs</span>, <span class="kt">ys</span>, <span class="kt">zs</span><span class="o">]</span>
+</span><span class="line"><span class="o">)</span><span class="k">:</span> <span class="kt">ListConcat</span><span class="o">[</span><span class="kt">x</span> <span class="kt">:::</span> <span class="kt">xs</span>, <span class="kt">ys</span>, <span class="kt">x</span> <span class="kt">:::</span> <span class="kt">zs</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line">
+</span><span class="line"><span class="k">def</span> <span class="n">listConcat</span><span class="o">[</span><span class="kt">xs</span>, <span class="kt">ys</span>, <span class="kt">zs</span><span class="o">](</span><span class="n">l1</span><span class="k">:</span> <span class="kt">xs</span><span class="o">,</span> <span class="n">l2</span><span class="k">:</span> <span class="kt">ys</span><span class="o">)(</span><span class="k">implicit</span>
+</span><span class="line">  <span class="n">lc</span><span class="k">:</span> <span class="kt">ListConcat</span><span class="o">[</span><span class="kt">xs</span>, <span class="kt">ys</span>, <span class="kt">zs</span><span class="o">]</span>
+</span><span class="line"><span class="o">)</span><span class="k">:</span> <span class="kt">zs</span> <span class="o">=</span> <span class="o">⊥</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="n">scala</span><span class="o">&gt;</span> <span class="k">:type</span> <span class="kt">listConcat</span><span class="o">(</span><span class="kt">⊥</span><span class="o">[</span><span class="kt">R</span> <span class="kt">:::</span> <span class="kt">Nil</span><span class="o">],</span> <span class="o">⊥[</span><span class="kt">G</span> <span class="kt">:::</span> <span class="kt">W</span> <span class="kt">:::</span> <span class="kt">Nil</span><span class="o">])</span>
+</span><span class="line"><span class="o">:::[</span><span class="kt">R</span>,<span class="kt">:::</span><span class="o">[</span><span class="kt">G</span>,<span class="kt">:::</span><span class="o">[</span><span class="kt">W</span>,<span class="kt">Nil</span><span class="o">]]]</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>As you can see now I can concatenate two lists at type-level: <em>[R] concat [G, W]</em> yields <em>[R, G, W]</em>.</p>
+
+<h2 id="applyable-type-functions">Applyable Type Functions</h2>
+
+<p>For this puzzle I need to be able to do things like <em>flip</em> each of the cubes in a list, which sounds exactly like <em>map</em> at the type level.</p>
+
+<p>First step is abstracting application of a type-level function, so I introduce <code>Apply</code> and supported <em>operations</em>:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+<span class="line-number">15</span>
+<span class="line-number">16</span>
+<span class="line-number">17</span>
+<span class="line-number">18</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">Rotation</span>
+</span><span class="line"><span class="k">trait</span> <span class="nc">Twist</span>
+</span><span class="line"><span class="k">trait</span> <span class="nc">Flip</span>
+</span><span class="line">
+</span><span class="line"><span class="k">trait</span> <span class="nc">Apply</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">a</span>, <span class="kt">b</span><span class="o">]</span>
+</span><span class="line">
+</span><span class="line"><span class="nc">implicit</span> <span class="k">def</span> <span class="n">apRotation</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">]</span>
+</span><span class="line">  <span class="k">:</span> <span class="kt">Apply</span><span class="o">[</span><span class="kt">Rotation</span>, <span class="kt">Cube</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">]</span>, <span class="kt">Cube</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">f</span>, <span class="kt">d</span><span class="o">]]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line">
+</span><span class="line"><span class="k">implicit</span> <span class="k">def</span> <span class="n">apTwist</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">]</span>
+</span><span class="line">  <span class="k">:</span> <span class="kt">Apply</span><span class="o">[</span><span class="kt">Twist</span>, <span class="kt">Cube</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">]</span>, <span class="kt">Cube</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">u</span>, <span class="kt">l</span>, <span class="kt">d</span>, <span class="kt">b</span><span class="o">]]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line">
+</span><span class="line"><span class="k">implicit</span> <span class="k">def</span> <span class="n">apFlip</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">]</span>
+</span><span class="line">  <span class="k">:</span> <span class="kt">Apply</span><span class="o">[</span><span class="kt">Flip</span>, <span class="kt">Cube</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">]</span>, <span class="kt">Cube</span><span class="o">[</span><span class="kt">d</span>, <span class="kt">l</span>, <span class="kt">b</span>, <span class="kt">r</span>, <span class="kt">f</span>, <span class="kt">u</span><span class="o">]]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line">
+</span><span class="line"><span class="k">def</span> <span class="n">ap</span><span class="o">[</span><span class="kt">t</span>, <span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span>, <span class="kt">o</span><span class="o">](</span><span class="n">r</span><span class="k">:</span> <span class="kt">t</span><span class="o">,</span> <span class="n">c1</span><span class="k">:</span> <span class="kt">Cube</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">])(</span><span class="k">implicit</span>
+</span><span class="line">  <span class="n">ap</span><span class="k">:</span> <span class="kt">Apply</span><span class="o">[</span><span class="kt">t</span>, <span class="kt">Cube</span><span class="o">[</span><span class="kt">u</span>, <span class="kt">f</span>, <span class="kt">r</span>, <span class="kt">b</span>, <span class="kt">l</span>, <span class="kt">d</span><span class="o">]</span>, <span class="kt">o</span><span class="o">]</span>
+</span><span class="line"><span class="o">)</span><span class="k">:</span> <span class="kt">o</span> <span class="o">=</span> <span class="o">⊥</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="n">scala</span><span class="o">&gt;</span> <span class="k">:type</span> <span class="kt">ap</span><span class="o">(</span><span class="kt">⊥</span><span class="o">[</span><span class="kt">Rotation</span><span class="o">],</span> <span class="o">⊥[</span><span class="kt">Cube1</span><span class="o">])</span>
+</span><span class="line"><span class="nc">Cube</span><span class="o">[</span><span class="kt">B</span>,<span class="kt">W</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">R</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<h2 id="map-and-filter">Map and Filter</h2>
+
+<p>Now I can create a function that recurses over a list and <em>Applys</em> another function <em>f</em>  to each element. This is type-level
+equivalent of the <em>map</em> function.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">Map</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">xs</span>, <span class="kt">zs</span><span class="o">]</span>
+</span><span class="line">
+</span><span class="line"><span class="nc">implicit</span> <span class="k">def</span> <span class="n">mapNil</span><span class="o">[</span><span class="kt">f</span><span class="o">]</span><span class="k">:</span> <span class="kt">Map</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">Nil</span>, <span class="kt">Nil</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">def</span> <span class="n">mapCons</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">x</span>, <span class="kt">z</span>, <span class="kt">xs</span>, <span class="kt">zs</span><span class="o">](</span><span class="k">implicit</span>
+</span><span class="line">  <span class="n">ap</span><span class="k">:</span> <span class="kt">Apply</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">x</span>, <span class="kt">z</span><span class="o">],</span>
+</span><span class="line">  <span class="n">map</span><span class="k">:</span> <span class="kt">Map</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">xs</span>, <span class="kt">zs</span><span class="o">]</span>
+</span><span class="line"><span class="o">)</span><span class="k">:</span> <span class="kt">Map</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">x</span> <span class="kt">:::</span> <span class="kt">xs</span>, <span class="kt">z</span> <span class="kt">:::</span> <span class="kt">zs</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line">
+</span><span class="line"><span class="k">def</span> <span class="n">map</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">xs</span>, <span class="kt">zs</span><span class="o">](</span><span class="n">f</span><span class="k">:</span> <span class="kt">f</span><span class="o">,</span> <span class="n">xs</span><span class="k">:</span> <span class="kt">xs</span><span class="o">)(</span><span class="k">implicit</span>
+</span><span class="line">  <span class="n">map</span><span class="k">:</span> <span class="kt">Map</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">xs</span>, <span class="kt">zs</span><span class="o">]</span>
+</span><span class="line"><span class="o">)</span><span class="k">:</span> <span class="kt">zs</span> <span class="o">=</span> <span class="o">⊥</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="n">scala</span><span class="o">&gt;</span> <span class="k">:type</span> <span class="kt">map</span><span class="o">(</span><span class="kt">⊥</span><span class="o">[</span><span class="kt">Flip</span><span class="o">],</span> <span class="o">⊥[</span><span class="kt">Cube1</span> <span class="kt">:::</span> <span class="kt">Cube2</span> <span class="kt">:::</span> <span class="kt">Nil</span><span class="o">])</span>
+</span><span class="line"><span class="o">:::[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">R</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">W</span>,<span class="kt">G</span>,<span class="kt">B</span><span class="o">]</span>,<span class="kt">:::</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">R</span>,<span class="kt">R</span>,<span class="kt">W</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">W</span><span class="o">]</span>,<span class="kt">Nil</span><span class="o">]]</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p><code>Filter</code> function is similar to <code>Map</code>:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">Filter</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">xs</span>, <span class="kt">zs</span><span class="o">]</span>
+</span><span class="line">
+</span><span class="line"><span class="nc">implicit</span> <span class="k">def</span> <span class="n">filterNil</span><span class="o">[</span><span class="kt">f</span><span class="o">]</span><span class="k">:</span> <span class="kt">Filter</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">Nil</span>, <span class="kt">Nil</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">def</span> <span class="n">filterCons</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">x</span>, <span class="kt">b</span>, <span class="kt">xs</span>, <span class="kt">ys</span>, <span class="kt">zs</span><span class="o">](</span><span class="k">implicit</span>
+</span><span class="line">  <span class="n">ap</span><span class="k">:</span> <span class="kt">Apply</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">x</span>, <span class="kt">b</span><span class="o">],</span>
+</span><span class="line">  <span class="n">f</span><span class="k">:</span> <span class="kt">Filter</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">xs</span>, <span class="kt">ys</span><span class="o">],</span>
+</span><span class="line">  <span class="n">apn</span><span class="k">:</span> <span class="kt">AppendIf</span><span class="o">[</span><span class="kt">b</span>, <span class="kt">x</span>, <span class="kt">ys</span>, <span class="kt">zs</span><span class="o">]</span>
+</span><span class="line"><span class="o">)</span><span class="k">:</span> <span class="kt">Filter</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">x</span> <span class="kt">:::</span> <span class="kt">xs</span>, <span class="kt">zs</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p><code>Filter</code> introduced new constraint, <code>AppendIf</code>, which takes a boolean values <em>b</em>, a value <em>x</em> and a list <em>ys</em>. 
+The given values <em>x</em> is appended to <em>ys</em> only if <em>b</em> is <em>True</em>, otherwise <em>ys</em> is returned unaltered:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">AppendIf</span><span class="o">[</span><span class="kt">b</span>, <span class="kt">x</span>, <span class="kt">ys</span>, <span class="kt">zs</span><span class="o">]</span>
+</span><span class="line">
+</span><span class="line"><span class="nc">implicit</span> <span class="k">def</span> <span class="n">appendIfTrue</span><span class="o">[</span><span class="kt">x</span>, <span class="kt">ys</span><span class="o">]</span><span class="k">:</span> <span class="kt">AppendIf</span><span class="o">[</span><span class="kt">True</span>, <span class="kt">x</span>, <span class="kt">ys</span>, <span class="kt">x</span> <span class="kt">:::</span> <span class="kt">ys</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">def</span> <span class="n">appendIfFalse</span><span class="o">[</span><span class="kt">x</span>, <span class="kt">ys</span><span class="o">]</span><span class="k">:</span> <span class="kt">AppendIf</span><span class="o">[</span><span class="kt">False</span>, <span class="kt">x</span>, <span class="kt">ys</span>, <span class="kt">ys</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line">
+</span><span class="line"><span class="k">def</span> <span class="n">append</span><span class="o">[</span><span class="kt">b</span>, <span class="kt">x</span>, <span class="kt">ys</span>, <span class="kt">zs</span><span class="o">](</span><span class="n">b</span><span class="k">:</span> <span class="kt">b</span><span class="o">,</span> <span class="n">x</span><span class="k">:</span> <span class="kt">x</span><span class="o">,</span> <span class="n">ys</span><span class="k">:</span> <span class="kt">ys</span><span class="o">)(</span><span class="k">implicit</span>
+</span><span class="line">  <span class="n">apn</span><span class="k">:</span> <span class="kt">AppendIf</span><span class="o">[</span><span class="kt">b</span>, <span class="kt">x</span>, <span class="kt">ys</span>, <span class="kt">zs</span><span class="o">]</span>
+</span><span class="line"><span class="o">)</span><span class="k">:</span> <span class="kt">zs</span> <span class="o">=</span> <span class="o">⊥</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="n">scala</span><span class="o">&gt;</span> <span class="k">:type</span> <span class="kt">append</span><span class="o">(</span><span class="kt">⊥</span><span class="o">[</span><span class="kt">True</span><span class="o">],</span> <span class="o">⊥[</span><span class="kt">R</span><span class="o">],</span> <span class="o">⊥[</span><span class="kt">G</span> <span class="kt">:::</span> <span class="kt">W</span> <span class="kt">:::</span> <span class="kt">Nil</span><span class="o">])</span>
+</span><span class="line"><span class="o">:::[</span><span class="kt">R</span>,<span class="kt">:::</span><span class="o">[</span><span class="kt">G</span>,<span class="kt">:::</span><span class="o">[</span><span class="kt">W</span>,<span class="kt">Nil</span><span class="o">]]]</span>
+</span><span class="line">
+</span><span class="line"><span class="n">scala</span><span class="o">&gt;</span> <span class="k">:type</span> <span class="kt">append</span><span class="o">(</span><span class="kt">⊥</span><span class="o">[</span><span class="kt">False</span><span class="o">],</span> <span class="o">⊥[</span><span class="kt">R</span><span class="o">],</span> <span class="o">⊥[</span><span class="kt">G</span> <span class="kt">:::</span> <span class="kt">W</span> <span class="kt">:::</span> <span class="kt">Nil</span><span class="o">])</span>
+</span><span class="line"><span class="o">:::[</span><span class="kt">G</span>,<span class="kt">:::</span><span class="o">[</span><span class="kt">W</span>,<span class="kt">Nil</span><span class="o">]]</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<h2 id="sequence-comprehensions">Sequence Comprehensions</h2>
+
+<p>Unfortunately sequence comprehensions can’t be directly mimiced in Scala Type System, but we can translate the meaning of a given
+sequence comprehension using the type-level list functions.</p>
+
+<p>For example, building a list of the possible orientations of a cube involves appending a list of possible
+applications of <em>flip</em>, so we will need to be able to map over a list and append the original list. <a href="https://gist.github.com/ezhulenev/db594992e5f68f435fdc5970e97f02db#file-instantinsanity-scala-L18" target="_blank">Original sequence comprehension</a> was:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">def</span> <span class="n">orientations</span><span class="k">:</span> <span class="kt">Cube</span> <span class="o">=&gt;</span> <span class="nc">Seq</span><span class="o">[</span><span class="kt">Cube</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span> <span class="n">c</span><span class="k">:</span> <span class="kt">Cube</span> <span class="o">=&gt;</span>
+</span><span class="line">    <span class="k">for</span> <span class="o">{</span>
+</span><span class="line">      <span class="o">...</span>
+</span><span class="line">      <span class="n">c3</span> <span class="k">&lt;-</span> <span class="nc">Seq</span><span class="o">(</span><span class="n">c2</span><span class="o">,</span> <span class="n">flip</span><span class="o">(</span><span class="n">c2</span><span class="o">))</span>
+</span><span class="line">    <span class="o">}</span> <span class="k">yield</span> <span class="n">c3</span>
+</span><span class="line">  <span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>I create <code>MapAppend</code> class in order to compose <code>Map</code> and <code>ListConcat</code>:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">MapAppend</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">xs</span>, <span class="kt">zs</span><span class="o">]</span>
+</span><span class="line">
+</span><span class="line"><span class="nc">implicit</span> <span class="k">def</span> <span class="n">mapAppendNil</span><span class="o">[</span><span class="kt">f</span><span class="o">]</span><span class="k">:</span> <span class="kt">MapAppend</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">Nil</span>, <span class="kt">Nil</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">def</span> <span class="n">mapAppendCons</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">xs</span>, <span class="kt">ys</span>, <span class="kt">zs</span><span class="o">](</span><span class="k">implicit</span>
+</span><span class="line">  <span class="n">m</span><span class="k">:</span> <span class="kt">Map</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">xs</span>, <span class="kt">ys</span><span class="o">],</span>
+</span><span class="line">  <span class="n">lc</span><span class="k">:</span> <span class="kt">ListConcat</span><span class="o">[</span><span class="kt">xs</span>, <span class="kt">ys</span>, <span class="kt">zs</span><span class="o">]</span>
+</span><span class="line"><span class="o">)</span><span class="k">:</span> <span class="kt">MapAppend</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">xs</span>, <span class="kt">zs</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>Further, I’ll need to be able to do the same twice for <em>twist</em> and three times for <em>rot</em>:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+<span class="line-number">15</span>
+<span class="line-number">16</span>
+<span class="line-number">17</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">MapAppend2</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">xs</span>, <span class="kt">zs</span><span class="o">]</span>
+</span><span class="line">
+</span><span class="line"><span class="nc">implicit</span> <span class="k">def</span> <span class="n">mapAppend2Nil</span><span class="o">[</span><span class="kt">f</span><span class="o">]</span><span class="k">:</span> <span class="kt">MapAppend2</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">Nil</span>, <span class="kt">Nil</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">def</span> <span class="n">mapAppend2Cons</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">xs</span>, <span class="kt">ys</span>, <span class="k">_</span><span class="kt">ys</span>, <span class="kt">zs</span><span class="o">](</span><span class="k">implicit</span>
+</span><span class="line">  <span class="n">m</span><span class="k">:</span> <span class="kt">Map</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">xs</span>, <span class="kt">ys</span><span class="o">],</span>
+</span><span class="line">  <span class="n">ma</span><span class="k">:</span> <span class="kt">MapAppend</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">ys</span>, <span class="k">_</span><span class="kt">ys</span><span class="o">],</span>
+</span><span class="line">  <span class="n">lc</span><span class="k">:</span> <span class="kt">ListConcat</span><span class="o">[</span><span class="kt">xs</span>, <span class="k">_</span><span class="kt">ys</span>, <span class="kt">zs</span><span class="o">]</span>
+</span><span class="line"><span class="o">)</span><span class="k">:</span> <span class="kt">MapAppend2</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">xs</span>, <span class="kt">zs</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line">
+</span><span class="line"><span class="k">trait</span> <span class="nc">MapAppend3</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">xs</span>, <span class="kt">zs</span><span class="o">]</span>
+</span><span class="line">
+</span><span class="line"><span class="nc">implicit</span> <span class="k">def</span> <span class="n">mapAppend3Nil</span><span class="o">[</span><span class="kt">f</span><span class="o">]</span><span class="k">:</span> <span class="kt">MapAppend3</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">Nil</span>, <span class="kt">Nil</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">def</span> <span class="n">mapAppend3Cons</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">xs</span>, <span class="kt">ys</span>, <span class="k">_</span><span class="kt">ys</span>, <span class="kt">zs</span><span class="o">](</span><span class="k">implicit</span>
+</span><span class="line">  <span class="n">m</span><span class="k">:</span> <span class="kt">Map</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">xs</span>, <span class="kt">ys</span><span class="o">],</span>
+</span><span class="line">  <span class="n">ma2</span><span class="k">:</span> <span class="kt">MapAppend2</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">ys</span>, <span class="k">_</span><span class="kt">ys</span><span class="o">],</span>
+</span><span class="line">  <span class="n">lc</span><span class="k">:</span> <span class="kt">ListConcat</span><span class="o">[</span><span class="kt">xs</span>, <span class="k">_</span><span class="kt">ys</span>, <span class="kt">zs</span><span class="o">]</span>
+</span><span class="line"><span class="o">)</span><span class="k">:</span> <span class="kt">MapAppend3</span><span class="o">[</span><span class="kt">f</span>, <span class="kt">xs</span>, <span class="kt">zs</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<h2 id="orientation">Orientation</h2>
+
+<p>The full sequence comprehension for generating all possible orientations of a cube build upon all
+combinations of <em>rot</em>, <em>twist</em> and <em>flip</em>:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">def</span> <span class="n">orientations</span><span class="k">:</span> <span class="kt">Cube</span> <span class="o">=&gt;</span> <span class="nc">Seq</span><span class="o">[</span><span class="kt">Cube</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span> <span class="n">c</span><span class="k">:</span> <span class="kt">Cube</span> <span class="o">=&gt;</span>
+</span><span class="line">  <span class="k">for</span> <span class="o">{</span>
+</span><span class="line">    <span class="n">c1</span> <span class="k">&lt;-</span> <span class="nc">Seq</span><span class="o">(</span><span class="n">c</span><span class="o">,</span> <span class="n">rot</span><span class="o">(</span><span class="n">c</span><span class="o">),</span> <span class="n">rot</span><span class="o">(</span><span class="n">rot</span><span class="o">(</span><span class="n">c</span><span class="o">)),</span> <span class="n">rot</span><span class="o">(</span><span class="n">rot</span><span class="o">(</span><span class="n">rot</span><span class="o">(</span><span class="n">c</span><span class="o">))))</span>
+</span><span class="line">    <span class="n">c2</span> <span class="k">&lt;-</span> <span class="nc">Seq</span><span class="o">(</span><span class="n">c1</span><span class="o">,</span> <span class="n">twist</span><span class="o">(</span><span class="n">c1</span><span class="o">),</span> <span class="n">twist</span><span class="o">(</span><span class="n">twist</span><span class="o">(</span><span class="n">c1</span><span class="o">)))</span>
+</span><span class="line">    <span class="n">c3</span> <span class="k">&lt;-</span> <span class="nc">Seq</span><span class="o">(</span><span class="n">c2</span><span class="o">,</span> <span class="n">flip</span><span class="o">(</span><span class="n">c2</span><span class="o">))</span>
+</span><span class="line">  <span class="o">}</span> <span class="k">yield</span> <span class="n">c3</span>
+</span><span class="line"><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>I will implement <code>Orientation</code> as an <em>Apply</em>able type function. It’s defined in terms of applications of
+<code>Rotation</code>, <code>Twist</code> and <code>Flip</code>, invoked via various <code>MapAppend</code> functions:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">Orientations</span>
+</span><span class="line">
+</span><span class="line"><span class="k">implicit</span> <span class="k">def</span> <span class="n">orientations</span><span class="o">[</span><span class="kt">c</span>, <span class="kt">fs</span>, <span class="kt">ts</span>, <span class="kt">zs</span><span class="o">](</span><span class="k">implicit</span>
+</span><span class="line">  <span class="n">ma</span><span class="k">:</span> <span class="kt">MapAppend</span><span class="o">[</span><span class="kt">Flip</span>, <span class="kt">c</span> <span class="kt">:::</span> <span class="kt">Nil</span>, <span class="kt">fs</span><span class="o">],</span>
+</span><span class="line">  <span class="n">ma2</span><span class="k">:</span> <span class="kt">MapAppend2</span><span class="o">[</span><span class="kt">Twist</span>, <span class="kt">fs</span>, <span class="kt">ts</span><span class="o">],</span>
+</span><span class="line">  <span class="n">ma3</span><span class="k">:</span> <span class="kt">MapAppend3</span><span class="o">[</span><span class="kt">Rotation</span>, <span class="kt">ts</span>, <span class="kt">zs</span><span class="o">]</span>
+</span><span class="line"><span class="o">)</span><span class="k">:</span> <span class="kt">Apply</span><span class="o">[</span><span class="kt">Orientations</span>, <span class="kt">c</span>, <span class="kt">zs</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>For any <code>Cube</code> this function generates the 24 possible orientations:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="n">scala</span><span class="o">&gt;</span> <span class="k">:type</span> <span class="kt">ap</span><span class="o">(</span><span class="kt">⊥</span><span class="o">[</span><span class="kt">Orientations</span><span class="o">],</span> <span class="o">⊥[</span><span class="kt">Cube1</span><span class="o">])</span>
+</span><span class="line"><span class="o">:::[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">W</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">R</span><span class="o">]</span>,<span class="kt">:::</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">R</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">W</span>,<span class="kt">G</span>,<span class="kt">B</span><span class="o">]</span>,
+</span><span class="line"><span class="kt">:::</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">G</span>,<span class="kt">W</span>,<span class="kt">B</span>,<span class="kt">B</span>,<span class="kt">R</span>,<span class="kt">G</span><span class="o">]</span>,<span class="kt">:::</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">R</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">W</span><span class="o">]</span>,
+</span><span class="line"><span class="kt">:::</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">W</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">R</span>,<span class="kt">G</span>,<span class="kt">B</span><span class="o">]</span>,<span class="kt">:::</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">G</span>,<span class="kt">R</span>,<span class="kt">B</span>,<span class="kt">B</span>,<span class="kt">W</span>,<span class="kt">G</span><span class="o">]</span>,
+</span><span class="line"><span class="kt">:::</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">B</span>,<span class="kt">W</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">R</span><span class="o">]</span>,<span class="kt">:::</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">R</span>,<span class="kt">G</span>,<span class="kt">W</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">B</span><span class="o">]</span>,
+</span><span class="line"><span class="kt">:::</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">B</span>,<span class="kt">R</span>,<span class="kt">W</span>,<span class="kt">G</span><span class="o">]</span>,<span class="kt">:::</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">B</span>,<span class="kt">R</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">W</span><span class="o">]</span>,
+</span><span class="line"><span class="kt">:::</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">W</span>,<span class="kt">G</span>,<span class="kt">R</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">B</span><span class="o">]</span>,<span class="kt">:::</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">B</span>,<span class="kt">W</span>,<span class="kt">R</span>,<span class="kt">G</span><span class="o">]</span>,
+</span><span class="line"><span class="kt">:::</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">W</span>,<span class="kt">R</span><span class="o">]</span>,<span class="kt">:::</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">R</span>,<span class="kt">W</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">B</span><span class="o">]</span>,
+</span><span class="line"><span class="kt">:::</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">R</span>,<span class="kt">W</span>,<span class="kt">B</span>,<span class="kt">G</span><span class="o">]</span>,<span class="kt">:::</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">R</span>,<span class="kt">W</span><span class="o">]</span>,
+</span><span class="line"><span class="kt">:::</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">W</span>,<span class="kt">R</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">B</span><span class="o">]</span>,<span class="kt">:::</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">W</span>,<span class="kt">R</span>,<span class="kt">B</span>,<span class="kt">G</span><span class="o">]</span>,
+</span><span class="line"><span class="kt">:::</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">B</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">W</span>,<span class="kt">G</span>,<span class="kt">R</span><span class="o">]</span>,<span class="kt">:::</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">R</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">W</span>,<span class="kt">B</span><span class="o">]</span>,
+</span><span class="line"><span class="kt">:::</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">G</span>,<span class="kt">R</span>,<span class="kt">W</span>,<span class="kt">B</span>,<span class="kt">B</span>,<span class="kt">G</span><span class="o">]</span>,<span class="kt">:::</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">B</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">R</span>,<span class="kt">G</span>,<span class="kt">W</span><span class="o">]</span>,
+</span><span class="line"><span class="kt">:::</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">W</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">R</span>,<span class="kt">B</span><span class="o">]</span>,<span class="kt">:::</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">G</span>,<span class="kt">W</span>,<span class="kt">R</span>,<span class="kt">B</span>,<span class="kt">B</span>,<span class="kt">G</span><span class="o">]</span>,
+</span><span class="line"><span class="kt">Nil</span><span class="o">]]]]]]]]]]]]]]]]]]]]]]]]</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<h2 id="stacking-cubes">Stacking Cubes</h2>
+
+<p>Given two cubes <code>Cube[u1, f1, r1, b1, l1, d1]</code> and <code>Cube[u2, f2, r2, b2, l2, d2]</code>, I want to check that none of
+the corresponding visible faces are the same color: the front sides <em>f1</em> and <em>f2</em> are not equal, and the right
+sides <em>r1</em> and <em>r2</em> are not equal, and so on.</p>
+
+<p>In order to do this, it’s required to define <em>not equal</em> relation for all four colors. Given two cubes I can apply
+this relations to each pair of visible faces to get four boolean values. To check that all of these are <em>True</em>, I will
+construct a list of those values and then write generic list function to check if all elements of a list are <em>True</em>.</p>
+
+<h2 id="not-equal">Not Equal</h2>
+
+<p>I’m instantiating <code>NE</code> instance for all color combinations.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+<span class="line-number">15</span>
+<span class="line-number">16</span>
+<span class="line-number">17</span>
+<span class="line-number">18</span>
+<span class="line-number">19</span>
+<span class="line-number">20</span>
+<span class="line-number">21</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">NE</span><span class="o">[</span><span class="kt">x</span>, <span class="kt">y</span>, <span class="kt">b</span><span class="o">]</span>
+</span><span class="line">
+</span><span class="line"><span class="nc">implicit</span> <span class="k">object</span> <span class="nc">neRR</span> <span class="k">extends</span> <span class="nc">NE</span><span class="o">[</span><span class="kt">R</span>, <span class="kt">R</span>, <span class="kt">False</span><span class="o">]</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">object</span> <span class="nc">neRG</span> <span class="k">extends</span> <span class="nc">NE</span><span class="o">[</span><span class="kt">R</span>, <span class="kt">G</span>, <span class="kt">True</span><span class="o">]</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">object</span> <span class="nc">neRB</span> <span class="k">extends</span> <span class="nc">NE</span><span class="o">[</span><span class="kt">R</span>, <span class="kt">B</span>, <span class="kt">True</span><span class="o">]</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">object</span> <span class="nc">neRW</span> <span class="k">extends</span> <span class="nc">NE</span><span class="o">[</span><span class="kt">R</span>, <span class="kt">W</span>, <span class="kt">True</span><span class="o">]</span>
+</span><span class="line">
+</span><span class="line"><span class="k">implicit</span> <span class="k">object</span> <span class="nc">neGR</span> <span class="k">extends</span> <span class="nc">NE</span><span class="o">[</span><span class="kt">G</span>, <span class="kt">R</span>, <span class="kt">True</span><span class="o">]</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">object</span> <span class="nc">neGG</span> <span class="k">extends</span> <span class="nc">NE</span><span class="o">[</span><span class="kt">G</span>, <span class="kt">G</span>, <span class="kt">False</span><span class="o">]</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">object</span> <span class="nc">neGB</span> <span class="k">extends</span> <span class="nc">NE</span><span class="o">[</span><span class="kt">G</span>, <span class="kt">B</span>, <span class="kt">True</span><span class="o">]</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">object</span> <span class="nc">neGW</span> <span class="k">extends</span> <span class="nc">NE</span><span class="o">[</span><span class="kt">G</span>, <span class="kt">W</span>, <span class="kt">True</span><span class="o">]</span>
+</span><span class="line">
+</span><span class="line"><span class="k">implicit</span> <span class="k">object</span> <span class="nc">neBR</span> <span class="k">extends</span> <span class="nc">NE</span><span class="o">[</span><span class="kt">B</span>, <span class="kt">R</span>, <span class="kt">True</span><span class="o">]</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">object</span> <span class="nc">neBG</span> <span class="k">extends</span> <span class="nc">NE</span><span class="o">[</span><span class="kt">B</span>, <span class="kt">G</span>, <span class="kt">True</span><span class="o">]</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">object</span> <span class="nc">neBB</span> <span class="k">extends</span> <span class="nc">NE</span><span class="o">[</span><span class="kt">B</span>, <span class="kt">B</span>, <span class="kt">False</span><span class="o">]</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">object</span> <span class="nc">neBW</span> <span class="k">extends</span> <span class="nc">NE</span><span class="o">[</span><span class="kt">B</span>, <span class="kt">W</span>, <span class="kt">True</span><span class="o">]</span>
+</span><span class="line">
+</span><span class="line"><span class="k">implicit</span> <span class="k">object</span> <span class="nc">neWR</span> <span class="k">extends</span> <span class="nc">NE</span><span class="o">[</span><span class="kt">W</span>, <span class="kt">R</span>, <span class="kt">True</span><span class="o">]</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">object</span> <span class="nc">neWG</span> <span class="k">extends</span> <span class="nc">NE</span><span class="o">[</span><span class="kt">W</span>, <span class="kt">G</span>, <span class="kt">True</span><span class="o">]</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">object</span> <span class="nc">neWB</span> <span class="k">extends</span> <span class="nc">NE</span><span class="o">[</span><span class="kt">W</span>, <span class="kt">B</span>, <span class="kt">True</span><span class="o">]</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">object</span> <span class="nc">neWW</span> <span class="k">extends</span> <span class="nc">NE</span><span class="o">[</span><span class="kt">W</span>, <span class="kt">W</span>, <span class="kt">False</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<h2 id="all">All</h2>
+
+<p>Now, I define a function <em>all</em> to check if all elements of a list are <em>True</em>.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">All</span><span class="o">[</span><span class="kt">l</span>, <span class="kt">b</span><span class="o">]</span>
+</span><span class="line">
+</span><span class="line"><span class="nc">implicit</span> <span class="k">def</span> <span class="n">allNil</span><span class="k">:</span> <span class="kt">All</span><span class="o">[</span><span class="kt">Nil</span>, <span class="kt">True</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">def</span> <span class="n">allFalse</span><span class="o">[</span><span class="kt">xs</span><span class="o">]</span><span class="k">:</span> <span class="kt">All</span><span class="o">[</span><span class="kt">False</span> <span class="kt">:::</span> <span class="kt">xs</span>, <span class="kt">False</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">def</span> <span class="n">allTrue</span><span class="o">[</span><span class="kt">b</span>, <span class="kt">xs</span><span class="o">](</span><span class="k">implicit</span> <span class="n">all</span><span class="k">:</span> <span class="kt">All</span><span class="o">[</span><span class="kt">xs</span>, <span class="kt">b</span><span class="o">])</span><span class="k">:</span> <span class="kt">All</span><span class="o">[</span><span class="kt">True</span> <span class="kt">:::</span> <span class="kt">xs</span>, <span class="kt">b</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line">
+</span><span class="line"><span class="k">def</span> <span class="n">all</span><span class="o">[</span><span class="kt">b</span>, <span class="kt">xs</span><span class="o">](</span><span class="n">l</span><span class="k">:</span> <span class="kt">xs</span><span class="o">)(</span><span class="k">implicit</span> <span class="n">all</span><span class="k">:</span> <span class="kt">All</span><span class="o">[</span><span class="kt">xs</span>, <span class="kt">b</span><span class="o">])</span><span class="k">:</span> <span class="kt">b</span> <span class="o">=</span> <span class="o">⊥</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="n">scala</span><span class="o">&gt;</span> <span class="k">:type</span> <span class="kt">all</span><span class="o">(</span><span class="kt">⊥</span><span class="o">[</span><span class="kt">Nil</span><span class="o">])</span>
+</span><span class="line"><span class="nc">True</span>
+</span><span class="line">
+</span><span class="line"><span class="n">scala</span><span class="o">&gt;</span> <span class="k">:type</span> <span class="kt">all</span><span class="o">(</span><span class="kt">⊥</span><span class="o">[</span><span class="kt">False</span> <span class="kt">:::</span> <span class="kt">Nil</span><span class="o">])</span>
+</span><span class="line"><span class="nc">False</span>
+</span><span class="line">
+</span><span class="line"><span class="n">scala</span><span class="o">&gt;</span> <span class="k">:type</span> <span class="kt">all</span><span class="o">(</span><span class="kt">⊥</span><span class="o">[</span><span class="kt">True</span> <span class="kt">:::</span> <span class="kt">False</span> <span class="kt">:::</span> <span class="kt">Nil</span><span class="o">])</span>
+</span><span class="line"><span class="nc">False</span>
+</span><span class="line">
+</span><span class="line"><span class="n">scala</span><span class="o">&gt;</span> <span class="k">:type</span> <span class="kt">all</span><span class="o">(</span><span class="kt">⊥</span><span class="o">[</span><span class="kt">True</span> <span class="kt">:::</span> <span class="kt">True</span> <span class="kt">:::</span> <span class="kt">Nil</span><span class="o">])</span>
+</span><span class="line"><span class="nc">True</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<h2 id="compatible">Compatible</h2>
+
+<p>Now I can write the compatibility check in the Scala Type System, that corresponds original <em>compatible</em> funcation:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="c1">// Compute which faces of a cube are visible when placed in a pile.</span>
+</span><span class="line"><span class="k">def</span> <span class="n">visible</span><span class="k">:</span> <span class="kt">Cube</span> <span class="o">=&gt;</span> <span class="nc">Seq</span><span class="o">[</span><span class="kt">Char</span><span class="o">]</span> <span class="k">=</span> <span class="o">{</span> <span class="k">case</span> <span class="nc">Seq</span><span class="o">(</span><span class="n">u</span><span class="o">,</span> <span class="n">f</span><span class="o">,</span> <span class="n">r</span><span class="o">,</span> <span class="n">b</span><span class="o">,</span> <span class="n">l</span><span class="o">,</span> <span class="n">d</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="nc">Seq</span><span class="o">(</span><span class="n">f</span><span class="o">,</span> <span class="n">r</span><span class="o">,</span> <span class="n">b</span><span class="o">,</span> <span class="n">l</span><span class="o">)</span> <span class="o">}</span>
+</span><span class="line">
+</span><span class="line"><span class="c1">// Two cubes are compatible if they have different colours on every</span>
+</span><span class="line"><span class="c1">// visible face.</span>
+</span><span class="line"><span class="k">def</span> <span class="n">compatible</span><span class="k">:</span> <span class="o">(</span><span class="kt">Cube</span><span class="o">,</span> <span class="kt">Cube</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="nc">Boolean</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class="line">  <span class="k">case</span> <span class="o">(</span><span class="n">c1</span><span class="o">,</span> <span class="n">c2</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">visible</span><span class="o">(</span><span class="n">c1</span><span class="o">).</span><span class="n">zip</span><span class="o">(</span><span class="n">visible</span><span class="o">(</span><span class="n">c2</span><span class="o">)).</span><span class="n">forall</span> <span class="o">{</span> <span class="k">case</span> <span class="o">(</span><span class="n">v1</span><span class="o">,</span> <span class="n">v2</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">v1</span> <span class="o">!=</span> <span class="n">v2</span> <span class="o">}</span>
+</span><span class="line"><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>I introduce a new <code>Compatible</code> class, it should check that no corresponding visible faces are the same color. It does
+validation by evaluating <code>NE</code> relationship for each pair of corresponding visible faces. </p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">Compatible</span><span class="o">[</span><span class="kt">c1</span>, <span class="kt">c2</span>, <span class="kt">b</span><span class="o">]</span>
+</span><span class="line">
+</span><span class="line"><span class="nc">implicit</span> <span class="k">def</span> <span class="n">compatibleInstance</span><span class="o">[</span><span class="kt">f1</span>, <span class="kt">f2</span>, <span class="kt">bF</span>, <span class="kt">r1</span>, <span class="kt">r2</span>, <span class="kt">bR</span>, <span class="kt">b1</span>, <span class="kt">b2</span>, <span class="kt">bB</span>, <span class="kt">l1</span>, <span class="kt">l2</span>, <span class="kt">bL</span>, <span class="kt">u1</span>, <span class="kt">u2</span>, <span class="kt">d1</span>, <span class="kt">d2</span>, <span class="kt">b</span><span class="o">](</span><span class="k">implicit</span>
+</span><span class="line">  <span class="n">ne1</span><span class="k">:</span> <span class="kt">NE</span><span class="o">[</span><span class="kt">f1</span>, <span class="kt">f2</span>, <span class="kt">bF</span><span class="o">],</span>
+</span><span class="line">  <span class="n">ne2</span><span class="k">:</span> <span class="kt">NE</span><span class="o">[</span><span class="kt">r1</span>, <span class="kt">r2</span>, <span class="kt">bR</span><span class="o">],</span>
+</span><span class="line">  <span class="n">ne3</span><span class="k">:</span> <span class="kt">NE</span><span class="o">[</span><span class="kt">b1</span>, <span class="kt">b2</span>, <span class="kt">bB</span><span class="o">],</span>
+</span><span class="line">  <span class="n">ne4</span><span class="k">:</span> <span class="kt">NE</span><span class="o">[</span><span class="kt">l1</span>, <span class="kt">l2</span>, <span class="kt">bL</span><span class="o">],</span>
+</span><span class="line">  <span class="n">all</span><span class="k">:</span> <span class="kt">All</span><span class="o">[</span><span class="kt">bF</span> <span class="kt">:::</span> <span class="kt">bR</span> <span class="kt">:::</span> <span class="kt">bB</span> <span class="kt">:::</span> <span class="kt">bL</span> <span class="kt">:::</span> <span class="kt">Nil</span>, <span class="kt">b</span><span class="o">]</span>
+</span><span class="line"><span class="o">)</span><span class="k">:</span> <span class="kt">Compatible</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">u1</span>, <span class="kt">f1</span>, <span class="kt">r1</span>, <span class="kt">b1</span>, <span class="kt">l1</span>, <span class="kt">d1</span><span class="o">]</span>, <span class="kt">Cube</span><span class="o">[</span><span class="kt">u2</span>, <span class="kt">f2</span>, <span class="kt">r2</span>, <span class="kt">b2</span>, <span class="kt">l2</span>, <span class="kt">d2</span><span class="o">]</span>, <span class="kt">b</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line">
+</span><span class="line"><span class="k">def</span> <span class="n">compatible</span><span class="o">[</span><span class="kt">c1</span>, <span class="kt">c2</span>, <span class="kt">b</span><span class="o">](</span><span class="n">c1</span><span class="k">:</span> <span class="kt">c1</span><span class="o">,</span> <span class="n">c2</span><span class="k">:</span> <span class="kt">c2</span><span class="o">)(</span><span class="k">implicit</span>
+</span><span class="line">  <span class="n">c</span><span class="k">:</span> <span class="kt">Compatible</span><span class="o">[</span><span class="kt">c1</span>, <span class="kt">c2</span>, <span class="kt">b</span><span class="o">]</span>
+</span><span class="line"><span class="o">)</span><span class="k">:</span> <span class="kt">b</span> <span class="o">=</span> <span class="o">⊥</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="n">scala</span><span class="o">&gt;</span> <span class="k">:type</span> <span class="kt">compatible</span><span class="o">(</span><span class="kt">⊥</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">R</span>, <span class="kt">R</span>, <span class="kt">R</span>, <span class="kt">R</span>, <span class="kt">R</span>, <span class="kt">R</span><span class="o">]],</span> <span class="o">⊥[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">B</span>, <span class="kt">B</span>, <span class="kt">B</span>, <span class="kt">B</span>, <span class="kt">B</span>, <span class="kt">B</span><span class="o">]])</span>
+</span><span class="line"><span class="nc">True</span>
+</span><span class="line">
+</span><span class="line"><span class="n">scala</span><span class="o">&gt;</span> <span class="k">:type</span> <span class="kt">compatible</span><span class="o">(</span><span class="kt">⊥</span><span class="o">[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">R</span>, <span class="kt">R</span>, <span class="kt">G</span>, <span class="kt">R</span>, <span class="kt">R</span>, <span class="kt">R</span><span class="o">]],</span> <span class="o">⊥[</span><span class="kt">Cube</span><span class="o">[</span><span class="kt">B</span>, <span class="kt">B</span>, <span class="kt">G</span>, <span class="kt">B</span>, <span class="kt">B</span>, <span class="kt">B</span><span class="o">]])</span>
+</span><span class="line"><span class="nc">False</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<h2 id="allowed">Allowed</h2>
+
+<p>The above <code>Compatible</code> class checks a cube for compatibility with another single cube. In the puzzle,
+a cube needs to be compatible with all the other cubes in the pile.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="c1">// Determine whether a cube can be added to pile of cubes, without</span>
+</span><span class="line"><span class="c1">// invalidating the solution.</span>
+</span><span class="line"><span class="k">def</span> <span class="n">allowed</span><span class="k">:</span> <span class="o">(</span><span class="kt">Cube</span><span class="o">,</span> <span class="kt">Seq</span><span class="o">[</span><span class="kt">Cube</span><span class="o">])</span> <span class="k">=&gt;</span> <span class="nc">Boolean</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class="line">  <span class="k">case</span> <span class="o">(</span><span class="n">c</span><span class="o">,</span> <span class="n">cs</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="n">cs</span><span class="o">.</span><span class="n">forall</span><span class="o">(</span><span class="n">compatible</span><span class="o">(</span><span class="k">_</span><span class="o">,</span> <span class="n">c</span><span class="o">))</span>
+</span><span class="line"><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p><code>Allowed</code> class generalize <code>Compatible</code> over list.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">Allowed</span><span class="o">[</span><span class="kt">c</span>, <span class="kt">cs</span>, <span class="kt">b</span><span class="o">]</span>
+</span><span class="line">
+</span><span class="line"><span class="nc">implicit</span> <span class="k">def</span> <span class="n">allowedNil</span><span class="o">[</span><span class="kt">c</span><span class="o">]</span><span class="k">:</span> <span class="kt">Allowed</span><span class="o">[</span><span class="kt">c</span>, <span class="kt">Nil</span>, <span class="kt">True</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">def</span> <span class="n">allowedCons</span><span class="o">[</span><span class="kt">c</span>, <span class="kt">y</span>, <span class="kt">b1</span>, <span class="kt">ys</span>, <span class="kt">b2</span>, <span class="kt">b</span><span class="o">](</span><span class="k">implicit</span>
+</span><span class="line">  <span class="n">c</span><span class="k">:</span> <span class="kt">Compatible</span><span class="o">[</span><span class="kt">c</span>, <span class="kt">y</span>, <span class="kt">b1</span><span class="o">],</span>
+</span><span class="line">  <span class="n">allowed</span><span class="k">:</span> <span class="kt">Allowed</span><span class="o">[</span><span class="kt">c</span>, <span class="kt">ys</span>, <span class="kt">b2</span><span class="o">],</span>
+</span><span class="line">  <span class="n">and</span><span class="k">:</span> <span class="kt">And</span><span class="o">[</span><span class="kt">b1</span>, <span class="kt">b2</span>, <span class="kt">b</span><span class="o">]</span>
+</span><span class="line"><span class="o">)</span><span class="k">:</span> <span class="kt">Allowed</span><span class="o">[</span><span class="kt">c</span>, <span class="kt">y</span> <span class="kt">:::</span> <span class="kt">ys</span>, <span class="kt">b</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line">
+</span><span class="line"><span class="k">def</span> <span class="n">allowed</span><span class="o">[</span><span class="kt">c</span>, <span class="kt">cs</span>, <span class="kt">b</span><span class="o">](</span><span class="n">c</span><span class="k">:</span> <span class="kt">c</span><span class="o">,</span> <span class="n">cs</span><span class="k">:</span> <span class="kt">cs</span><span class="o">)(</span><span class="k">implicit</span> <span class="n">a</span><span class="k">:</span> <span class="kt">Allowed</span><span class="o">[</span><span class="kt">c</span>, <span class="kt">cs</span>, <span class="kt">b</span><span class="o">])</span><span class="k">:</span> <span class="kt">b</span> <span class="o">=</span> <span class="o">⊥</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="n">scala</span><span class="o">&gt;</span> <span class="k">:type</span> <span class="kt">allowed</span><span class="o">(</span><span class="kt">⊥</span><span class="o">[</span><span class="kt">CubeRed</span><span class="o">],</span> <span class="o">⊥[</span><span class="kt">CubeBlue</span> <span class="kt">:::</span> <span class="kt">CubeRed</span> <span class="kt">:::</span> <span class="kt">Nil</span><span class="o">])</span>
+</span><span class="line"><span class="nc">False</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<h2 id="solution">Solution</h2>
+
+<p>Now I’m ready to implement <em>solutions</em>:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="c1">// Return a list of all ways of orienting each cube such that no side of</span>
+</span><span class="line"><span class="c1">// the pile has two faces the same.</span>
+</span><span class="line"><span class="k">def</span> <span class="n">solutions</span><span class="k">:</span> <span class="kt">Seq</span><span class="o">[</span><span class="kt">Cube</span><span class="o">]</span> <span class="k">=&gt;</span> <span class="nc">Seq</span><span class="o">[</span><span class="kt">Seq</span><span class="o">[</span><span class="kt">Cube</span><span class="o">]]</span> <span class="k">=</span> <span class="o">{</span>
+</span><span class="line">  <span class="k">case</span> <span class="nc">Nil</span> <span class="k">=&gt;</span> <span class="nc">Seq</span><span class="o">(</span><span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line">  <span class="k">case</span> <span class="n">c</span> <span class="o">::</span> <span class="n">cs</span> <span class="k">=&gt;</span> <span class="k">for</span> <span class="o">{</span>
+</span><span class="line">    <span class="nc">_cs</span> <span class="k">&lt;-</span> <span class="n">solutions</span><span class="o">(</span><span class="n">cs</span><span class="o">)</span>
+</span><span class="line">    <span class="nc">_c</span> <span class="k">&lt;-</span> <span class="n">orientations</span><span class="o">(</span><span class="n">c</span><span class="o">)</span>
+</span><span class="line">    <span class="k">if</span> <span class="n">allowed</span><span class="o">(</span><span class="nc">_c</span><span class="o">,</span> <span class="nc">_cs</span><span class="o">)</span>
+</span><span class="line">  <span class="o">}</span> <span class="k">yield</span> <span class="nc">_c</span> <span class="o">+:</span> <span class="nc">_cs</span>
+</span><span class="line"><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>I will create a corresponding class <code>Sultions</code>, which takes a list of <code>Cube</code> as input, and returs a list of
+possible solutions, where each solution is a list of <code>Cube</code> in allowed orientations.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">class</span> <span class="nc">Solutions</span><span class="o">[</span><span class="kt">cs</span>, <span class="kt">ss</span><span class="o">]</span>
+</span><span class="line">
+</span><span class="line"><span class="nc">implicit</span> <span class="k">def</span> <span class="n">solutionsNil</span><span class="k">:</span> <span class="kt">Solutions</span><span class="o">[</span><span class="kt">Nil</span>, <span class="kt">Nil</span> <span class="kt">:::</span> <span class="kt">Nil</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">def</span> <span class="n">solutionsCons</span><span class="o">[</span><span class="kt">cs</span>, <span class="kt">sols</span>, <span class="kt">c</span>, <span class="kt">os</span>, <span class="kt">zs</span><span class="o">](</span><span class="k">implicit</span>
+</span><span class="line">  <span class="n">s</span><span class="k">:</span> <span class="kt">Solutions</span><span class="o">[</span><span class="kt">cs</span>, <span class="kt">sols</span><span class="o">],</span>
+</span><span class="line">  <span class="n">ap</span><span class="k">:</span> <span class="kt">Apply</span><span class="o">[</span><span class="kt">Orientations</span>, <span class="kt">c</span>, <span class="kt">os</span><span class="o">],</span>
+</span><span class="line">  <span class="n">ac</span><span class="k">:</span> <span class="kt">AllowedCombinations</span><span class="o">[</span><span class="kt">os</span>, <span class="kt">sols</span>, <span class="kt">zs</span><span class="o">]</span>
+</span><span class="line"><span class="o">)</span><span class="k">:</span> <span class="kt">Solutions</span><span class="o">[</span><span class="kt">c</span> <span class="kt">:::</span> <span class="kt">cs</span>, <span class="kt">zs</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>The <code>AllowedCombinations</code> class recurses across the solutions so far, checking each against the given orientation.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">AllowedCombinations</span><span class="o">[</span><span class="kt">os</span>, <span class="kt">sols</span>, <span class="kt">zs</span><span class="o">]</span>
+</span><span class="line"><span class="nc">implicit</span> <span class="k">def</span> <span class="n">allowedCombinationsNil</span><span class="o">[</span><span class="kt">os</span><span class="o">]</span><span class="k">:</span> <span class="kt">AllowedCombinations</span><span class="o">[</span><span class="kt">os</span>, <span class="kt">Nil</span>, <span class="kt">Nil</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">def</span> <span class="n">allowedCombinationsCons</span><span class="o">[</span><span class="kt">os</span>, <span class="kt">sols</span>, <span class="kt">as</span>, <span class="kt">s</span>, <span class="kt">bs</span>, <span class="kt">zs</span><span class="o">](</span><span class="k">implicit</span>
+</span><span class="line">  <span class="n">ac</span><span class="k">:</span> <span class="kt">AllowedCombinations</span><span class="o">[</span><span class="kt">os</span>, <span class="kt">sols</span>, <span class="kt">as</span><span class="o">],</span>
+</span><span class="line">  <span class="n">mo</span><span class="k">:</span> <span class="kt">MatchingOrientations</span><span class="o">[</span><span class="kt">os</span>, <span class="kt">s</span>, <span class="kt">bs</span><span class="o">],</span>
+</span><span class="line">  <span class="n">lc</span><span class="k">:</span> <span class="kt">ListConcat</span><span class="o">[</span><span class="kt">as</span>, <span class="kt">bs</span>, <span class="kt">zs</span><span class="o">]</span>
+</span><span class="line"><span class="o">)</span><span class="k">:</span> <span class="kt">AllowedCombinations</span><span class="o">[</span><span class="kt">os</span>, <span class="kt">s</span> <span class="kt">:::</span> <span class="kt">sols</span>, <span class="kt">zs</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>Finally <code>MatchingOrientations</code> class recurses across the orientations of the new cube,
+checking each against a particular solution <em>sol</em>.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">trait</span> <span class="nc">MatchingOrientations</span><span class="o">[</span><span class="kt">os</span>, <span class="kt">sols</span>, <span class="kt">zs</span><span class="o">]</span>
+</span><span class="line"><span class="nc">implicit</span> <span class="k">def</span> <span class="n">matchingOrientationsNil</span><span class="o">[</span><span class="kt">sol</span><span class="o">]</span><span class="k">:</span> <span class="kt">MatchingOrientations</span><span class="o">[</span><span class="kt">Nil</span>, <span class="kt">sol</span>, <span class="kt">Nil</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span><span class="line"><span class="k">implicit</span> <span class="k">def</span> <span class="n">matchingOrientationsCons</span><span class="o">[</span><span class="kt">os</span>, <span class="kt">sol</span>, <span class="kt">as</span>, <span class="kt">o</span>, <span class="kt">b</span>, <span class="kt">zs</span><span class="o">](</span><span class="k">implicit</span>
+</span><span class="line">  <span class="n">mo</span><span class="k">:</span> <span class="kt">MatchingOrientations</span><span class="o">[</span><span class="kt">os</span>, <span class="kt">sol</span>, <span class="kt">as</span><span class="o">],</span>
+</span><span class="line">  <span class="n">a</span><span class="k">:</span> <span class="kt">Allowed</span><span class="o">[</span><span class="kt">o</span>, <span class="kt">sol</span>, <span class="kt">b</span><span class="o">],</span>
+</span><span class="line">  <span class="n">apn</span><span class="k">:</span> <span class="kt">AppendIf</span><span class="o">[</span><span class="kt">b</span>, <span class="kt">o</span> <span class="kt">:::</span> <span class="kt">sol</span>, <span class="kt">as</span>, <span class="kt">zs</span><span class="o">]</span>
+</span><span class="line"><span class="o">)</span><span class="k">:</span> <span class="kt">MatchingOrientations</span><span class="o">[</span><span class="kt">o</span> <span class="kt">:::</span> <span class="kt">os</span>, <span class="kt">sol</span>, <span class="kt">zs</span><span class="o">]</span> <span class="k">=</span> <span class="o">⊥</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>If orientation is allowed, then the combination <em>o</em> is added to the existing solution <em>sol</em>, by forming the type <em>o ::: sol</em>.</p>
+
+<p>Finally I can solve the puzzle for given cubes:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="k">type</span> <span class="kt">Cubes</span> <span class="o">=</span> <span class="o">(</span><span class="nc">Cube1</span> <span class="o">:::</span> <span class="nc">Cube2</span> <span class="o">:::</span> <span class="nc">Cube3</span> <span class="o">:::</span> <span class="nc">Cube4</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line">
+</span><span class="line"><span class="k">def</span> <span class="n">solutions</span><span class="o">[</span><span class="kt">cs</span>, <span class="kt">ss</span><span class="o">](</span><span class="n">cs</span><span class="k">:</span> <span class="kt">cs</span><span class="o">)(</span><span class="k">implicit</span> <span class="n">sol</span><span class="k">:</span> <span class="kt">Solutions</span><span class="o">[</span><span class="kt">cs</span>, <span class="kt">ss</span><span class="o">])</span><span class="k">:</span> <span class="kt">ss</span> <span class="o">=</span> <span class="o">⊥</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>Unfortunately I still was not able to compute solution for four cubes, it’s still running (almost 24 hours).
+I will update this post when it’s done. But without loss of generality I can compute all possible ways to
+arrange a list with one single cube.</p>
+
+<p>Computing solution for two cubes takes reasonable 10 minutes, but it generates so many possible arrangements,
+and final type name is so long, that it breaks JVM class file size limitation.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+<span class="line-number">15</span>
+<span class="line-number">16</span>
+<span class="line-number">17</span>
+<span class="line-number">18</span>
+<span class="line-number">19</span>
+<span class="line-number">20</span>
+<span class="line-number">21</span>
+<span class="line-number">22</span>
+<span class="line-number">23</span>
+<span class="line-number">24</span>
+<span class="line-number">25</span>
+<span class="line-number">26</span>
+<span class="line-number">27</span>
+<span class="line-number">28</span>
+<span class="line-number">29</span>
+<span class="line-number">30</span>
+</pre></td><td class="code"><pre><code class="scala"><span class="line"><span class="n">scala</span><span class="o">&gt;</span> <span class="k">:type</span> <span class="kt">solutions</span><span class="o">(</span><span class="kt">⊥</span><span class="o">[</span><span class="kt">Cubes</span><span class="o">])</span>
+</span><span class="line"><span class="c1">// It&#39;s already running for 24 hours</span>
+</span><span class="line">
+</span><span class="line"><span class="n">scala</span><span class="o">&gt;</span> <span class="k">:type</span> <span class="kt">solutions</span><span class="o">(</span><span class="kt">⊥</span><span class="o">[</span><span class="kt">Cube1</span> <span class="kt">:::</span> <span class="kt">Nil</span><span class="o">])</span>
+</span><span class="line">
+</span><span class="line">    <span class="o">(</span><span class="nc">Cube</span><span class="o">[</span><span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">W</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">R</span><span class="o">]</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line"><span class="o">:::</span> <span class="o">(</span><span class="nc">Cube</span><span class="o">[</span><span class="kt">R</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">W</span>,<span class="kt">G</span>,<span class="kt">B</span><span class="o">]</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line"><span class="o">:::</span> <span class="o">(</span><span class="nc">Cube</span><span class="o">[</span><span class="kt">G</span>,<span class="kt">W</span>,<span class="kt">B</span>,<span class="kt">B</span>,<span class="kt">R</span>,<span class="kt">G</span><span class="o">]</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line"><span class="o">:::</span> <span class="o">(</span><span class="nc">Cube</span><span class="o">[</span><span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">R</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">W</span><span class="o">]</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line"><span class="o">:::</span> <span class="o">(</span><span class="nc">Cube</span><span class="o">[</span><span class="kt">W</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">R</span>,<span class="kt">G</span>,<span class="kt">B</span><span class="o">]</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line"><span class="o">:::</span> <span class="o">(</span><span class="nc">Cube</span><span class="o">[</span><span class="kt">G</span>,<span class="kt">R</span>,<span class="kt">B</span>,<span class="kt">B</span>,<span class="kt">W</span>,<span class="kt">G</span><span class="o">]</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line"><span class="o">:::</span> <span class="o">(</span><span class="nc">Cube</span><span class="o">[</span><span class="kt">B</span>,<span class="kt">W</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">R</span><span class="o">]</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line"><span class="o">:::</span> <span class="o">(</span><span class="nc">Cube</span><span class="o">[</span><span class="kt">R</span>,<span class="kt">G</span>,<span class="kt">W</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">B</span><span class="o">]</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line"><span class="o">:::</span> <span class="o">(</span><span class="nc">Cube</span><span class="o">[</span><span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">B</span>,<span class="kt">R</span>,<span class="kt">W</span>,<span class="kt">G</span><span class="o">]</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line"><span class="o">:::</span> <span class="o">(</span><span class="nc">Cube</span><span class="o">[</span><span class="kt">B</span>,<span class="kt">R</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">W</span><span class="o">]</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line"><span class="o">:::</span> <span class="o">(</span><span class="nc">Cube</span><span class="o">[</span><span class="kt">W</span>,<span class="kt">G</span>,<span class="kt">R</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">B</span><span class="o">]</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line"><span class="o">:::</span> <span class="o">(</span><span class="nc">Cube</span><span class="o">[</span><span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">B</span>,<span class="kt">W</span>,<span class="kt">R</span>,<span class="kt">G</span><span class="o">]</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line"><span class="o">:::</span> <span class="o">(</span><span class="nc">Cube</span><span class="o">[</span><span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">W</span>,<span class="kt">R</span><span class="o">]</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line"><span class="o">:::</span> <span class="o">(</span><span class="nc">Cube</span><span class="o">[</span><span class="kt">R</span>,<span class="kt">W</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">B</span><span class="o">]</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line"><span class="o">:::</span> <span class="o">(</span><span class="nc">Cube</span><span class="o">[</span><span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">R</span>,<span class="kt">W</span>,<span class="kt">B</span>,<span class="kt">G</span><span class="o">]</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line"><span class="o">:::</span> <span class="o">(</span><span class="nc">Cube</span><span class="o">[</span><span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">R</span>,<span class="kt">W</span><span class="o">]</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line"><span class="o">:::</span> <span class="o">(</span><span class="nc">Cube</span><span class="o">[</span><span class="kt">W</span>,<span class="kt">R</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">B</span><span class="o">]</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line"><span class="o">:::</span> <span class="o">(</span><span class="nc">Cube</span><span class="o">[</span><span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">W</span>,<span class="kt">R</span>,<span class="kt">B</span>,<span class="kt">G</span><span class="o">]</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line"><span class="o">:::</span> <span class="o">(</span><span class="nc">Cube</span><span class="o">[</span><span class="kt">B</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">W</span>,<span class="kt">G</span>,<span class="kt">R</span><span class="o">]</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line"><span class="o">:::</span> <span class="o">(</span><span class="nc">Cube</span><span class="o">[</span><span class="kt">R</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">W</span>,<span class="kt">B</span><span class="o">]</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line"><span class="o">:::</span> <span class="o">(</span><span class="nc">Cube</span><span class="o">[</span><span class="kt">G</span>,<span class="kt">R</span>,<span class="kt">W</span>,<span class="kt">B</span>,<span class="kt">B</span>,<span class="kt">G</span><span class="o">]</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line"><span class="o">:::</span> <span class="o">(</span><span class="nc">Cube</span><span class="o">[</span><span class="kt">B</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">R</span>,<span class="kt">G</span>,<span class="kt">W</span><span class="o">]</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line"><span class="o">:::</span> <span class="o">(</span><span class="nc">Cube</span><span class="o">[</span><span class="kt">W</span>,<span class="kt">G</span>,<span class="kt">B</span>,<span class="kt">G</span>,<span class="kt">R</span>,<span class="kt">B</span><span class="o">]</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line"><span class="o">:::</span> <span class="o">(</span><span class="nc">Cube</span><span class="o">[</span><span class="kt">G</span>,<span class="kt">W</span>,<span class="kt">R</span>,<span class="kt">B</span>,<span class="kt">B</span>,<span class="kt">G</span><span class="o">]</span> <span class="o">:::</span> <span class="nc">Nil</span><span class="o">)</span>
+</span><span class="line"><span class="o">:::</span> <span class="nc">Nil</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>For comparison, here is the solution generated by the pure Scala version:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"> <div class="CodeRay">
+  <div class="code"><pre>
+[GBWRBG, WGBWRR, RWRBGR, BRGGWW]
+[GBRWBG, RRWBGW, RGBRWR, WWGGRB]
+[GWRBBG, WBWRGR, RRBGWR, BGGWRW]
+[GBBRWG, RGRWBW, RWGBRR, WRWGGB]
+[GRBBWG, WWRGBR, RBGWRR, BGWRGW]
+[GWBBRG, RBGRWW, RRWGBR, WGRWGB]
+[GBBWRG, WRGBWR, RGWRBR, BWRGGW]
+[GRWBBG, RWBGRW, RBRWGR, WGGRWB]
+</pre></div>
+</div>
+ </figure></notextile></div>
+
+<h1 id="conclusion">Conclusion</h1>
+
+<p>We’ve seen how to use Scala Type System as a programming language to solve a given problem, and apparently
+it’s as powerful as Haskell Type System.</p>
+
+<p>Solving this kind of puzzles using type system is not very practical, it took me more then 24 hours to get
+a solution, but it shows how expressing type system can be.</p>
+
+<blockquote>
+  <p>Full code for Type-Level Instant Insanity is on <a href="https://gist.github.com/ezhulenev/d741fa7c47d532ec9d1a1bf9aa12fbbc" target="_blank">Github</a></p>
+</blockquote>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Eugene Zhulenev</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2017-04-26T13:15:16-04:00" pubdate data-updated="true">Apr 26<span>th</span>, 2017</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/scala/'>scala</a>, <a class='category' href='/blog/categories/type-level-programming/'>type level programming</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://eugenezhulenev.com/blog/2017/04/26/type-level-instant-insanity-in-scala/" data-via="ezhulenev" data-counturl="http://eugenezhulenev.com/blog/2017/04/26/type-level-instant-insanity-in-scala/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2016/02/01/deep-learning-with-tensorflow-on-ec2-spot-instances/" title="Previous Post: Large Scale Deep Learning with TensorFlow on EC2 Spot Instances">&laquo; Large Scale Deep Learning with TensorFlow on EC2 Spot Instances</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+  <aside class="sidebar">
+   
+<form action="https://www.google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:eugenezhulenev.com" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2017/04/26/type-level-instant-insanity-in-scala/">Type-Level Instant Insanity in Scala</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2016/02/01/deep-learning-with-tensorflow-on-ec2-spot-instances/">Large Scale Deep Learning With TensorFlow on EC2 Spot Instances</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/12/03/spark-in-production-large-scale-machine-learning/">Spark in Production: Lessons From Running Large Scale Machine Learning</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/09/16/spark-ml-for-big-and-small-data/">Optimizing Spark Machine Learning for Small Data</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines/">Audience Modeling With Spark ML Pipelines</a>
+      </li>
+    
+  </ul>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/ezhulenev">@ezhulenev</a> on GitHub
+  
+  <script type="text/javascript">
+    $(document).ready(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'ezhulenev',
+            count: 0,
+            skip_forks: true,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2017 - Eugene Zhulenev -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'eugenezhulenev';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://eugenezhulenev.com/blog/2017/04/26/type-level-instant-insanity-in-scala/';
+        var disqus_url = 'http://eugenezhulenev.com/blog/2017/04/26/type-level-instant-insanity-in-scala/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = '//' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+<script>
+  $(document).ready(function() {  
+  var stickyNavTop = $('nav').offset().top;  
+    
+  var stickyNav = function(){  
+  var scrollTop = $(window).scrollTop();  
+         
+  if (scrollTop > stickyNavTop) {   
+      $('nav').addClass('sticky');  
+  } else {  
+      $('nav').removeClass('sticky');   
+  }  
+  };  
+    
+  stickyNav();  
+    
+  $(window).scroll(function() {  
+      stickyNav();  
+  });  
+  });  
+</script>
+
+
+</body>
+</html>
