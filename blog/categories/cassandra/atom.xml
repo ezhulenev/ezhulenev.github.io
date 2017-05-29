@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Cassandra | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/cassandra/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2017-04-26T11:08:42-04:00</updated>
+  <updated>2017-05-28T22:24:21-07:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -16,7 +16,7 @@
   <entry>
     <title type="html"><![CDATA[Building Twitter Live Stream Analytics With Spark and Cassandra]]></title>
     <link href="http://eugenezhulenev.com/blog/2014/11/20/twitter-analytics-with-spark/"/>
-    <updated>2014-11-20T20:01:15-05:00</updated>
+    <updated>2014-11-20T17:01:15-08:00</updated>
     <id>http://eugenezhulenev.com/blog/2014/11/20/twitter-analytics-with-spark</id>
     <content type="html"><![CDATA[<blockquote>
   <p>This is repost of my article from <a href="http://io.pellucid.com/blog/building-twitter-live-stream-analytics-with-spark-and-cassandra">Pellucid Tech Blog</a></p>

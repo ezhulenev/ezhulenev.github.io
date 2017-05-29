@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Spark | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/spark/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2017-04-26T11:08:42-04:00</updated>
+  <updated>2017-05-28T22:24:21-07:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -16,7 +16,7 @@
   <entry>
     <title type="html"><![CDATA[Spark in Production: Lessons From Running Large Scale Machine Learning]]></title>
     <link href="http://eugenezhulenev.com/blog/2015/12/03/spark-in-production-large-scale-machine-learning/"/>
-    <updated>2015-12-03T13:24:46-05:00</updated>
+    <updated>2015-12-03T10:24:46-08:00</updated>
     <id>http://eugenezhulenev.com/blog/2015/12/03/spark-in-production-large-scale-machine-learning</id>
     <content type="html"><![CDATA[<p>I wrote earlier about our approach for <a href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines">machine learning with Spark</a> 
 at <a href="http://collective.com">Collective</a>, it was focused on transforming raw data into features that can be used for training a model.
@@ -219,7 +219,7 @@ be modeled with queues.</p>
   <entry>
     <title type="html"><![CDATA[Optimizing Spark Machine Learning for Small Data]]></title>
     <link href="http://eugenezhulenev.com/blog/2015/09/16/spark-ml-for-big-and-small-data/"/>
-    <updated>2015-09-16T10:04:25-04:00</updated>
+    <updated>2015-09-16T07:04:25-07:00</updated>
     <id>http://eugenezhulenev.com/blog/2015/09/16/spark-ml-for-big-and-small-data</id>
     <content type="html"><![CDATA[<blockquote>
   <p><strong>Update 2015-10-08</strong>: Optimization “hack” described in this post still works, however we don’t use it in production anymore. 
@@ -338,7 +338,7 @@ without doing so many code duplication. I’d love to see if anyone else had the
   <entry>
     <title type="html"><![CDATA[Audience Modeling With Spark ML Pipelines]]></title>
     <link href="http://eugenezhulenev.com/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines/"/>
-    <updated>2015-09-09T09:04:25-04:00</updated>
+    <updated>2015-09-09T06:04:25-07:00</updated>
     <id>http://eugenezhulenev.com/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines</id>
     <content type="html"><![CDATA[<p>At <a href="http://collective.com">Collective</a> we are heavily relying on machine learning and predictive modeling to 
 run digital advertising business. All decisions about what ad to show at this particular time to this particular user
@@ -642,7 +642,7 @@ create custom transformers/estimators that later can be used as a part of bigger
   <entry>
     <title type="html"><![CDATA[Interactive Audience Analytics With Spark and HyperLogLog]]></title>
     <link href="http://eugenezhulenev.com/blog/2015/07/15/interactive-audience-analytics-with-spark-and-hyperloglog/"/>
-    <updated>2015-07-15T22:07:44-04:00</updated>
+    <updated>2015-07-15T19:07:44-07:00</updated>
     <id>http://eugenezhulenev.com/blog/2015/07/15/interactive-audience-analytics-with-spark-and-hyperloglog</id>
     <content type="html"><![CDATA[<p>At <a href="http://collective.com">Collective</a> we are working not only on cool things like 
 <a href="/blog/2015/06/10/2015-06-10-feature-engineering-at-scale">Machine Learning and Predictive Modeling</a>, 
@@ -1075,7 +1075,7 @@ with Spar MLLib and GraphX, and I’m pretty sure they all will be successful.</
   <entry>
     <title type="html"><![CDATA[Feature Engineering at Scale With Spark]]></title>
     <link href="http://eugenezhulenev.com/blog/2015/06/10/feature-engineering-at-scale/"/>
-    <updated>2015-06-10T23:02:45-04:00</updated>
+    <updated>2015-06-10T20:02:45-07:00</updated>
     <id>http://eugenezhulenev.com/blog/2015/06/10/feature-engineering-at-scale</id>
     <content type="html"><![CDATA[<blockquote>
   <p>Check Model Matrix <a href="http://collectivemedia.github.io/modelmatrix/">Website</a> and <a href="https://github.com/collectivemedia/modelmatrix">Github project</a>.</p>

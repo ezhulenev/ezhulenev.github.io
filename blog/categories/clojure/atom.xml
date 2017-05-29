@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Clojure | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/clojure/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2017-04-26T11:08:42-04:00</updated>
+  <updated>2017-05-28T22:24:21-07:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -16,7 +16,7 @@
   <entry>
     <title type="html"><![CDATA[Large Scale Deep Learning With TensorFlow on EC2 Spot Instances]]></title>
     <link href="http://eugenezhulenev.com/blog/2016/02/01/deep-learning-with-tensorflow-on-ec2-spot-instances/"/>
-    <updated>2016-02-01T11:14:16-05:00</updated>
+    <updated>2016-02-01T08:14:16-08:00</updated>
     <id>http://eugenezhulenev.com/blog/2016/02/01/deep-learning-with-tensorflow-on-ec2-spot-instances</id>
     <content type="html"><![CDATA[<p>In this post I’m demonstrating how to combine together <strong>TensorFlow</strong>, <strong>Docker</strong>, <strong>EC2 Container Service</strong> and <strong>EC2 Spot Instances</strong> 
 to solve massive cluster computing problems the most cost-effective way.</p>

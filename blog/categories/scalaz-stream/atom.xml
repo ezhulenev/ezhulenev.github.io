@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Scalaz-stream | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/scalaz-stream/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2017-04-26T11:08:42-04:00</updated>
+  <updated>2017-05-28T22:24:21-07:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -16,7 +16,7 @@
   <entry>
     <title type="html"><![CDATA[Spark in Production: Lessons From Running Large Scale Machine Learning]]></title>
     <link href="http://eugenezhulenev.com/blog/2015/12/03/spark-in-production-large-scale-machine-learning/"/>
-    <updated>2015-12-03T13:24:46-05:00</updated>
+    <updated>2015-12-03T10:24:46-08:00</updated>
     <id>http://eugenezhulenev.com/blog/2015/12/03/spark-in-production-large-scale-machine-learning</id>
     <content type="html"><![CDATA[<p>I wrote earlier about our approach for <a href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines">machine learning with Spark</a> 
 at <a href="http://collective.com">Collective</a>, it was focused on transforming raw data into features that can be used for training a model.
@@ -219,7 +219,7 @@ be modeled with queues.</p>
   <entry>
     <title type="html"><![CDATA[Akka Cluster for Value at Risk Calculation (Part 2/2)]]></title>
     <link href="http://eugenezhulenev.com/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2/"/>
-    <updated>2014-05-01T22:03:45-04:00</updated>
+    <updated>2014-05-01T19:03:45-07:00</updated>
     <id>http://eugenezhulenev.com/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2</id>
     <content type="html"><![CDATA[<h3 id="synopsis">Synopsis</h3>
 
@@ -687,7 +687,7 @@ And scalaz-stream is very nice and super powerful library, I strongly encourage 
   <entry>
     <title type="html"><![CDATA[Akka Cluster for Value at Risk Calculation (Part 1/2)]]></title>
     <link href="http://eugenezhulenev.com/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1/"/>
-    <updated>2014-05-01T22:03:45-04:00</updated>
+    <updated>2014-05-01T19:03:45-07:00</updated>
     <id>http://eugenezhulenev.com/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1</id>
     <content type="html"><![CDATA[<h3 id="synopsis">Synopsis</h3>
 
@@ -1187,7 +1187,7 @@ and explained why it’s a perfect fit for grid computing and spreading calculat
   <entry>
     <title type="html"><![CDATA[Scalaz-Stream: Feed `Process` Through the Given Effectful `Channel` Concurrently]]></title>
     <link href="http://eugenezhulenev.com/blog/2014/04/01/scalaz-stream-concurrent-process/"/>
-    <updated>2014-04-01T22:03:03-04:00</updated>
+    <updated>2014-04-01T19:03:03-07:00</updated>
     <id>http://eugenezhulenev.com/blog/2014/04/01/scalaz-stream-concurrent-process</id>
     <content type="html"><![CDATA[<p>Let’s assume that we have some input process, and want to run some ‘heavy computation’ on each element.
 Obviously we want utilize all available cores and use thread pool. However scalaz-stream by default is deterministic

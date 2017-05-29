@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Scalaz | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/scalaz/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2017-04-26T11:08:42-04:00</updated>
+  <updated>2017-05-28T22:24:21-07:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -16,7 +16,7 @@
   <entry>
     <title type="html"><![CDATA[Scalaz-Stream: Feed `Process` Through the Given Effectful `Channel` Concurrently]]></title>
     <link href="http://eugenezhulenev.com/blog/2014/04/01/scalaz-stream-concurrent-process/"/>
-    <updated>2014-04-01T22:03:03-04:00</updated>
+    <updated>2014-04-01T19:03:03-07:00</updated>
     <id>http://eugenezhulenev.com/blog/2014/04/01/scalaz-stream-concurrent-process</id>
     <content type="html"><![CDATA[<p>Let’s assume that we have some input process, and want to run some ‘heavy computation’ on each element.
 Obviously we want utilize all available cores and use thread pool. However scalaz-stream by default is deterministic

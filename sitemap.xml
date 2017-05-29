@@ -2,98 +2,98 @@
 <urlset xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>
     <url>
         <loc>http://eugenezhulenev.com/blog/2014/04/01/scalaz-stream-concurrent-process/</loc>
-        <lastmod>2017-04-25T12:02:02-04:00</lastmod>
+        <lastmod>2015-07-14T06:01:17-07:00</lastmod>
     </url>
     <url>
         <loc>
             http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1/
         </loc>
-        <lastmod>2017-04-25T12:02:02-04:00</lastmod>
+        <lastmod>2015-07-14T06:01:17-07:00</lastmod>
     </url>
     <url>
         <loc>
             http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/
         </loc>
-        <lastmod>2017-04-25T12:02:02-04:00</lastmod>
+        <lastmod>2015-07-14T06:01:17-07:00</lastmod>
     </url>
     <url>
         <loc>
             http://eugenezhulenev.com/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-1/
         </loc>
-        <lastmod>2017-04-25T12:02:02-04:00</lastmod>
+        <lastmod>2015-07-14T06:01:17-07:00</lastmod>
     </url>
     <url>
         <loc>
             http://eugenezhulenev.com/blog/2014/05/01/akka-cluster-for-value-at-risk-calculation-2/
         </loc>
-        <lastmod>2017-04-25T12:02:02-04:00</lastmod>
+        <lastmod>2015-07-14T06:01:17-07:00</lastmod>
     </url>
     <url>
         <loc>
             http://eugenezhulenev.com/blog/2014/10/18/run-tests-in-standalone-spark-cluster/
         </loc>
-        <lastmod>2017-04-25T12:02:02-04:00</lastmod>
+        <lastmod>2016-01-29T19:07:08-08:00</lastmod>
     </url>
     <url>
         <loc>
             http://eugenezhulenev.com/blog/2014/11/14/stock-price-prediction-with-big-data-and-machine-learning/
         </loc>
-        <lastmod>2017-04-25T12:02:02-04:00</lastmod>
+        <lastmod>2015-07-14T06:01:17-07:00</lastmod>
     </url>
     <url>
         <loc>http://eugenezhulenev.com/blog/2014/11/20/twitter-analytics-with-spark/</loc>
-        <lastmod>2017-04-25T12:02:02-04:00</lastmod>
+        <lastmod>2015-07-14T06:01:17-07:00</lastmod>
     </url>
     <url>
         <loc>http://eugenezhulenev.com/blog/2015/06/10/feature-engineering-at-scale/</loc>
-        <lastmod>2017-04-25T12:02:02-04:00</lastmod>
+        <lastmod>2015-07-14T16:29:55-07:00</lastmod>
     </url>
     <url>
         <loc>
             http://eugenezhulenev.com/blog/2015/07/15/interactive-audience-analytics-with-spark-and-hyperloglog/
         </loc>
-        <lastmod>2017-04-25T12:02:02-04:00</lastmod>
+        <lastmod>2015-09-08T18:27:46-07:00</lastmod>
     </url>
     <url>
         <loc>
             http://eugenezhulenev.com/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines/
         </loc>
-        <lastmod>2017-04-25T12:02:02-04:00</lastmod>
+        <lastmod>2015-09-08T18:27:46-07:00</lastmod>
     </url>
     <url>
         <loc>http://eugenezhulenev.com/blog/2015/09/16/spark-ml-for-big-and-small-data/</loc>
-        <lastmod>2017-04-25T12:02:02-04:00</lastmod>
+        <lastmod>2016-01-29T19:07:08-08:00</lastmod>
     </url>
     <url>
         <loc>
             http://eugenezhulenev.com/blog/2015/12/03/spark-in-production-large-scale-machine-learning/
         </loc>
-        <lastmod>2017-04-25T12:02:02-04:00</lastmod>
+        <lastmod>2016-01-29T19:07:08-08:00</lastmod>
     </url>
     <url>
         <loc>
             http://eugenezhulenev.com/blog/2016/02/01/deep-learning-with-tensorflow-on-ec2-spot-instances/
         </loc>
-        <lastmod>2017-04-25T12:02:02-04:00</lastmod>
+        <lastmod>2016-01-31T19:28:17-08:00</lastmod>
     </url>
     <url>
         <loc>http://eugenezhulenev.com/blog/2017/04/26/type-level-instant-insanity-in-scala/</loc>
-        <lastmod>2017-04-26T10:59:51-04:00</lastmod>
+        <lastmod>2017-05-28T22:21:37-07:00</lastmod>
     </url>
     <url>
         <loc>http://eugenezhulenev.com/blog/archives/</loc>
-        <lastmod>2017-04-26T10:59:51-04:00</lastmod>
+        <lastmod>2017-05-28T22:21:37-07:00</lastmod>
     </url>
     <url>
         <loc>http://eugenezhulenev.com/blog/</loc>
-        <lastmod>2017-04-26T10:59:51-04:00</lastmod>
+        <lastmod>2017-05-28T22:21:37-07:00</lastmod>
     </url>
     <url>
         <loc>http://eugenezhulenev.com/</loc>
-        <lastmod>2017-04-26T10:59:51-04:00</lastmod>
+        <lastmod>2017-05-28T22:21:37-07:00</lastmod>
     </url>
     <url>
         <loc>http://eugenezhulenev.com/robots.txt</loc>
-        <lastmod>2017-04-25T12:02:02-04:00</lastmod>
+        <lastmod>2015-07-14T06:01:17-07:00</lastmod>
     </url>
 </urlset>

@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Type Level Programming | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/type-level-programming/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2017-04-26T11:08:42-04:00</updated>
+  <updated>2017-05-28T22:24:21-07:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -16,7 +16,7 @@
   <entry>
     <title type="html"><![CDATA[Type-Level Instant Insanity in Scala]]></title>
     <link href="http://eugenezhulenev.com/blog/2017/04/26/type-level-instant-insanity-in-scala/"/>
-    <updated>2017-04-26T13:15:16-04:00</updated>
+    <updated>2017-04-26T10:15:16-07:00</updated>
     <id>http://eugenezhulenev.com/blog/2017/04/26/type-level-instant-insanity-in-scala</id>
     <content type="html"><![CDATA[<blockquote>
   <p>This post is a Scala version of <a href="http://blog.kfish.org/2007/09/type-level-instant-insanity.html" target="_blank">Haskell Type-Level Instant Insanity by Conrad Parker</a></p>

@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Cloud | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/cloud/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2017-04-26T11:08:42-04:00</updated>
+  <updated>2017-05-28T22:24:21-07:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -16,7 +16,7 @@
   <entry>
     <title type="html"><![CDATA[Seamless Migration From Monolithic Application to Finagle Services (Part 2/2)]]></title>
     <link href="http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2/"/>
-    <updated>2014-04-09T22:03:45-04:00</updated>
+    <updated>2014-04-09T19:03:45-07:00</updated>
     <id>http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-2</id>
     <content type="html"><![CDATA[<h3 id="synopsis">Synopsis</h3>
 
@@ -495,7 +495,7 @@ But with Finagle server-side part of application can be scaled independently, an
   <entry>
     <title type="html"><![CDATA[Seamless Migration From Monolithic Application to Finagle Services (Part 1/2)]]></title>
     <link href="http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1/"/>
-    <updated>2014-04-09T22:03:45-04:00</updated>
+    <updated>2014-04-09T19:03:45-07:00</updated>
     <id>http://eugenezhulenev.com/blog/2014/04/09/seamless-migration-from-monolithic-application-to-finagle-services-1</id>
     <content type="html"><![CDATA[<h3 id="synopsis">Synopsis</h3>
 
