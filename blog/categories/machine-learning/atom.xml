@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Machine Learning | Eugene Zhulenev]]></title>
   <link href="http://eugenezhulenev.com/blog/categories/machine-learning/atom.xml" rel="self"/>
   <link href="http://eugenezhulenev.com/"/>
-  <updated>2017-05-28T22:24:21-07:00</updated>
+  <updated>2019-01-01T15:30:25-08:00</updated>
   <id>http://eugenezhulenev.com/</id>
   <author>
     <name><![CDATA[Eugene Zhulenev]]></name>
@@ -12,431 +12,6 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
-  
-  <entry>
-    <title type="html"><![CDATA[Large Scale Deep Learning With TensorFlow on EC2 Spot Instances]]></title>
-    <link href="http://eugenezhulenev.com/blog/2016/02/01/deep-learning-with-tensorflow-on-ec2-spot-instances/"/>
-    <updated>2016-02-01T08:14:16-08:00</updated>
-    <id>http://eugenezhulenev.com/blog/2016/02/01/deep-learning-with-tensorflow-on-ec2-spot-instances</id>
-    <content type="html"><![CDATA[<p>In this post I’m demonstrating how to combine together <strong>TensorFlow</strong>, <strong>Docker</strong>, <strong>EC2 Container Service</strong> and <strong>EC2 Spot Instances</strong> 
-to solve massive cluster computing problems the most cost-effective way.</p>
-
-<blockquote>
-  <p>Source code is on on Github: <a href="https://github.com/ezhulenev/distributo">https://github.com/ezhulenev/distributo</a></p>
-</blockquote>
-
-<p>Neural Networks and Deep Learning in particular gained a lot of attention over the last year, and it’s only the beginning. Google released
-to open source their numerical computing framework <a href="https://www.tensorflow.org/">TensorFlow</a>, which can be used for training and running
-deep neural networks for wide variety of machine learning problems, especially image recognition.</p>
-
-<blockquote>
-  <p>TensorFlow was originally developed by researchers and engineers working on the Google Brain Team within Google’s Machine Intelligence research 
-organization for the purposes of conducting machine learning and deep neural networks research, but the system is general enough to be 
-applicable in a wide variety of other domains as well.</p>
-</blockquote>
-
-<p>Although TensorFlow version used at Google supports distributed training, open sourced version can run only on one node. However some of machine learning
-problems are still embarrassingly parallel, and can be easily parallelized regardless of single-node nature of the core library itself.</p>
-
-<ol>
-  <li><strong>Hyperparameter optimization</strong> or <strong>model selection</strong> is the problem of choosing a set of hyperparameters for a learning algorithm, 
-usually with the goal of optimizing a measure of the algorithm’s performance on an independent data set. Naturally parallelized by training
-models for each set ot parameters in parallel and choosing the best model (parameters) later.</li>
-  <li><strong>Inference</strong> (applying trained model to new data) can be parallelized by splitting input dataset into smaller 
-batches and running trained model on each of them in parallel</li>
-</ol>
-
-<!-- more -->
-
-<h2 id="hyperparameter-optimization">Hyperparameter Optimization</h2>
-
-<p>TensorFlow provides primitives for expressing and solving various numerical computations using data flow graphs, and it was primarily designed to solve
-neural networks research problems.</p>
-
-<p>Choosing a right design and parameters for your neural network is separate optimization problem:  </p>
-
-<ul>
-  <li>how many layers to use?</li>
-  <li>how many neurons in each layer?</li>
-  <li>what learning rate to use?</li>
-</ul>
-
-<p>These choices form a set of model hyperparameters, which can be used for training multiple models in parallel.</p>
-
-<p><img class="center" src="/images/deep-learning/hyperparameter-optimization.png" title="Hyperparameter Optimization" ></p>
-
-<h2 id="inference">Inference</h2>
-
-<p>When you already have trained model, and you want to score/classify huge dataset, you can use similar approach: split all your input
-data into smaller batches, and run them in parallel. Instead of different hyperparameters, scheduler will control batch offsets 
-defining what part of the dataset should be loaded for inference.</p>
-
-<h1 id="tensorflow-for-image-recognition">TensorFlow for Image Recognition</h1>
-
-<h2 id="packaging-into-docker-image">Packaging into Docker Image</h2>
-
-<p>TensorFlow has awesome <a href="https://www.tensorflow.org/versions/0.6.0/tutorials/image_recognition/index.html">Image Recognition Tutorial</a>, which uses already
-pre-trained ImageNet model for image recognition/classification. You provide an image, and a model gives you what it 
-can see on this image: leopard, container ship, place, etc.. Works like magic.</p>
-
-<p>I’ve prepared <a href="https://github.com/ezhulenev/distributo/tree/master/example/docker-tensorflow">Docker image</a> based on official TensorFlow image 
-and slightly modified image classification example. It takes a range of images that needs to be classified, and S3 
-path where to put results:</p>
-
-<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
-  <div class="code"><pre>
-# You have to provider your AWS credentials to upload files on S3
-# and S3 bucket name
-docker run -it -e ‘AWS_ACCESS_KEY_ID=…’ -e ‘AWS_SECRET_ACCESS_KEY=…’ \
-        ezhulenev/distributo-tensorflow-example \
-        0:100 s3://distributo-example/imagenet/inferred-0-100.txt
-</pre></div>
-</div>
- </figure></notextile></div></p>
-
-<p>This command will classify first 100 images from <a href="http://image-net.org/imagenet_data/urls/imagenet_fall11_urls.tgz">http://image-net.org/imagenet_data/urls/imagenet_fall11_urls.tgz</a>:</p>
-
-<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
-  <div class="code"><pre>
-n00005787&lt;em&gt;175   http://farm3.static.flickr.com/2179/2090355369&lt;/em&gt;4c8a60f899.jpg
-n00005787&lt;em&gt;185   http://farm4.static.flickr.com/3205/2815917575_c2ea596ed2.jpg
-n00005787&lt;/em&gt;186   http://farm3.static.flickr.com/2084/2517885309&lt;em&gt;6680a79ab1.jpg
-n00005787&lt;/em&gt;190   http://farm1.static.flickr.com/81/245539781&lt;em&gt;42028c8c67.jpg
-n00005787&lt;/em&gt;198   http://farm2.static.flickr.com/1437/680424989&lt;em&gt;da45c42286.jpg
-n00005787&lt;/em&gt;219   http://farm1.static.flickr.com/176/441681804_fec8ae4c58.jpg
-</pre></div>
-</div>
- </figure></notextile></div></p>
-
-<p>And upload inference results to S3:</p>
-
-<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
-  <div class="code"><pre>
-n00005787&lt;em&gt;175,http://farm3.static.flickr.com/2179/2090355369&lt;/em&gt;4c8a60f899.jpg,[
-  (‘brain coral’, 0.354022), 
-  (‘hen-of-the-woods, hen of the woods, Polyporus frondosus, Grifola frondosa’, 0.18448937), 
-  (‘coral reef’, 0.15611894), 
-  (‘gyromitra’, 0.035839655), 
-  (‘coral fungus’, 0.03291795)
-]
-n00005787_185,http://farm4.static.flickr.com/3205/2815917575_c2ea596ed2.jpg,[
-  (‘sea slug, nudibranch’, 0.4032793), 
-  (‘sea cucumber, holothurian’, 0.17277676), 
-  (‘hermit crab’, 0.043269496),
-  (‘conch’, 0.036443222), 
-  (‘jellyfish’, 0.023511186)
-]
-</pre></div>
-</div>
- </figure></notextile></div></p>
-
-<h2 id="moving-into-the-aws-cloud">Moving into the AWS Cloud</h2>
-
-<p>Amazon has <a href="https://aws.amazon.com/ecs/">EC2 Container Service (ECS)</a>, which is container management service that supports Docker containers,
-and allows to easily launch any task packaged into container on EC2 instances using simple API. You don’t have to worry about managing
-your cluster or installing any additional software. It just works out of the box with Amazon provided AMIs.</p>
-
-<p>ECS clusters are running on regular EC2 instances, and it’s up to you what instances to use. One option, that especially makes sense
-for large offline model training/inference it to use <a href="https://aws.amazon.com/ec2/spot/">EC2 Spot Instances</a> which allow you to bid on spare EC2 
-computing capacity. Spot instances are usually available at a big discount compared to On-Demand pricing, this allows to 
-significantly reduce the cost of running computation, and scale only when price allows to do so.</p>
-
-<h1 id="distributo">Distributo</h1>
-
-<p>Distributo is a small library that makes it easier to automate EC2 resource allocation on spot market, 
-and provides custom ECS scheduler that takes care of efficient execution of your tasks on available computing resources.</p>
-
-<p>Source code is on Github: <a href="https://github.com/ezhulenev/distributo">https://github.com/ezhulenev/distributo</a>. </p>
-
-<p>It requires <a href="http://leiningen.org/">Leiningen</a> to compile and to run example application.</p>
-
-<h3 id="resource-allocator">Resource Allocator</h3>
-
-<p>Resource allocator is responsible for allocating compute resources in EC2 based on outstanding 
-jobs resource requirements. Right now it’s lame implementation that only supports fixed
-size ECS cluster built from same type spot instances. You need to define upfront how many instances do you need.</p>
-
-<h3 id="scheduler">Scheduler</h3>
-
-<p>Scheduler decides on what available container instance to start pending jobs. It’s using bin-packing 
-with fitness calculators (concept borrowed from <a href="https://github.com/Netflix/Fenzo/wiki/Fitness-Calculators">Netflix/Fenzo</a>) to 
-choose best instance to start new task. It’s the main difference from default ECS scheduler that
-places tasks on random instances.</p>
-
-<h2 id="run-tensorflow-image-recognition-with-distributo">Run TensorFlow Image Recognition with Distributo</h2>
-
-<p>Distributo uses AWS JAVA SDK to access your AWS credentials. If you don’t have them already configured you
-can do it with AWS CLI</p>
-
-<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
-  <div class="code"><pre>
-aws configure
-</pre></div>
-</div>
- </figure></notextile></div></p>
-
-<p>After that you can start you cluster and run TensorFlow inference with this command:    </p>
-
-<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
-  <div class="code"><pre>
-lein run –inference \
-  –num-instances 1 \
-  –batch-size 100 \
-  –num-batches 10 \
-  –output s3://distributo-example/imagenet/
-</pre></div>
-</div>
- </figure></notextile></div></p>
-
-<p>This command will run 10 TensorFlow containers with batches from <code>[0:100]</code> up to <code>[900:1000]</code> on single instance and 
-put inference results into S3 bucket. By default it’s buying <code>m4.large</code> instances for <code>$0.03</code> which can run only 2 containers 
-in parallel, in this example 10 jobs will be competing for 1 instance.</p>
-
-<p>Distributo doesn’t free resources after it’s done with inference. If you are done, don’t forget to clean resources:</p>
-
-<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
-  <div class="code"><pre>
-lein run –free-resources
-</pre></div>
-</div>
- </figure></notextile></div></p>
-
-<h2 id="future-work">Future Work</h2>
-
-<p>Resource allocator and scheduler could be much more clever about their choices of regions, availability zones 
-and instance types to be able to build most price-effective cluster out of resources currently 
-available on spot market.</p>
-
-<p><a href="https://github.com/twosigma/Cook">TwoSigma/Cook</a> - has lot’s of great ideas about fair resource allocation and cluster 
-sharing for large scale batch computations, which might be very interesting to implement</p>
-
-<h2 id="alternative-approaches">Alternative Approaches</h2>
-
-<h3 id="spark-as-distributed-compute-engine">Spark as Distributed Compute Engine</h3>
-
-<p>Apache Spark has Python integration and it’s possible to achieve very similar parallelization 
-with it: <a href="https://databricks.com/blog/2016/01/25/deep-learning-with-spark-and-tensorflow.html">https://databricks.com/blog/2016/01/25/deep-learning-with-spark-and-tensorflow.html</a>.</p>
-
-<p>However it’s completely different from approach that I described, because it doesn’t allow to use Docker (easily) and requires non trivial cluster setup. Although it might be more powerful
-because it’s much easier to build more complicated pipelines.</p>
-
-<h3 id="aws-auto-scaling">AWS Auto Scaling</h3>
-
-<p>ECS provides auto scaling out of the box, also it has it’s own task scheduler. However task scheduler use random 
-containers to place new tasks, which can lead to unefficient resource utilization. And with custom resource allocator it’s 
-possible to build more sophisticated strategies for buying cheapest computing resources on fluctuating market.</p>
-
-<h3 id="mesos">Mesos</h3>
-
-<p>Mesos also provides great API for running tasks packaged as Docker images in the cluster.</p>
-
-<p>However managing Mesos deployment is not trivial task, and you might not want to do have this headache. Also it’s much more difficult to provide
-truly scalable platform, you’ll have to provision your cluster for peak load, which can be expensive and not cost-effective.</p>
-]]></content>
-  </entry>
-  
-  <entry>
-    <title type="html"><![CDATA[Spark in Production: Lessons From Running Large Scale Machine Learning]]></title>
-    <link href="http://eugenezhulenev.com/blog/2015/12/03/spark-in-production-large-scale-machine-learning/"/>
-    <updated>2015-12-03T10:24:46-08:00</updated>
-    <id>http://eugenezhulenev.com/blog/2015/12/03/spark-in-production-large-scale-machine-learning</id>
-    <content type="html"><![CDATA[<p>I wrote earlier about our approach for <a href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines">machine learning with Spark</a> 
-at <a href="http://collective.com">Collective</a>, it was focused on transforming raw data into features that can be used for training a model.
-At this post I want describe how to assemble multiple building blocks into production application, that efficiently uses
-Spark cluster and can train/validate hundreds of models.</p>
-
-<p>Training single model is relatively easy, and it’s well covered in Spark documentation and multiple other blog posts. Training hundreds of 
-models can become really tricky from engineering point of view. Spark has lot’s of configuration parameters 
-that can affect cluster performance and stability, and you can use some clever tricks to get higher cluster utilization.</p>
-
-<!-- more -->
-
-<h3 id="scale-of-the-problem">Scale Of The Problem</h3>
-
-<p>At Collective we are using Spark and machine learning for online advertising optimization, trying to decide which ads are relevant to 
-which people, at which time and at which web site. </p>
-
-<p>Log data used for training models is huge, billions of rows. Number of users that we target is hundreds of millions. 
-We have hundreds of clients with tens of different campaigns, with different optimization targets and restrictions.</p>
-
-<p>These factors gives an idea of the scale of the problem.  </p>
-
-<h3 id="production-machine-learning-pipeline">Production Machine Learning Pipeline</h3>
-
-<p>Typical machine learning pipeline for one specific ad campaign looks like this:</p>
-
-<ul>
-  <li><em>Prepare response dataset:</em> based on impression/activity logs define which users should be in positive set (did some actions that we are trying to optimize for, example could be signing up for test drive)</li>
-  <li><em>Prepare train dataset:</em> extract predictors data from logs</li>
-  <li><em>Feauturize:</em> given predictors data extract feature vectors</li>
-  <li><em>Train model:</em> feed features and response data into Spark ML</li>
-  <li><em>Prepare test dataset:</em> data that is going to be used for model performance evaluation</li>
-  <li><em>Evaluate model:</em> for binary classification it can be computing ROC and AUC</li>
-</ul>
-
-<p>Preparing datasets is usually contains of multiple join and filter conditions. Featurization and training built on top 
-of <a href="https://databricks.com/blog/2015/01/07/ml-pipelines-a-new-high-level-api-for-mllib.html">Spark ML Pipeline</a> API, and 
-compose multiple transformers and estimators together. It’s covered in <a href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines">one of previous posts</a>.</p>
-
-<p>Given different nature of each step they have different limiting factors. Preparing dataset is expensive operation and heavily 
-uses shuffle. Model training time is usually dominated by network latency introduced by iterative function optimization algorithm.</p>
-
-<p>Serial execution of these steps can’t efficiently utilize all executor cores. Running multiple models in parallel in our 
-case doesn’t really help as well, multiple models reach <em>modeling</em> stage at almost the same time.</p>
-
-<h3 id="introducing-scalaz-stream">Introducing Scalaz-Stream</h3>
-
-<p>I’ll just put first paragraph from amazing <a href="https://gist.github.com/djspiewak/d93a9c4983f63721c41c">Introduction to scalaz-stream</a> here:</p>
-
-<blockquote>
-  <p>Every application ever written can be viewed as some sort of transformation on data. Data can come from different sources, such as a network or a file or user input or the Large Hadron Collider. It can come from many sources all at once to be merged and aggregated in interesting ways, and it can be produced into many different output sinks, such as a network or files or graphical user interfaces. You might produce your output all at once, as a big data dump at the end of the world (right before your program shuts down), or you might produce it more incrementally. Every application fits into this model.</p>
-</blockquote>
-
-<p>We model machine learning pipeline as a <code>scalaz.stream.Process</code> - multistep transformation on data, and use <code>scalaz-stream</code> combinators to run it
-with controlled concurrency and resource safety.</p>
-
-<p>Simple domain model for campaign optimization can be defined like this:</p>
-
-<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
-  <div class="code"><pre>
-<span class="keyword">case</span> <span class="type">class</span> <span class="class">OptimizedCampaign</span>(<span class="key">id</span>: Int, <span class="key">input</span>: Input, <span class="key">target</span>: <span class="predefined-type">Target</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
-</span>
-&lt;p&gt;<span class="keyword">case</span> <span class="type">class</span> <span class="class">ModelingError</span>(<span class="key">error</span>: <span class="predefined-type">String</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
-</span>
-&lt;p&gt;<span class="keyword">case</span> <span class="type">class</span> <span class="class">TrainedAndEvaluatedModel</span>(<span class="error">…</span>)
-</pre></div>
-</div>
- </figure></notextile></div></p>
-
-<p>Input would be definition of campaign that needs to be optimized, and output would be model that was trained and evaluated or error if something went wrong.</p>
-
-<p>Each of modeling steps described earlier can be encoded as <code>scalaz.stream.Channel</code> transformations:</p>
-
-<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
-  <div class="code"><pre>&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
-</span>
-&lt;p&gt;<span class="keyword">import</span> <span class="include">scalaz.stream._</span>&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
-</span>
-&lt;p&gt;val prepareResponse = 
-  channel.lift[Task, OptimizedCampaign, ModelingError <span class="error">\</span>/ ResponseDataset] {
-    <span class="keyword">case</span> opt =&amp;gt;
-       <span class="comment">// Expensive join/filter etc…</span>
-       val <span class="key">response</span>: DataFrame = 
-         dataset1
-           .join(dataset2, <span class="error">…</span>)
-           .filter(..)
-           .select(<span class="error">…</span>)
-       ResponseDataset(response)
-  }&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
-</span>
-&lt;p&gt;val prepareTrainDataset = lift[ResponseDataset, TrainDataset] {
-  <span class="keyword">case</span> response =&amp;gt;
-    <span class="comment">// Another expensive joins that requires shuffle</span>
-    val <span class="key">train</span>: DataFrame = 
-      dataset1.join(dataset2, <span class="error">…</span>).filter(<span class="error">…</span>)
-    TrainDataset(train)&lt;br /&gt;
-}&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
-</span>
-&lt;p&gt;val featurize = lift[TrainDataset, FeaturizedDataset] {
-  <span class="keyword">case</span> train =&amp;gt; 
-     <span class="comment">// Compute featurization using ML Pipeline API</span>
-     val pipeline = <span class="keyword">new</span> Pipeline()
-       .setStages(<span class="predefined-type">Array</span>(encodeSites, encodeS2Cells, assemble, lr))
-     pipeline.fit(train.dataFrame).transform(train.dataFrame)&lt;br /&gt;
-}&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
-</span>
-&lt;p&gt;val trainModel = lift[FeaturizedDataset, TrainedModel] {
-  <span class="keyword">case</span> featurized =&amp;gt; 
-    <span class="comment">// Train model with featurized data </span>
-    val lr = <span class="keyword">new</span> LogisticRegression().set(<span class="error">…</span>)
-    val pipeline = <span class="keyword">new</span> Pipeline().setStages(<span class="predefined-type">Array</span>(encode, lr))
-    val evaluator = <span class="keyword">new</span> BinaryClassificationEvaluator() &lt;br /&gt;
-    val crossValidator = <span class="keyword">new</span> CrossValidator()
-      .setEstimator(pipeline)
-      .setEvaluator(evaluator)  &lt;br /&gt;
-    val paramGrid = <span class="keyword">new</span> ParamGridBuilder()
-      .addGrid(lr.elasticNetParam, <span class="predefined-type">Array</span>(<span class="float">0.1</span>, <span class="float">0.5</span>))
-      .build()  &lt;br /&gt;
-    val model = crossValidator.fit(featurized.dataFrame)
-    TrainedModel(model)
-}&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
-</span>
-&lt;p&gt;val prepareTestDataset = lift[TrainedModel, TestDataset] {
-  <span class="keyword">case</span> model =&amp;gt; <span class="error">…</span>
-} &lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
-</span>
-&lt;p&gt;val evaluateModel = lift[TestDataset, TrainedAndEvaluatedModel] {
-  <span class="keyword">case</span> test =&amp;gt; <span class="error">…</span>
-}&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
-</span>
-&lt;p&gt;<span class="comment">// Helper method that allows each step to </span>
-<span class="comment">// return &lt;code&gt;ModelingError \/ Result&lt;/code&gt; and nicely chains it together</span>
-<span class="directive">private</span> <span class="keyword">def</span> lift&lt;a href=<span class="string"><span class="delimiter">&quot;</span><span class="content">f: A =&amp;gt; ModelingError </span><span class="content">\/</span><span class="content"> B</span><span class="delimiter">&quot;</span></span>&gt;A, B&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">a&gt; = {</span></span><span class="error">
-</span>  channel.lift[Task, ModelingError <span class="error">\</span>/ A, ModelingError <span class="error">\</span>/ B] {
-      <span class="keyword">case</span> -<span class="error">\</span><span class="regexp"><span class="delimiter">/</span><span class="content">(err) =&amp;gt; Task.now(</span><span class="char">\/</span><span class="content">.left(err))</span></span><span class="error">
-</span>      <span class="keyword">case</span> <span class="error">\</span><span class="regexp"><span class="delimiter">/</span><span class="content">-(a) =&amp;gt; task(f(a))</span></span><span class="error">
-</span>    }
-}
-</pre></div>
-</div>
- </figure></notextile></div></p>
-
-<p>Given previously defined modeling steps, optimization pipeline can be defined as <code>Process</code> transformation.</p>
-
-<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
-  <div class="code"><pre>
-<span class="keyword">def</span> <span class="function">optimize</span>(
-  <span class="key">campaigns</span>: <span class="predefined-type">Process</span>[Task, OptimizedCampaign]
-): <span class="predefined-type">Process</span>[Task, ModelingError <span class="error">\</span>/ TrainedAndEvaluatedModel] = {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
-</span>
-&lt;p&gt;campaigns
-    .concurrently(<span class="integer">2</span>)(prepareResponse)
-    .concurrently(<span class="integer">2</span>)(prepareTrainDataset)
-    .concurrently(<span class="integer">2</span>)(featurize)
-    .concurrently(<span class="integer">10</span>)(trainModel)
-    .concurrently(<span class="integer">2</span>)(prepareTestDataset)
-    .concurrently(<span class="integer">2</span>)(evaluateModel)
-}
-</pre></div>
-</div>
- </figure></notextile></div></p>
-
-<p>I’m using <code>concurrently</code> method, which runs each step with controlled concurrency in separate threads. Steps that are doing heavy shuffles 
-are running not more than 2 in parallel, in contrast to model training that is relatively lightweight operation and can run with much higher
-concurrency. This helper method is described in <a href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines">earlier post</a>.</p>
-
-<h4 id="push-vs-pull-based-streams">Push vs Pull Based Streams</h4>
-
-<p><code>scalaz-steam</code> uses pull based model, it means that not first step (prepare response) is pushing data down the transformation chain when it’s ready, but
-the bottom step (evaluate model) asks the previous step for new data when it’s done.</p>
-
-<p>This allows to keep Spark cluster always busy, for example when relatively slow running modeling step is done, it 
-asks <code>featurize</code> for new data, and it’s already there, which means that modeling can start immediately.</p>
-
-<h3 id="spark-cluster-tuning">Spark Cluster Tuning</h3>
-
-<p>For better cluster utilization I suggest to use <code>FAIR</code> scheduler mode, that can be turned on with <code>--conf spark.scheduler.mode=FAIR</code> flag.</p>
-
-<p>Another big problem for us was tuning garbage collection. I’ve spent a lot of time trying to tune <code>G1</code> collector, but <code>ConcMarkSweepGC</code> with <code>ParNewGC</code> showed the best results
-in our case. It doesn’t guarantee that it’s also the best choice for your particular case.</p>
-
-<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
-  <div class="code"><pre>
-–conf spark.executor.extraJavaOptions=”-server -XX:+AggressiveOpts -XX:-UseBiasedLocking -XX:NewSize=4g -XX:MaxNewSize=4g -XX:+UseParNewGC -XX:MaxTenuringThreshold=2 -XX:SurvivorRatio=4 -XX:+UnlockDiagnosticVMOptions -XX:ParGCCardsPerStrideChunk=32768 -XX:+UseConcMarkSweepGC -XX:+CMSParallelRemarkEnabled -XX:+ParallelRefProcEnabled -XX:+CMSClassUnloadingEnabled -XX:CMSInitiatingOccupancyFraction=80 -XX:+UseCMSInitiatingOccupancyOnly -XX:+AlwaysPreTouch -XX:+PrintGCDetails -XX:+PrintAdaptiveSizePolicy -XX:+PrintTenuringDistribution -XX:+PrintGCDateStamps”
-–driver-java-options “-server -XX:+AggressiveOpts -XX:-UseBiasedLocking -XX:NewSize=4g -XX:MaxNewSize=4g -XX:+UseParNewGC -XX:MaxTenuringThreshold=2 -XX:SurvivorRatio=4 -XX:+UnlockDiagnosticVMOptions -XX:ParGCCardsPerStrideChunk=32768 -XX:+UseConcMarkSweepGC -XX:+CMSParallelRemarkEnabled -XX:+ParallelRefProcEnabled -XX:+CMSClassUnloadingEnabled -XX:CMSInitiatingOccupancyFraction=80 -XX:+UseCMSInitiatingOccupancyOnly -XX:+AlwaysPreTouch -XX:+PrintGCDetails -XX:+PrintAdaptiveSizePolicy -XX:+PrintTenuringDistribution -XX:+PrintGCDateStamps -Xloggc:gc.log” 
-</pre></div>
-</div>
- </figure></notextile></div></p>
-
-<h3 id="streams-everywhere">Streams Everywhere</h3>
-
-<p><code>scalaz-stream</code> is a great abstraction and as it’s described in <a href="https://gist.github.com/djspiewak/d93a9c4983f63721c41c">scalaz-stream Introduction</a> <em>every</em> application <em>can</em>, and I believe <strong>should be</strong> modeled this way.</p>
-
-<p>This approach is embraced not only in scala community, but also in clojure, take a look for example at 
-Rich Hickey presentation about <a href="http://www.infoq.com/presentations/clojure-core-async">clojure core.async channels</a>, and how your application can
-be modeled with queues.</p>
-]]></content>
-  </entry>
   
   <entry>
     <title type="html"><![CDATA[Optimizing Spark Machine Learning for Small Data]]></title>
@@ -1139,6 +714,380 @@ documentation on <a href="http://collectivemedia.github.io/modelmatrix/">Website
 
 <p>You can continue your reading with <a href="http://arxiv.org/abs/1402.6076">Machine Learning at Scale</a> paper, 
 to get more data science focused details about our modeling approach.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Stock Price Prediction With Big Data and Machine Learning]]></title>
+    <link href="http://eugenezhulenev.com/blog/2014/11/14/stock-price-prediction-with-big-data-and-machine-learning/"/>
+    <updated>2014-11-14T18:03:35-08:00</updated>
+    <id>http://eugenezhulenev.com/blog/2014/11/14/stock-price-prediction-with-big-data-and-machine-learning</id>
+    <content type="html"><![CDATA[<p>Apache Spark and Spark MLLib for building price movement prediction model from order log data.</p>
+
+<blockquote>
+  <p>The code for this application app can be found on <a href="https://github.com/ezhulenev/orderbook-dynamics">Github</a></p>
+</blockquote>
+
+<h3 id="synopsis">Synopsis</h3>
+
+<p>This post is based on <a href="https://raw.github.com/ezhulenev/scala-openbook/master/assets/Modeling-high-frequency-limit-order-book-dynamics-with-support-vector-machines.pdf">Modeling high-frequency limit order book dynamics with support vector machines</a> paper.
+Roughly speaking I’m implementing ideas introduced in this paper in scala with <a href="https://spark.apache.org/">Spark</a> and <a href="https://spark.apache.org/mllib/">Spark MLLib</a>.
+Authors are using sampling, I’m going to use full order log from <a href="http://www.nyxdata.com/Data-Products/NYSE-OpenBook-History">NYSE</a> (sample data is available from <a href="ftp://ftp.nyxdata.com/Historical%20Data%20Samples/TAQ%20NYSE%20OpenBook/">NYSE FTP</a>), just because
+I can easily do it with Spark. Instead of using SVM, I’m going to use <a href="http://spark.apache.org/docs/latest/mllib-decision-tree.html">Decision Tree</a> algorithm for classification,
+because in Spark MLLib it supports multiclass classification out of the box.</p>
+
+<p>If you want to get deep understanding of the problem and proposed solution, you need to read the paper.
+I’m going to give high level overview of the problem in less academic language, in one or two paragraphs.</p>
+
+<blockquote>
+  <p>Predictive modelling is the process by which a model is created or chosen to try to best predict the probability of an outcome.</p>
+</blockquote>
+
+<!-- more -->
+
+<h4 id="model-architecture">Model Architecture</h4>
+
+<p>Authors are proposing framework for extracting feature vectors from from raw order log data, that can be used as input to
+machine learning classification method (SVM or Decision Tree for example) to predict price movement (Up, Down, Stationary). Given a set of training data
+with assigned labels (price movement) classification algorithm builds a model that assigns new examples into one of pre-defined categories.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+Time(sec)            Price($)   Volume      Event Type      Direction
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+34203.011926972      598.68     10          submission      ask
+34203.011926973      594.47     15          submission      bid
+34203.011926974      594.49     20          submission      bid
+34203.011926981      597.68     30          submission      ask
+34203.011926991      594.47     15          execution       ask
+34203.011927072      597.68     10          cancellation    ask
+34203.011927082      599.88     12          submission      ask
+34203.011927097      598.38     11          submission      ask
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p>In the table, each row of the message book represents a trading event that could be either a order submission,
+order cancellation, or order execution. The arrival time measured from midnight,
+is in seconds and nanoseconds; price is in US dollars, and the Volume is in number of shares.
+Ask - I’m selling and asking for this price, Bid - I want to buy for this price.</p>
+
+<p>From this log it’s very easy to reconstruct state of order book after each entry. You can read more about <a href="http://www.investopedia.com/terms/o/order-book.asp">order book</a>
+and <a href="http://www.investopedia.com/university/intro-to-order-types/limit-orders.asp">limit order book</a> in Investopedia,
+I’m not going to dive into details. Concepts are super easy for understanding.</p>
+
+<blockquote>
+  <p>An electronic list of buy and sell orders for a specific security or financial instrument, organized by price level.</p>
+</blockquote>
+
+<h4 id="feature-extraction-and-training-data-preparation">Feature Extraction and Training Data Preparation</h4>
+
+<p>After order books are reconstructed from order log, we can derive attributes, that will form feature vectors used as input to <code>classification model</code>.</p>
+
+<p>Attributes are divided into three categories: basic, time-insensitive, and time-sensitive, all of which can be directly computed from the data.
+Attributes in the basic set are the prices and volumes at both ask and bid sides up to n = 10 different levels (that is, price levels in the order book at a given moment),
+which can be directly fetched from the order book. Attributes in the time-insensitive set are easily computed from the basic set at a single point in time.
+Of this, bid-ask spread and mid-price, price ranges, as well as average price and volume at different price levels are calculated in feature sets <code>v2</code>, <code>v3</code>, and <code>v5</code>, respectively;
+while <code>v5</code> is designed to track the accumulated differences of price and volume between ask and bid sides. By further taking the recent history of current data into consideration,
+we devise the features in the time-sensitive set. More about calculating other attributes can be found in <a href="https://raw.github.com/ezhulenev/scala-openbook/master/assets/Modeling-high-frequency-limit-order-book-dynamics-with-support-vector-machines.pdf">original paper</a>.</p>
+
+<p><img class="center" src="https://raw.github.com/ezhulenev/scala-openbook/master/assets/features.png"></p>
+
+<h4 id="labeling-training-data">Labeling Training Data</h4>
+
+<p>To prepare training data for machine learning it’s also required to label each point with price movement observed over some time horizon (1 second fo example).
+It’s straightforward task that only requires two order books: current order book and order book after some period of time.</p>
+
+<p>I’m going to use <code>MeanPriceMove</code> label that can be: <code>Stationary</code>, <code>Up</code> or <code>Down</code>.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;trait <span class="predefined-type">Label</span>[L] <span class="directive">extends</span> <span class="predefined-type">Serializable</span> { label =&amp;gt;
+  <span class="keyword">def</span> <span class="function">apply</span>(<span class="key">current</span>: OrderBook, <span class="key">future</span>: OrderBook): <span class="predefined-type">Option</span>[L]
+}&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;sealed trait MeanPriceMove&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;object MeanPriceMove {
+  <span class="keyword">case</span> object Up <span class="directive">extends</span> MeanPriceMove
+  <span class="keyword">case</span> object Down <span class="directive">extends</span> MeanPriceMove
+  <span class="keyword">case</span> object Stationary <span class="directive">extends</span> MeanPriceMove
+}&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;object MeanPriceMovementLabel <span class="directive">extends</span> <span class="predefined-type">Label</span>[MeanPriceMove] {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="directive">private</span>[<span class="local-variable">this</span>] val basicSet = BasicSet.apply(BasicSet.Config.default)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">def</span> <span class="function">apply</span>(<span class="key">current</span>: OrderBook, <span class="key">future</span>: OrderBook): <span class="predefined-type">Option</span>[MeanPriceMove] = {
+    val currentMeanPrice = basicSet.meanPrice(current)
+    val futureMeanPrice = basicSet.meanPrice(future)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;pre&gt;&lt;code&gt;val <span class="key">cell</span>: Cell[MeanPriceMove] =
+   currentMeanPrice.zipMap(futureMeanPrice) {
+    (currentMeanValue, futureMeanValue) =&amp;gt;
+      <span class="keyword">if</span> (currentMeanValue == futureMeanValue)
+        MeanPriceMove.Stationary
+      <span class="keyword">else</span> <span class="keyword">if</span> (currentMeanValue &amp;gt; futureMeanValue)
+        MeanPriceMove.Down
+      <span class="keyword">else</span>
+        MeanPriceMove.Up
+    }
+
+cell.toOption   } } </pre></div>
+</div>
+ </figure></notextile></div>
+</code></pre>
+
+<h3 id="order-log-data">Order Log Data</h3>
+
+<p>I’m going to use <a href="http://www.nyxdata.com/Data-Products/NYSE-OpenBook-History">NYSE TAQ OpenBook</a> orders data, and parse it with <a href="https://github.com/ezhulenev/scala-openbook">Scala OpenBook</a>
+library. It’s easiest data set to get, free sample data for 2 trading days is available for download at <a href="ftp://ftp.nyxdata.com/Historical%20Data%20Samples/TAQ%20NYSE%20OpenBook/">NYSE FTP</a>.</p>
+
+<blockquote>
+  <p>TAQ (Trades and Quotes) historical data products provide a varying range of market depth on a T+1 basis for covered markets.
+TAQ data products are used to develop and backtest trading strategies, analyze market trends as seen in a real-time ticker plant environment, and research markets for regulatory or audit activity.</p>
+</blockquote>
+
+<h3 id="prepare-training-data">Prepare Training Data</h3>
+
+<p><code>OrderBook</code> is two sorted maps, where key is price and value is volume.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="keyword">case</span> <span class="type">class</span> <span class="class">OrderBook</span>(<span class="key">symbol</span>: <span class="predefined-type">String</span>,
+                     <span class="key">buy</span>: <span class="predefined-type">TreeMap</span>[Int, Int] = <span class="predefined-type">TreeMap</span>.empty,
+                     <span class="key">sell</span>: <span class="predefined-type">TreeMap</span>[Int, Int] = <span class="predefined-type">TreeMap</span>.empty)
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<h4 id="feature-sets">Feature Sets</h4>
+
+<p>I’m using <code>Cell</code> from <a href="https://github.com/pellucidanalytics/framian">Framian</a> library to represent extracted feature values. It can be <code>Value</code>, <code>NA</code> or <code>NM</code>.</p>
+
+<p>As defined in original paper we have three feature sets, first two calculated from <code>OrderBook</code>, last one requires <code>OrdersTrail</code> which effectively is
+window computation over raw order log.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+sealed trait <span class="predefined-type">BasicAttribute</span>[T] <span class="directive">extends</span> <span class="predefined-type">Serializable</span> { self =&amp;gt;
+  <span class="keyword">def</span> <span class="function">apply</span>(<span class="key">orderBook</span>: OrderBook): Cell[T]&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">def</span> map&lt;a href=<span class="string"><span class="delimiter">&quot;</span><span class="content">f: T =&amp;gt; T2</span><span class="delimiter">&quot;</span></span>&gt;T2&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">a&gt;: BasicAttribute[T2] = new BasicAttribute[T2] {</span></span><span class="error">
+</span>    <span class="keyword">def</span> <span class="function">apply</span>(<span class="key">orderBook</span>: OrderBook): Cell[T2] = self(orderBook).map(f)
+  }
+}
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+sealed trait TimeInsensitiveAttribute[T] <span class="directive">extends</span> <span class="predefined-type">Serializable</span> { self =&amp;gt;
+  <span class="keyword">def</span> <span class="function">apply</span>(<span class="key">orderBook</span>: OrderBook): Cell[T]&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">def</span> map&lt;a href=<span class="string"><span class="delimiter">&quot;</span><span class="content">f: T =&amp;gt; T2</span><span class="delimiter">&quot;</span></span>&gt;T2&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">a&gt;: TimeInsensitiveAttribute[T2] = new TimeInsensitiveAttribute[T2] {</span></span><span class="error">
+</span>    <span class="keyword">def</span> <span class="function">apply</span>(<span class="key">orderBook</span>: OrderBook): Cell[T2] = self(orderBook).map(f)
+  }
+}
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+trait TimeSensitiveAttribute[T] <span class="directive">extends</span> <span class="predefined-type">Serializable</span> { self =&amp;gt;
+  <span class="keyword">def</span> <span class="function">apply</span>(<span class="key">ordersTrail</span>: <span class="predefined-type">Vector</span>[OpenBookMsg]): Cell[T]&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">def</span> map&lt;a href=<span class="string"><span class="delimiter">&quot;</span><span class="content">f: T =&amp;gt; T2</span><span class="delimiter">&quot;</span></span>&gt;T2&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">a&gt;: TimeSensitiveAttribute[T2] = new TimeSensitiveAttribute[T2] {</span></span><span class="error">
+</span>    <span class="keyword">def</span> <span class="function">apply</span>(<span class="key">ordersTrail</span>: <span class="predefined-type">Vector</span>[OpenBookMsg]): Cell[T2] = self(ordersTrail).map(f)
+  }
+}
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p>and it’s how features calculation looks like</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="type">class</span> <span class="class">BasicSet</span> <span class="directive">private</span>[attribute] (val <span class="key">config</span>: BasicSet.Config) <span class="directive">extends</span> <span class="predefined-type">Serializable</span> {
+  <span class="directive">private</span>[attribute] <span class="keyword">def</span> <span class="function">askPrice</span>(<span class="key">orderBook</span>: OrderBook)(<span class="key">i</span>: Int): Cell[Int] = {
+    Cell.fromOption {
+      orderBook.sell.keySet.drop(i - <span class="integer">1</span>).headOption
+    }
+  }&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="directive">private</span>[attribute] <span class="keyword">def</span> <span class="function">bidPrice</span>(<span class="key">orderBook</span>: OrderBook)(<span class="key">i</span>: Int): Cell[Int] = {
+    Cell.fromOption {
+      val bidPrices = orderBook.buy.keySet
+      <span class="keyword">if</span> (bidPrices.size &amp;gt;= i) {
+        bidPrices.drop(bidPrices.size - i).headOption
+      } <span class="keyword">else</span> None
+    }
+  }&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="directive">private</span> <span class="keyword">def</span> attribute&lt;a href=<span class="string"><span class="delimiter">&quot;</span><span class="content">f: OrderBook =&amp;gt; Cell[T]</span><span class="delimiter">&quot;</span></span>&gt;T&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">a&gt;: BasicAttribute[T] = new BasicAttribute[T] {</span></span><span class="error">
+</span>    <span class="keyword">def</span> <span class="function">apply</span>(<span class="key">orderBook</span>: OrderBook): Cell[T] = f(orderBook)
+  }&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">def</span> <span class="function">askPrice</span>(<span class="key">i</span>: Int): <span class="predefined-type">BasicAttribute</span>[Int] = attribute(askPrice(_)(i))&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">def</span> <span class="function">bidPrice</span>(<span class="key">i</span>: Int): <span class="predefined-type">BasicAttribute</span>[Int] = attribute(bidPrice(_)(i))&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;val <span class="key">meanPrice</span>: <span class="predefined-type">BasicAttribute</span>[<span class="predefined-type">Double</span>] = {
+    val ask1 = askPrice(<span class="integer">1</span>)
+    val bid1 = bidPrice(<span class="integer">1</span>)
+    <span class="predefined-type">BasicAttribute</span>.from(orderBook =&amp;gt;
+      ask1(orderBook).zipMap(bid1(orderBook)) {
+        (ask, bid) =&amp;gt; (ask.toDouble + bid.toDouble) / <span class="integer">2</span>
+      })
+  }
+}
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<h4 id="label-training-data">Label Training Data</h4>
+
+<p>To extract labeled data from orders I’m using <code>LabeledPointsExtractor</code></p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+<span class="type">class</span> <span class="class">LabeledPointsExtractor</span>[<span class="key">L</span>: LabelEncode] {&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">def</span> <span class="function">labeledPoints</span>(<span class="key">orders</span>: <span class="predefined-type">Vector</span>[OpenBookMsg]): <span class="predefined-type">Vector</span>[LabeledPoint] = {
+    log.debug(s<span class="error">”</span>Extract labeled points from orders log. Log <span class="key">size</span>: <span class="error">$</span>{orders.size}<span class="error">”</span>)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;pre&gt;&lt;code&gt;<span class="comment">// ...   } } </span></pre></div>
+</div>
+ </figure></notextile></div>
+</code></pre>
+
+<p>and it can be constructed nicely with builder</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+val extractor = {
+    <span class="keyword">import</span> <span class="include">com.scalafi.dynamics.attribute.LabeledPointsExtractor._</span>
+    (LabeledPointsExtractor.newBuilder()
+      += basic(&lt;em&gt;.askPrice(<span class="integer">1</span>))
+      += basic(&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">em&gt;.bidPrice(1))</span></span><span class="error">
+</span>      += basic(_.meanPrice)
+      ).result(symbol, MeanPriceMovementLabel, LabeledPointsExtractor.Config(<span class="integer">1</span>.millisecond))
+  }
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p>This <code>extractor</code> will prepare labeled points using <code>MeanPriceMovementLabel</code> with 3 features: ask price, bid price and mean price</p>
+
+<h3 id="run-classification-model">Run Classification Model</h3>
+
+<p>In “real” application I’m using 36 features from all 3 feature sets. I run my tests with sample data from NYSE ftp,
+<code>EQY_US_NYSE_BOOK_20130403</code> for model training and <code>EQY_US_NYSE_BOOK_20130404</code> for model validation.</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+object DecisionTreeDynamics <span class="directive">extends</span> App with ConfiguredSparkContext with FeaturesExtractor {
+  <span class="directive">private</span> val log = LoggerFactory.getLogger(<span class="local-variable">this</span>.getClass)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;<span class="keyword">case</span> <span class="type">class</span> <span class="class">Config</span>(<span class="key">training</span>: <span class="predefined-type">String</span> = <span class="error">“</span><span class="error">”</span>,
+                    <span class="key">validation</span>: <span class="predefined-type">String</span> = <span class="error">“</span><span class="error">”</span>,
+                    <span class="key">filter</span>: <span class="predefined-type">Option</span>[<span class="predefined-type">String</span>] = None,
+                    <span class="key">symbol</span>: <span class="predefined-type">Option</span>[<span class="predefined-type">String</span>] = None)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;val parser = <span class="keyword">new</span> OptionParser&lt;a href=<span class="string"><span class="delimiter">&quot;</span><span class="content">&amp;quot;Order Book Dynamics&amp;quot;</span><span class="delimiter">&quot;</span></span>&gt;Config&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">a&gt; {</span></span><span class="error">
+</span>    <span class="comment">// ….</span>
+  }&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;p&gt;parser.parse(args, Config()) map { implicit config =&amp;gt;
+    val trainingFiles = openBookFiles(<span class="error">“</span>Training<span class="error">”</span>, config.training, config.filter)
+    val validationFiles = openBookFiles(<span class="error">“</span>Validation<span class="error">”</span>, config.validation, config.filter)&lt;<span class="regexp"><span class="delimiter">/</span><span class="content">p&gt;</span></span><span class="error">
+</span>
+&lt;pre&gt;&lt;code&gt;val trainingOrderLog = orderLog(trainingFiles)
+log.info(s<span class="string"><span class="delimiter">&quot;</span><span class="content">Training order log size: </span><span class="inline"><span class="inline-delimiter">${</span>trainingOrderLog.count()<span class="inline-delimiter">}</span></span><span class="delimiter">&quot;</span></span>)
+
+<span class="comment">// Configure DecisionTree model</span>
+val labelEncode = implicitly[LabelEncode[MeanPriceMove]]
+val numClasses = labelEncode.numClasses
+val categoricalFeaturesInfo = <span class="predefined-type">Map</span>.empty[Int, Int]
+val impurity = <span class="string"><span class="delimiter">&quot;</span><span class="content">gini</span><span class="delimiter">&quot;</span></span>
+val maxDepth = <span class="integer">5</span>
+val maxBins = <span class="integer">100</span>
+
+val trainingData = trainingOrderLog.extractLabeledData(featuresExtractor(<span class="key">_</span>: <span class="predefined-type">String</span>))
+val trainedModels = (trainingData map { <span class="keyword">case</span> LabeledOrderLog(symbol, labeledPoints) =&amp;gt;
+  log.info(s<span class="string"><span class="delimiter">&quot;</span><span class="inline"><span class="inline-delimiter">$</span>symbol</span><span class="content">: Train Decision Tree model. Training data size: </span><span class="inline"><span class="inline-delimiter">${</span>labeledPoints.count()<span class="inline-delimiter">}</span></span><span class="delimiter">&quot;</span></span>)
+  val model = DecisionTree.trainClassifier(labeledPoints, numClasses, categoricalFeaturesInfo, impurity, maxDepth, maxBins)
+  val labelCounts = labeledPoints.map(_.label).countByValue().map {
+    <span class="keyword">case</span> (key, count) =&amp;gt; (labelEncode.decode(key.toInt), count)
+  }
+  log.info(s<span class="string"><span class="delimiter">&quot;</span><span class="inline"><span class="inline-delimiter">$</span>symbol</span><span class="content">: Label counts: [</span><span class="inline"><span class="inline-delimiter">${</span>labelCounts.mkString(<span class="string"><span class="delimiter">&quot;</span><span class="content">, </span><span class="delimiter">&quot;</span></span>)<span class="inline-delimiter">}</span></span><span class="content">]</span><span class="delimiter">&quot;</span></span>)
+  symbol -&amp;gt; model
+}).toMap
+
+val validationOrderLog = orderLog(validationFiles)
+log.info(s<span class="string"><span class="delimiter">&quot;</span><span class="content">Validation order log size: </span><span class="inline"><span class="inline-delimiter">${</span>validationOrderLog.count()<span class="inline-delimiter">}</span></span><span class="delimiter">&quot;</span></span>)
+val validationData = validationOrderLog.extractLabeledData(featuresExtractor(<span class="key">_</span>: <span class="predefined-type">String</span>))
+
+<span class="comment">// Evaluate model on validation data and compute training error</span>
+validationData.map { <span class="keyword">case</span> LabeledOrderLog(symbol, labeledPoints) =&amp;gt;
+
+  val model = trainedModels(symbol)
+
+  log.info(s<span class="string"><span class="delimiter">&quot;</span><span class="inline"><span class="inline-delimiter">$</span>symbol</span><span class="content">: Evaluate model on validation data. Validation data size: </span><span class="inline"><span class="inline-delimiter">${</span>labeledPoints.count()<span class="inline-delimiter">}</span></span><span class="delimiter">&quot;</span></span>)
+  log.info(s<span class="string"><span class="delimiter">&quot;</span><span class="inline"><span class="inline-delimiter">$</span>symbol</span><span class="content">: Learned classification tree model: </span><span class="inline"><span class="inline-delimiter">$</span>model</span><span class="delimiter">&quot;</span></span>)
+
+  val labelAndPrediction = labeledPoints.map { point =&amp;gt;
+    val prediction = model.predict(point.features)
+    (point.label, prediction)
+  }
+  val trainingError = labelAndPrediction.filter(r =&amp;gt; r._1 != r._2).count().toDouble / labeledPoints.count
+  log.info(s<span class="string"><span class="delimiter">&quot;</span><span class="inline"><span class="inline-delimiter">$</span>symbol</span><span class="content">: Training Error = </span><span class="delimiter">&quot;</span></span> + trainingError)
+}   } } </pre></div>
+</div>
+ </figure></notextile></div>
+</code></pre>
+
+<h4 id="training-error">Training Error</h4>
+
+<p>Output of running Decision Tree classification for single symbol <code>ORCL</code>:</p>
+
+<p><div class='bogus-wrapper'><notextile><figure class='code'> <div class="CodeRay">
+  <div class="code"><pre>
+ORCL: Train Decision Tree model. Training data size: 64064
+ORCL: Trained model in 3740 millis
+ORCL: Label counts: [Stationary -&amp;gt; 42137, Down -&amp;gt; 10714, Up -&amp;gt; 11213]
+ORCL: Evaluate model on validation data. Validation data size: 54749
+ORCL: Training Error = 0.28603262160039455
+</pre></div>
+</div>
+ </figure></notextile></div></p>
+
+<p>As you can see this pretty simple model was able to successfully classify ~70% of the data.</p>
+
+<p><strong>Remark:</strong> Despite the fact, that this model shows very good success rate, it doesn’t mean that it
+can be successfully used to build profitable automated trading strategy. First of all I don’t check
+if it’s 95% success predicting stationary and 95% error rate predicting any price movement with
+average 70% success rate. It doesn’t measure “strength” of price movement, it has to be sufficient to cover
+transaction costs. And many other details that matters for building real trading system.</p>
+
+<p>For sure it’s huge room for improvement and result validation. Unfortunately it’s hard do get enough data,
+2 trading days is to small data set to draw conclusions and start building system to earn all the money in the world.
+However I think it’ a good starting point.</p>
+
+<h3 id="results">Results</h3>
+
+<p>I was able to relatively easy reproduce fairly complicated research project at much lager scale than in original paper.</p>
+
+<p>Latest Big Data technologies allows to build models using all available data, and stop doing samplings.
+Using all of the data helps to build best possible models and capture all details from full data set.</p>
+
+<blockquote>
+  <p>The code for this application app can be found on <a href="https://github.com/ezhulenev/orderbook-dynamics">Github</a></p>
+</blockquote>
 ]]></content>
   </entry>
   

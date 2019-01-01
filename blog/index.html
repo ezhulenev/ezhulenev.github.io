@@ -182,177 +182,6 @@ stacks the cubes one at a time, trying each possible orientation of each cube.</
     <header>
   
   <h1 class="beta">
-    <a href="/blog/2016/02/01/deep-learning-with-tensorflow-on-ec2-spot-instances/">Large Scale Deep Learning with TensorFlow on EC2 Spot Instances</a>
-  </h1>
-  
-
-  
-  <div class="meta clearfix">
-    
-
-
-
-
-
-
-
-
-  
-
-
-<time class="pull-left" datetime="2016-02-01T08:14:16-08:00" pubdate data-updated="true"><i class="icon-calendar"></i> Feb 1<span>st</span>, 2016</time>
-    
-
-  <div class="pull-left">
-    <i class="icon-tags"></i>
-    <ul class="tags unstyled">
-    
-      
-        <li><a class='category' href='/blog/categories/aws/'>aws</a></li>
-      
-        <li><a class='category' href='/blog/categories/clojure/'>clojure</a></li>
-      
-        <li><a class='category' href='/blog/categories/deep-learning/'>deep learning</a></li>
-      
-        <li><a class='category' href='/blog/categories/ec2/'>ec2</a></li>
-      
-        <li><a class='category' href='/blog/categories/ecs/'>ecs</a></li>
-      
-        <li><a class='category' href='/blog/categories/machine-learning/'>machine learning</a></li>
-      
-        <li><a class='category' href='/blog/categories/tensorflow/'>tensorflow</a></li>
-      
-    
-    </ul>
-  </div>
-
-    
-      <a class="pull-right" href="http://eugenezhulenev.com/blog/2016/02/01/deep-learning-with-tensorflow-on-ec2-spot-instances/#disqus_thread">
-        Comments <i class="icon-comment"></i>
-      </a>
-    
-  </div>
-  
-</header>
-
-
-
-
-<div class="entry-content clearfix">
-  <p>In this post I’m demonstrating how to combine together <strong>TensorFlow</strong>, <strong>Docker</strong>, <strong>EC2 Container Service</strong> and <strong>EC2 Spot Instances</strong> 
-to solve massive cluster computing problems the most cost-effective way.</p>
-
-<blockquote>
-  <p>Source code is on on Github: <a href="https://github.com/ezhulenev/distributo">https://github.com/ezhulenev/distributo</a></p>
-</blockquote>
-
-<p>Neural Networks and Deep Learning in particular gained a lot of attention over the last year, and it’s only the beginning. Google released
-to open source their numerical computing framework <a href="https://www.tensorflow.org/">TensorFlow</a>, which can be used for training and running
-deep neural networks for wide variety of machine learning problems, especially image recognition.</p>
-
-<blockquote>
-  <p>TensorFlow was originally developed by researchers and engineers working on the Google Brain Team within Google’s Machine Intelligence research 
-organization for the purposes of conducting machine learning and deep neural networks research, but the system is general enough to be 
-applicable in a wide variety of other domains as well.</p>
-</blockquote>
-
-<p>Although TensorFlow version used at Google supports distributed training, open sourced version can run only on one node. However some of machine learning
-problems are still embarrassingly parallel, and can be easily parallelized regardless of single-node nature of the core library itself.</p>
-
-<ol>
-  <li><strong>Hyperparameter optimization</strong> or <strong>model selection</strong> is the problem of choosing a set of hyperparameters for a learning algorithm, 
-usually with the goal of optimizing a measure of the algorithm’s performance on an independent data set. Naturally parallelized by training
-models for each set ot parameters in parallel and choosing the best model (parameters) later.</li>
-  <li><strong>Inference</strong> (applying trained model to new data) can be parallelized by splitting input dataset into smaller 
-batches and running trained model on each of them in parallel</li>
-</ol>
-
-
-  <a class="btn pull-right" href="/blog/2016/02/01/deep-learning-with-tensorflow-on-ec2-spot-instances/">Read on &rarr;</a>
-</div>
-
-  </article>
-  <hr>
-
-  
-  <article class="listing">
-    <header>
-  
-  <h1 class="beta">
-    <a href="/blog/2015/12/03/spark-in-production-large-scale-machine-learning/">Spark in Production: Lessons From Running Large Scale Machine Learning</a>
-  </h1>
-  
-
-  
-  <div class="meta clearfix">
-    
-
-
-
-
-
-
-
-
-  
-
-
-<time class="pull-left" datetime="2015-12-03T10:24:46-08:00" pubdate data-updated="true"><i class="icon-calendar"></i> Dec 3<span>rd</span>, 2015</time>
-    
-
-  <div class="pull-left">
-    <i class="icon-tags"></i>
-    <ul class="tags unstyled">
-    
-      
-        <li><a class='category' href='/blog/categories/dataframe/'>dataframe</a></li>
-      
-        <li><a class='category' href='/blog/categories/machine-learning/'>machine learning</a></li>
-      
-        <li><a class='category' href='/blog/categories/scala/'>scala</a></li>
-      
-        <li><a class='category' href='/blog/categories/scalaz-stream/'>scalaz-stream</a></li>
-      
-        <li><a class='category' href='/blog/categories/spark/'>spark</a></li>
-      
-    
-    </ul>
-  </div>
-
-    
-      <a class="pull-right" href="http://eugenezhulenev.com/blog/2015/12/03/spark-in-production-large-scale-machine-learning/#disqus_thread">
-        Comments <i class="icon-comment"></i>
-      </a>
-    
-  </div>
-  
-</header>
-
-
-
-
-<div class="entry-content clearfix">
-  <p>I wrote earlier about our approach for <a href="/blog/2015/09/09/audience-modeling-with-spark-ml-pipelines">machine learning with Spark</a> 
-at <a href="http://collective.com">Collective</a>, it was focused on transforming raw data into features that can be used for training a model.
-At this post I want describe how to assemble multiple building blocks into production application, that efficiently uses
-Spark cluster and can train/validate hundreds of models.</p>
-
-<p>Training single model is relatively easy, and it’s well covered in Spark documentation and multiple other blog posts. Training hundreds of 
-models can become really tricky from engineering point of view. Spark has lot’s of configuration parameters 
-that can affect cluster performance and stability, and you can use some clever tricks to get higher cluster utilization.</p>
-
-
-  <a class="btn pull-right" href="/blog/2015/12/03/spark-in-production-large-scale-machine-learning/">Read on &rarr;</a>
-</div>
-
-  </article>
-  <hr>
-
-  
-  <article class="listing">
-    <header>
-  
-  <h1 class="beta">
     <a href="/blog/2015/09/16/spark-ml-for-big-and-small-data/">Optimizing Spark Machine Learning for Small Data</a>
   </h1>
   
@@ -855,7 +684,7 @@ I’m going to give high level overview of the problem in less academic language
     <header>
   
   <h1 class="beta">
-    <a href="/blog/2014/10/18/run-tests-in-standalone-spark-cluster/">Running Spark tests in standalone cluster</a>
+    <a href="/blog/2014/04/01/scalaz-stream-concurrent-process/">Scalaz-Stream: Feed `Process` through the given effectful `Channel` concurrently</a>
   </h1>
   
 
@@ -873,7 +702,7 @@ I’m going to give high level overview of the problem in less academic language
   
 
 
-<time class="pull-left" datetime="2014-10-18T18:01:15-07:00" pubdate data-updated="true"><i class="icon-calendar"></i> Oct 18<span>th</span>, 2014</time>
+<time class="pull-left" datetime="2014-04-01T19:03:03-07:00" pubdate data-updated="true"><i class="icon-calendar"></i> Apr 1<span>st</span>, 2014</time>
     
 
   <div class="pull-left">
@@ -881,18 +710,18 @@ I’m going to give high level overview of the problem in less academic language
     <ul class="tags unstyled">
     
       
-        <li><a class='category' href='/blog/categories/sbt/'>sbt</a></li>
-      
         <li><a class='category' href='/blog/categories/scala/'>scala</a></li>
       
-        <li><a class='category' href='/blog/categories/spark/'>spark</a></li>
+        <li><a class='category' href='/blog/categories/scalaz/'>scalaz</a></li>
+      
+        <li><a class='category' href='/blog/categories/scalaz-stream/'>scalaz-stream</a></li>
       
     
     </ul>
   </div>
 
     
-      <a class="pull-right" href="http://eugenezhulenev.com/blog/2014/10/18/run-tests-in-standalone-spark-cluster/#disqus_thread">
+      <a class="pull-right" href="http://eugenezhulenev.com/blog/2014/04/01/scalaz-stream-concurrent-process/#disqus_thread">
         Comments <i class="icon-comment"></i>
       </a>
     
@@ -904,39 +733,12 @@ I’m going to give high level overview of the problem in less academic language
 
 
 <div class="entry-content clearfix">
-  <p>Unit testing Spark Applications with standalone Apache Spark Cluster.</p>
-
-<blockquote>
-  <p><strong>Update 2015-10-08</strong>: Albeit approach described in this post works and totally valid, now I would suggest to take a look on packaging all tests in a fat jar
-together with <code>scalatest</code> (or any other test library of your choice) and using <code>spark-submit</code> command to run it</p>
-</blockquote>
-
-<blockquote>
-  <p>The code for this application app can be found on <a href="https://github.com/ezhulenev/spark-testing">Github</a></p>
-</blockquote>
-
-<h3 id="running-spark-applications">Running Spark Applications</h3>
-
-<p>To be able to run Spark jobs, Spark cluster needs to have all classes used by your application in it’s classpath.
-You can put manually all jar files required by your application to Spark nodes, but it’s not cool.
-Another solution is to manually set jar files that required to distribute to worker nodes
-when you create SparkConf. One way to do it, is to package your application as a “fat-jar”,
-so you need to distribute only single jar.
-Industry standard for packaging Spark application is <a href="https://github.com/sbt/sbt-assembly">sbt-assembly</a> plugin,
-and it’s used by Spark itself.</p>
-
-<h3 id="unit-testing-spark-applications">Unit Testing Spark Applications</h3>
-
-<p>If you need to test your Spark application, easiest way is to create local Spark Context for each test, or maybe shared between all tests.
-When Spark is running in local mode, it’s running in the same JVM as your tests with same jar files in classpath.</p>
-
-<p>If your tests requires data that doesn’t fit into single node, for example in integration or acceptance tests,
-obvious solution is to run them in standalone Spark cluster
-with sufficient number of nodes. At this time everything becomes more difficult. Now you need to package you application with tests
-in single jar file, and submit it to Spark cluster with each test.</p>
+  <p>Let’s assume that we have some input process, and want to run some ‘heavy computation’ on each element.
+Obviously we want utilize all available cores and use thread pool. However scalaz-stream by default is deterministic
+and in following example all computation steps will run consecutively.</p>
 
 
-  <a class="btn pull-right" href="/blog/2014/10/18/run-tests-in-standalone-spark-cluster/">Read on &rarr;</a>
+  <a class="btn pull-right" href="/blog/2014/04/01/scalaz-stream-concurrent-process/">Read on &rarr;</a>
 </div>
 
   </article>
@@ -945,15 +747,13 @@ in single jar file, and submit it to Spark cluster with each test.</p>
 
   <div class="pagination">
     
-      <a class="btn pull-left" href="/blog/page/2/">&larr; Older</a>
-    
 
     
   </div>
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2017 - Eugene Zhulenev -
+  Copyright &copy; 2019 - Eugene Zhulenev -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
 </p>
 
